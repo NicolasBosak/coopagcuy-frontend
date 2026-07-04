@@ -1,0 +1,73 @@
+import client from "./client";
+import type {
+    Dashboard, ReporteProductora, ReporteCAT, ReporteNovedad,
+    ReporteDevoluciones,
+} from "../types/reportes";
+
+interface FiltroPeriodo {
+    desde: string;
+    hasta: string;
+    cat?: string;
+}
+
+export const reportesApi = {
+    dashboard: async (desde?: string, hasta?: string) => {
+        const { data } = await client.get<Dashboard>("/api/reportes/dashboard", {
+            params: { desde, hasta },
+        });
+        return data;
+    },
+
+    porProductora: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteProductora[]>(
+            "/api/reportes/productoras", { params: filtro }
+        );
+        return data;
+    },
+
+    porCAT: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteCAT[]>(
+            "/api/reportes/cat", { params: filtro }
+        );
+        return data;
+    },
+
+    novedades: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteNovedad[]>(
+            "/api/reportes/novedades", { params: filtro }
+        );
+        return data;
+    },
+
+    exportarExcelProductoras: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/productoras",
+            { params: filtro, responseType: "blob" }
+        );
+        return data;
+    },
+
+    exportarExcelNovedades: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/novedades",
+            { params: filtro, responseType: "blob" }
+        );
+        return data;
+    },
+
+    // Devoluciones de clientes + retornos a productoras
+    devoluciones: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteDevoluciones>(
+            "/api/reportes/devoluciones", { params: filtro }
+        );
+        return data;
+    },
+
+    exportarPDFLote: async (codigoLote: string) => {
+        const { data } = await client.get<Blob>(
+            `/api/reportes/exportar/pdf/lote/${codigoLote}`,
+            { responseType: "blob" }
+        );
+        return data;
+    },
+};

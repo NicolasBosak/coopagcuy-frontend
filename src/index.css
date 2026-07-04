@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-crema text-gray-800 antialiased;
+    }
+
+    /* Foco visible para navegación con teclado */
+    :focus-visible {
+        @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-crema;
+    }
+}
+
+@layer utilities {
+
+    /* Retícula sutil de fondo para encabezados de página */
+    .textura-campo {
+        background-image: radial-gradient(circle,
+                rgba(47, 107, 58, 0.07) 1px, transparent 1px);
+        background-size: 18px 18px;
+    }
+
+    /* Barra de navegación deslizable sin barra de scroll visible */
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Usuarios que prefieren menos movimiento: sin animaciones */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
