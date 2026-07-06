@@ -40,6 +40,13 @@ export default function Faenamiento() {
         enabled: tab === "devoluciones",
     });
 
+    // Cuyes devueltos vivos a su productora antes del faenamiento
+    const { data: retornos = [], isLoading: cargandoRet } = useQuery({
+        queryKey: ["retornos"],
+        queryFn: () => faenamientoApi.listarRetornos(),
+        enabled: tab === "devoluciones",
+    });
+
     const { data: movilizaciones = [], isLoading: cargandoMov } = useQuery({
         queryKey: ["movilizaciones"],
         queryFn: () => recepcionApi.listarMovilizaciones(),
@@ -318,8 +325,84 @@ export default function Faenamiento() {
 
             {/* ── Tab devoluciones — RF-307 ── */}
             {tab === "devoluciones" && (
-                <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto
-                        animate-fade-in-up">
+                <div className="space-y-6 animate-fade-in-up">
+
+                    {/* Cuyes devueltos VIVOS a su productora antes de faenar */}
+                    <div>
+                        <h2 className="text-xs font-bold uppercase tracking-wide
+                           text-gray-500 mb-2">
+                            Cuyes vivos devueltos a productora
+                        </h2>
+                        <div className="bg-white rounded-2xl border border-gray-200
+                            overflow-x-auto">
+                            {cargandoRet ? (
+                                <div className="p-8 text-center text-sm text-gray-400">
+                                    Cargando retornos…
+                                </div>
+                            ) : retornos.length === 0 ? (
+                                <div className="p-8 text-center text-sm text-gray-400">
+                                    Ningún animal ha sido devuelto vivo a su productora.
+                                </div>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            {["Jaula", "Cuy", "Productora", "Motivo",
+                                                "Fecha", "Responsable", ""].map(h => (
+                                                    <th key={h}
+                                                        className="px-4 py-3 text-left text-xs font-bold
+                                     text-gray-500 uppercase tracking-wide">
+                                                        {h}
+                                                    </th>
+                                                ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {retornos.map((r) => (
+                                            <tr key={r.id} className="hover:bg-gray-50 transition">
+                                                <td className="px-4 py-3 font-mono text-xs
+                                       text-gray-700">
+                                                    {r.codigoLote}
+                                                </td>
+                                                <td className="px-4 py-3 text-center font-bold
+                                       text-gray-700">
+                                                    #{r.numeroEnLote}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {r.nombreProductora}
+                                                    <span className="block text-xs text-gray-400">
+                                                        {r.comunidad}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {r.motivo}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-500 text-xs">
+                                                    {new Date(r.fechaRetorno)
+                                                        .toLocaleDateString("es-EC")}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {r.responsable}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <Badge label="Vivo" variant="warning" />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Devoluciones de producto por clientes (post-despacho) */}
+                    <div>
+                        <h2 className="text-xs font-bold uppercase tracking-wide
+                           text-gray-500 mb-2">
+                            Devoluciones de clientes
+                        </h2>
+                        <div className="bg-white rounded-2xl border border-gray-200
+                            overflow-x-auto">
                     {cargandoDev ? (
                         <div className="p-8 text-center text-sm text-gray-400">
                             Cargando devoluciones…
@@ -346,7 +429,7 @@ export default function Faenamiento() {
                                 {devoluciones.map((d) => (
                                     <tr key={d.id} className="hover:bg-gray-50 transition">
                                         <td className="px-4 py-3 font-mono text-xs text-gray-700">
-                                            {d.codigoLote}
+                                            {d.codigoLoteFaenado ?? d.codigoLote ?? "—"}
                                         </td>
                                         <td className="px-4 py-3">
                                             {d.numeroSesion ? (
@@ -380,6 +463,8 @@ export default function Faenamiento() {
                             </tbody>
                         </table>
                     )}
+                        </div>
+                    </div>
                 </div>
             )}
 

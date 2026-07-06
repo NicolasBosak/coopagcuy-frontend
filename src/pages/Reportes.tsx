@@ -92,6 +92,12 @@ export default function Reportes() {
             } else if (tab === "novedades") {
                 const blob = await reportesApi.exportarExcelNovedades(filtro);
                 descargarBlob(blob, `Reporte-Novedades-${desde}-${hasta}.xlsx`);
+            } else if (tab === "cat") {
+                const blob = await reportesApi.exportarExcelCAT(filtro);
+                descargarBlob(blob, `Reporte-CAT-${desde}-${hasta}.xlsx`);
+            } else if (tab === "devoluciones") {
+                const blob = await reportesApi.exportarExcelDevoluciones(filtro);
+                descargarBlob(blob, `Reporte-Devoluciones-${desde}-${hasta}.xlsx`);
             }
         } finally {
             setExportando(false);
@@ -129,17 +135,15 @@ export default function Reportes() {
                         Producción, calidad y novedades por período
                     </p>
                 </div>
-                {tab !== "cat" && tab !== "devoluciones" && (
-                    <button
-                        onClick={handleExportar}
-                        disabled={exportando}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700
+                <button
+                    onClick={handleExportar}
+                    disabled={exportando}
+                    className="px-4 py-2 bg-primary-600 hover:bg-primary-700
                        disabled:bg-primary-300 text-white text-sm
                        font-medium rounded-lg transition"
-                    >
-                        {exportando ? "Exportando..." : "Exportar a Excel"}
-                    </button>
-                )}
+                >
+                    {exportando ? "Exportando..." : "Exportar a Excel"}
+                </button>
             </div>
 
             <div className="mb-5">

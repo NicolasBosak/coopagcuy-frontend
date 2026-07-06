@@ -75,6 +75,8 @@ export interface RegistrarEntregaRequest {
     observaciones?: string;
     sincronizadoOffline?: boolean;
     dispositivoId?: string;
+    // UUID local de la entrega offline: clave de idempotencia del sync
+    idCliente?: string;
 }
 
 export interface EntregaResultado {
@@ -93,11 +95,21 @@ export interface EntregaOffline extends RegistrarEntregaRequest {
     _error?: string;
 }
 
+// El backend devuelve UN resultado por entrega, identificado por su
+// idCliente: el emparejamiento es por Id, nunca por posición
 export interface SyncResult {
     totalRecibidos: number;
     totalGuardados: number;
+    // Reintentos de entregas ya sincronizadas: se marcan como listas
+    // sin duplicar animales
+    totalDuplicados: number;
     totalConError: number;
-    errores: { dispositivoId: string; codigoLoteTemp: string; motivo: string }[];
+    resultados: {
+        idCliente: string | null;
+        exito: boolean;
+        duplicada: boolean;
+        motivo: string | null;
+    }[];
 }
 
 // ── Movilización CAT → planta (eslabón transporte) ────────────────────

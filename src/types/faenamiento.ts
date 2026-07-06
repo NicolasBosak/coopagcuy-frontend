@@ -75,14 +75,36 @@ export interface RetornoProductora {
     responsable: string;
 }
 
+// ── Despacho por lote faenado con detalle por animal ─────────────────
+
 export interface RegistrarDespachoRequest {
-    loteId: number;
+    loteFaenadoId: number;
+    // Animales específicos que se envían
+    cuyFaenamientoIds: number[];
     clienteDestino: string;
     fechaDespacho: string;
-    cantidadUnidades: number;
     responsable: string;
     transporte?: string;
     observaciones?: string;
+}
+
+// Lote faenado con saldo despachable y sus animales disponibles
+export interface LoteFaenadoDespachable {
+    loteFaenadoId: number;
+    codigo: string;
+    fechaFaenamiento: string;
+    totalFaenadas: number;
+    despachadas: number;
+    disponibles: number;
+    cuyes: CuyDespachable[];
+}
+
+export interface CuyDespachable {
+    cuyFaenamientoId: number;
+    codigoJaula: string;
+    numeroEnLote: number;
+    pesoCanalGramos: number | null;
+    estado: string;
 }
 
 export interface Faenamiento {
@@ -114,14 +136,19 @@ export interface Faenamiento {
 
 export interface Despacho {
     id: number;
-    loteId: number;
-    codigoLote: string;
+    // Código del lote faenado (FAE-…); nulo en despachos antiguos que
+    // apuntaban a la jaula (codigoLote)
+    codigoLoteFaenado: string | null;
+    codigoLote: string | null;
     clienteDestino: string;
     fechaDespacho: string;
     cantidadUnidades: number;
+    // Unidades ya devueltas por el cliente (el restante es devolvible)
+    unidadesDevueltas: number;
     responsable: string;
     transporte: string | null;
     observaciones: string | null;
+    cuyes: { codigoJaula: string; numeroEnLote: number }[];
 }
 
 export interface InkJetCodigo {

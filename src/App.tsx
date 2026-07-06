@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Productoras from "./pages/Productoras";
 import Recepcion from "./pages/Recepcion";
 import Faenamiento from "./pages/Faenamiento";
+import Despacho from "./pages/Despacho";
 import QRPublico from "./pages/QRPublico";
 import Reportes from "./pages/Reportes";
 import Administracion from "./pages/Administracion";
@@ -51,6 +52,13 @@ export default function App() {
                 "OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"
               ]}>
                 <Faenamiento />
+              </PrivateRoute>
+            } />
+            <Route path="/despacho" element={
+              <PrivateRoute rolesPermitidos={[
+                "OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"
+              ]}>
+                <Despacho />
               </PrivateRoute>
             } />
 

@@ -3,7 +3,10 @@
 export interface Usuario {
     id: number;
     nombreCompleto: string;
-    email: string;
+    // Número de cédula: única credencial de inicio de sesión
+    cedula: string;
+    // Correo de contacto opcional; no sirve para iniciar sesión
+    email: string | null;
     rol: string;
     // CAT asignado (solo Operadores de CAT)
     catAsignado: string | null;
@@ -13,7 +16,8 @@ export interface Usuario {
 
 export interface CrearUsuarioRequest {
     nombreCompleto: string;
-    email: string;
+    cedula: string;
+    email?: string;
     password: string;
     rol: string;
     catAsignado?: string;
@@ -21,6 +25,7 @@ export interface CrearUsuarioRequest {
 
 export interface ActualizarUsuarioRequest {
     nombreCompleto: string;
+    email?: string;
     rol: string;
     catAsignado?: string;
     nuevaPassword?: string;
@@ -49,9 +54,11 @@ export interface GuardarComunidadRequest {
 
 export interface Devolucion {
     id: number;
-    loteId: number;
-    codigoLote: string;
-    // Sesión de faenamiento de la que proviene el producto devuelto
+    loteId: number | null;
+    // Código del lote faenado del despacho; en devoluciones antiguas
+    // solo existe el código de jaula
+    codigoLoteFaenado: string | null;
+    codigoLote: string | null;
     numeroSesion: number | null;
     nombreProductora: string;
     comunidad: string;
@@ -63,10 +70,9 @@ export interface Devolucion {
     observaciones: string | null;
 }
 
+// La devolución nace de un despacho: el cliente se deriva de él
 export interface RegistrarDevolucionRequest {
-    loteId: number;
-    registroFaenamientoId?: number;
-    clienteDevuelve: string;
+    despachoId: number;
     fechaDevolucion: string;
     cantidadUnidades: number;
     motivo: string;

@@ -8,7 +8,7 @@ export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const [form, setForm] = useState<LoginRequest>({ email: "", password: "" });
+    const [form, setForm] = useState<LoginRequest>({ cedula: "", password: "" });
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -21,8 +21,15 @@ export default function Login() {
             const { data } = await client.post<LoginResponse>("/api/auth/login", form);
             login(data);
             navigate("/dashboard");
-        } catch {
-            setError("Correo o contraseña incorrectos. Intenta nuevamente.");
+        } catch (e: unknown) {
+            // Sin respuesta del servidor = problema de conexión (red, CORS,
+            // API apagada), no de credenciales: mensajes distintos para
+            // no confundir al operador
+            const err = e as { response?: unknown };
+            setError(err.response
+                ? "Cédula o contraseña incorrectas. Intenta nuevamente."
+                : "No se pudo conectar con el servidor. Verifica tu conexión "
+                + "o avisa al administrador.");
         } finally {
             setLoading(false);
         }
@@ -55,14 +62,21 @@ export default function Login() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Correo electrónico
+                                Número de cédula
                             </label>
                             <input
-                                type="email"
+                                type="text"
                                 required
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                placeholder="admin@coopagcuy.ec"
+                                inputMode="numeric"
+                                autoComplete="username"
+                                maxLength={10}
+                                value={form.cedula}
+                                onChange={(e) => setForm({
+                                    ...form,
+                                    // Solo dígitos: evita errores de tipeo
+                                    cedula: e.target.value.replace(/\D/g, ""),
+                                })}
+                                placeholder="0102030405"
                                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg
                            text-sm focus:outline-none focus:ring-2
                            focus:ring-primary-500 focus:border-transparent

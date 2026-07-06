@@ -4,11 +4,16 @@ import { MainLayout } from "../components/layout/MainLayout";
 import { StatCard } from "../components/ui/StatCard";
 
 export default function Dashboard() {
-    const { data, isLoading, isError } = useQuery({
+    const { data, isLoading, isError, error } = useQuery({
         queryKey: ["dashboard"],
         queryFn: () => reportesApi.dashboard(),
         refetchInterval: 60_000, // refresca cada minuto
     });
+
+    // Un 403 es un problema de permisos del rol, no de conexión:
+    // el mensaje debe orientar distinto en cada caso
+    const sinPermiso = (error as { response?: { status?: number } } | null)
+        ?.response?.status === 403;
 
     return (
         <MainLayout>
@@ -36,7 +41,11 @@ export default function Dashboard() {
             {isError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4
                         text-red-700 text-sm">
-                    No se pudo cargar el dashboard. Verifica la conexión con el backend.
+                    {sinPermiso
+                        ? "Tu rol no tiene acceso a estos indicadores. " +
+                          "Avisa al administrador del sistema."
+                        : "No se pudo cargar el dashboard. " +
+                          "Verifica la conexión con el backend."}
                 </div>
             )}
 

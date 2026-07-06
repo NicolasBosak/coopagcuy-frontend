@@ -16,6 +16,7 @@ export function FormUsuario({ usuario, onClose }: Props) {
     const editando = usuario !== null;
 
     const [nombre, setNombre] = useState(usuario?.nombreCompleto ?? "");
+    const [cedula, setCedula] = useState(usuario?.cedula ?? "");
     const [email, setEmail] = useState(usuario?.email ?? "");
     const [password, setPassword] = useState("");
     const [rol, setRol] = useState(usuario?.rol ?? "OperadorCAT");
@@ -30,13 +31,15 @@ export function FormUsuario({ usuario, onClose }: Props) {
             if (editando) {
                 await usuariosApi.actualizar(usuario.id, {
                     nombreCompleto: nombre,
+                    email: email || undefined,
                     rol,
                     catAsignado: cat,
                     nuevaPassword: password || undefined,
                 });
             } else {
                 await usuariosApi.crear({
-                    nombreCompleto: nombre, email, password, rol,
+                    nombreCompleto: nombre, cedula,
+                    email: email || undefined, password, rol,
                     catAsignado: cat,
                 });
             }
@@ -55,6 +58,10 @@ export function FormUsuario({ usuario, onClose }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        if (!editando && cedula.length !== 10) {
+            setError("El número de cédula debe tener 10 dígitos.");
+            return;
+        }
         if (!editando && password.length < 8) {
             setError("La contraseña debe tener al menos 8 caracteres, con una letra y un número.");
             return;
@@ -100,20 +107,37 @@ export function FormUsuario({ usuario, onClose }: Props) {
                 <div>
                     <label className="block text-xs font-bold uppercase tracking-wide
                         text-gray-500 mb-1">
-                        Correo electrónico
+                        Número de cédula
                     </label>
                     <input
-                        type="email" required value={email} disabled={editando}
-                        onChange={(e) => setEmail(e.target.value)}
+                        type="text" required value={cedula} disabled={editando}
+                        inputMode="numeric" maxLength={10}
+                        onChange={(e) => setCedula(e.target.value.replace(/\D/g, ""))}
+                        placeholder="10 dígitos, es la clave de ingreso al sistema"
                         className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
                        text-base focus:border-primary-500 focus:outline-none
                        disabled:bg-gray-50 disabled:text-gray-400"
                     />
                     {editando && (
                         <p className="text-xs text-gray-400 mt-1">
-                            El correo no se puede cambiar.
+                            La cédula no se puede cambiar.
                         </p>
                     )}
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide
+                        text-gray-500 mb-1">
+                        Correo electrónico
+                        <span className="text-gray-300 normal-case"> (opcional)</span>
+                    </label>
+                    <input
+                        type="email" value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Solo si la persona tiene correo"
+                        className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
+                       text-base focus:border-primary-500 focus:outline-none"
+                    />
                 </div>
 
                 <div>

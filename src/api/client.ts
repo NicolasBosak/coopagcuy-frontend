@@ -14,12 +14,14 @@ client.interceptors.request.use((config) => {
     return config;
 });
 
-// Si el backend devuelve 401, limpia la sesión y redirige al login
+// Si el backend devuelve 401 con la sesión caducada, limpia y redirige
+// al login. El propio POST de login se excluye: su 401 significa
+// "credenciales incorrectas" y debe mostrarse en pantalla, no recargar.
 client.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            ``
+        const esLogin = error.config?.url?.includes("/api/auth/login");
+        if (error.response?.status === 401 && !esLogin) {
             sessionStorage.removeItem("jwt_token");
             sessionStorage.removeItem("jwt_user");
             window.location.href = "/login";

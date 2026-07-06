@@ -1,7 +1,7 @@
 import client from "./client";
 import type {
     Faenamiento,
-    Despacho, RegistrarDespachoRequest,
+    Despacho, RegistrarDespachoRequest, LoteFaenadoDespachable,
     InkJetCodigo, QRResponse, PaginaPublica,
     RetornoProductora, LoteDisponible,
     RegistrarFaenamientoBatchRequest, FaenamientoBatchResultado,
@@ -44,6 +44,20 @@ export const faenamientoApi = {
 
     registrarDespacho: async (body: RegistrarDespachoRequest) => {
         const { data } = await client.post<Despacho>("/api/faenamiento/despachos", body);
+        return data;
+    },
+
+    // Lotes faenados con saldo despachable y sus animales disponibles
+    listarDespachables: async () => {
+        const { data } = await client.get<LoteFaenadoDespachable[]>(
+            "/api/faenamiento/despachos/disponibles");
+        return data;
+    },
+
+    // Historial completo de despachos, con filtro opcional por fecha
+    listarDespachos: async (params?: { desde?: string; hasta?: string }) => {
+        const { data } = await client.get<Despacho[]>(
+            "/api/faenamiento/despachos", { params });
         return data;
     },
 

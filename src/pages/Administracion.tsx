@@ -118,7 +118,7 @@ export default function Administracion() {
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    {["Nombre", "Correo", "Rol", "CAT", "Estado", ""].map((h) => (
+                                    {["Nombre", "Cédula", "Rol", "CAT", "Estado", ""].map((h) => (
                                         <th key={h}
                                             className="px-4 py-3 text-left text-xs font-bold
                                  text-gray-500 uppercase tracking-wide">
@@ -132,8 +132,16 @@ export default function Administracion() {
                                     <tr key={u.id} className="hover:bg-gray-50 transition">
                                         <td className="px-4 py-3 font-medium text-gray-800">
                                             {u.nombreCompleto}
+                                            {u.email && (
+                                                <span className="block text-xs font-normal
+                                                   text-gray-400">
+                                                    {u.email}
+                                                </span>
+                                            )}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-500">{u.email}</td>
+                                        <td className="px-4 py-3 font-mono text-xs text-gray-600">
+                                            {u.cedula}
+                                        </td>
                                         <td className="px-4 py-3 text-gray-600">
                                             {nombreRol(u.rol)}
                                         </td>

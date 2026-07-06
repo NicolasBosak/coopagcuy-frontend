@@ -55,6 +55,23 @@ export const reportesApi = {
         return data;
     },
 
+    exportarExcelCAT: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/cat",
+            { params: filtro, responseType: "blob" }
+        );
+        return data;
+    },
+
+    // Dos hojas: devoluciones de clientes y retornos a productora
+    exportarExcelDevoluciones: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/devoluciones",
+            { params: filtro, responseType: "blob" }
+        );
+        return data;
+    },
+
     // Devoluciones de clientes + retornos a productoras
     devoluciones: async (filtro: FiltroPeriodo) => {
         const { data } = await client.get<ReporteDevoluciones>(

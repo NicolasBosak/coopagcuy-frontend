@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { offlineDB } from "../services/db";
 import client from "../api/client";
 import type { SyncResult } from "../types/recepcion";
@@ -9,6 +9,11 @@ export function useOfflineSync() {
     const [pendientes, setPendientes] = useState(0);
     const [lastSync, setLastSync] = useState<Date | null>(null);
 
+    // Evita sincronizaciones simultáneas: el evento "online" puede
+    // dispararse varias veces seguidas y dos envíos concurrentes
+    // competirían por las mismas entregas
+    const syncEnCurso = useRef(false);
+
     // Contar pendientes al montar
     const actualizarConteo = useCallback(async () => {
         const lotes = await offlineDB.obtenerPendientes();
@@ -17,11 +22,14 @@ export function useOfflineSync() {
 
     // Sincroniza las entregas pendientes con el backend
     const sincronizar = useCallback(async (): Promise<SyncResult | null> => {
-        const entregas = await offlineDB.obtenerPendientes();
-        if (entregas.length === 0) return null;
+        if (syncEnCurso.current) return null;
+        syncEnCurso.current = true;
 
-        setSyncing(true);
         try {
+            const entregas = await offlineDB.obtenerPendientes();
+            if (entregas.length === 0) return null;
+
+            setSyncing(true);
             const dispositivoId = localStorage.getItem("dispositivo_id")
                 ?? `dispositivo-${Date.now()}`;
             localStorage.setItem("dispositivo_id", dispositivoId);
@@ -30,15 +38,27 @@ export function useOfflineSync() {
                 "/api/recepcion/sync-entregas",
                 {
                     dispositivoId,
+                    // El _id local viaja como idCliente: es la clave de
+                    // idempotencia y de emparejamiento del resultado
                     entregas: entregas.map(({ _id, _tipo, _estado,
-                        _fechaCreacion, _intentos, _error, ...rest }) => rest),
+                        _fechaCreacion, _intentos, _error, ...rest }) => ({
+                            ...rest,
+                            idCliente: _id,
+                        })),
                 }
             );
 
-            for (let i = 0; i < entregas.length; i++) {
-                const err = data.errores[i];
-                if (err) await offlineDB.marcarError(entregas[i]._id, err.motivo);
-                else await offlineDB.marcarSincronizado(entregas[i]._id);
+            // Emparejar por idCliente, nunca por posición. Una entrega
+            // "duplicada" (reintento de algo ya guardado en el servidor)
+            // también queda marcada como sincronizada.
+            for (const r of data.resultados) {
+                if (!r.idCliente) continue;
+                if (r.exito) {
+                    await offlineDB.marcarSincronizado(r.idCliente);
+                } else {
+                    await offlineDB.marcarError(
+                        r.idCliente, r.motivo ?? "Error desconocido");
+                }
             }
 
             setLastSync(new Date());
@@ -48,6 +68,7 @@ export function useOfflineSync() {
             console.error("Error en sincronización:", err);
             return null;
         } finally {
+            syncEnCurso.current = false;
             setSyncing(false);
         }
     }, [actualizarConteo]);
