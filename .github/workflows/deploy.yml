@@ -1,0 +1,52 @@
+name: Desplegar Front
+
+# develop -> staging; main -> producción (con aprobación en el entorno).
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-front-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    # Solo despliega en push; los PR se quedan en build/typecheck
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Compila con la URL del API del entorno (staging o producción).
+      # tsc -b corre dentro del script build, así que el typecheck
+      # también bloquea aquí.
+      - name: Compilar
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: pnpm build
+
+      # Los PR solo verifican; el despliegue real ocurre en push
+      - name: Desplegar a Static Web Apps
+        if: github.event_name == 'push'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOY_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist       # carpeta ya compilada
+          skip_app_build: true     # no recompilar: subimos el dist tal cual
+          skip_api_build: true
