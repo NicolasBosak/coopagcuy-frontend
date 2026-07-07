@@ -390,6 +390,12 @@ export default function Recepcion() {
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {p.metodoPago}
+                                                {p.numeroLetras && p.valorPorLetra && (
+                                                    <span className="block text-xs text-gray-400">
+                                                        {p.numeroLetras} letras · $
+                                                        {p.valorPorLetra.toFixed(2)} c/u
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-gray-500 text-xs">
                                                 {new Date(p.fechaPago).toLocaleDateString("es-EC")}

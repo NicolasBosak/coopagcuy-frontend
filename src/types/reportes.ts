@@ -81,3 +81,36 @@ export interface RetornoItem {
     fechaRetorno: string;
     responsable: string;
 }
+
+// ── Flujo de trazabilidad: Entrada / Tránsito / Salida ────────────────
+
+export interface ReporteEntrada {
+    codigoLote: string;
+    centroAcopio: string;
+    productora: string;
+    comunidad: string;
+    cantidadEnEspera: number;
+    fechaLlegada: string;
+}
+
+export interface ReporteTransito {
+    codigoLoteFaenado: string;
+    fechaFaenamiento: string;
+    operario: string;
+    jaulasOrigen: string;
+    comunidades: string;
+    unidades: number;
+    pesoTotalGramos: number;
+    pesoPromedioGramos: number;
+    estado: string;
+}
+
+export interface ReporteSalida {
+    codigoLoteFaenado: string;
+    fechaDespacho: string;
+    cliente: string;
+    chofer: string;
+    ruta: string;
+    unidades: number;
+    responsable: string;
+}

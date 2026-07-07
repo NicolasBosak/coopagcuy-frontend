@@ -84,7 +84,9 @@ export interface RegistrarDespachoRequest {
     clienteDestino: string;
     fechaDespacho: string;
     responsable: string;
-    transporte?: string;
+    // Datos del transporte de salida
+    chofer?: string;
+    ruta?: string;
     observaciones?: string;
 }
 
@@ -146,7 +148,8 @@ export interface Despacho {
     // Unidades ya devueltas por el cliente (el restante es devolvible)
     unidadesDevueltas: number;
     responsable: string;
-    transporte: string | null;
+    chofer: string | null;
+    ruta: string | null;
     observaciones: string | null;
     cuyes: { codigoJaula: string; numeroEnLote: number }[];
 }

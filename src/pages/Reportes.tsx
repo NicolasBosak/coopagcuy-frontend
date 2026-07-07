@@ -10,7 +10,8 @@ import { AnilloNovedades } from "../components/reportes/graficos/AnilloNovedades
 import { AnilloConteos } from "../components/reportes/graficos/AnilloConteos";
 import type { CentroAcopio } from "../types/productora";
 
-type Tab = "productoras" | "cat" | "novedades" | "devoluciones";
+type Tab = "entrada" | "transito" | "salida"
+    | "productoras" | "cat" | "novedades" | "devoluciones";
 
 function inicioMes() {
     const d = new Date();
@@ -22,7 +23,7 @@ function hoy() {
 }
 
 export default function Reportes() {
-    const [tab, setTab] = useState<Tab>("productoras");
+    const [tab, setTab] = useState<Tab>("entrada");
     const [desde, setDesde] = useState(inicioMes());
     const [hasta, setHasta] = useState(hoy());
     const [cat, setCat] = useState<CentroAcopio | "">("");
@@ -52,6 +53,24 @@ export default function Reportes() {
         queryKey: ["reporte_devoluciones", desde, hasta, cat],
         queryFn: () => reportesApi.devoluciones(filtro),
         enabled: tab === "devoluciones",
+    });
+
+    const { data: entradaData = [], isLoading: loadingEntrada } = useQuery({
+        queryKey: ["reporte_entrada", desde, hasta, cat],
+        queryFn: () => reportesApi.entrada(filtro),
+        enabled: tab === "entrada",
+    });
+
+    const { data: transitoData = [], isLoading: loadingTransito } = useQuery({
+        queryKey: ["reporte_transito", desde, hasta, cat],
+        queryFn: () => reportesApi.transito(filtro),
+        enabled: tab === "transito",
+    });
+
+    const { data: salidaData = [], isLoading: loadingSalida } = useQuery({
+        queryKey: ["reporte_salida", desde, hasta, cat],
+        queryFn: () => reportesApi.salida(filtro),
+        enabled: tab === "salida",
     });
 
     // ── Datos de los gráficos: se recalculan con cada cambio de filtro ──
@@ -98,6 +117,15 @@ export default function Reportes() {
             } else if (tab === "devoluciones") {
                 const blob = await reportesApi.exportarExcelDevoluciones(filtro);
                 descargarBlob(blob, `Reporte-Devoluciones-${desde}-${hasta}.xlsx`);
+            } else if (tab === "entrada") {
+                const blob = await reportesApi.exportarExcelEntrada(filtro);
+                descargarBlob(blob, `Reporte-Entrada-${desde}-${hasta}.xlsx`);
+            } else if (tab === "transito") {
+                const blob = await reportesApi.exportarExcelTransito(filtro);
+                descargarBlob(blob, `Reporte-Transito-${desde}-${hasta}.xlsx`);
+            } else if (tab === "salida") {
+                const blob = await reportesApi.exportarExcelSalida(filtro);
+                descargarBlob(blob, `Reporte-Salida-${desde}-${hasta}.xlsx`);
             }
         } finally {
             setExportando(false);
@@ -158,6 +186,9 @@ export default function Reportes() {
             {/* Tabs */}
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5 w-fit">
                 {([
+                    { id: "entrada", label: "Entrada" },
+                    { id: "transito", label: "Tránsito" },
+                    { id: "salida", label: "Salida" },
                     { id: "productoras", label: "Por productora" },
                     { id: "cat", label: "Por CAT" },
                     { id: "novedades", label: "Novedades" },
@@ -175,6 +206,156 @@ export default function Reportes() {
                     </button>
                 ))}
             </div>
+
+            {/* Tab: Entrada — cuyes en espera de faenamiento */}
+            {tab === "entrada" && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                    {loadingEntrada ? (
+                        <div className="p-8 text-center text-sm text-gray-400">
+                            Cargando reporte...
+                        </div>
+                    ) : entradaData.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-gray-400">
+                            No hay cuyes en espera de faenamiento en el período.
+                        </div>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    {["Código lote", "CAT", "Productora", "Comunidad",
+                                        "En espera", "Fecha de llegada"].map(h => (
+                                            <th key={h} className="px-3 py-3 text-left text-xs
+                                     font-medium text-gray-500 uppercase tracking-wide
+                                     whitespace-nowrap">{h}</th>
+                                        ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {entradaData.map((r, i) => (
+                                    <tr key={`${r.codigoLote}-${i}`} className="hover:bg-gray-50">
+                                        <td className="px-3 py-2.5 font-mono text-xs text-gray-700">
+                                            {r.codigoLote}
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <Badge label={r.centroAcopio} variant="neutral" />
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-700">{r.productora}</td>
+                                        <td className="px-3 py-2.5 text-gray-600">{r.comunidad}</td>
+                                        <td className="px-3 py-2.5 text-center font-bold text-primary-700">
+                                            {r.cantidadEnEspera}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                                            {new Date(r.fechaLlegada).toLocaleDateString("es-EC")}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            )}
+
+            {/* Tab: Tránsito — lotes faenados completos */}
+            {tab === "transito" && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                    {loadingTransito ? (
+                        <div className="p-8 text-center text-sm text-gray-400">
+                            Cargando reporte...
+                        </div>
+                    ) : transitoData.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-gray-400">
+                            No hay lotes faenados en el período.
+                        </div>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    {["Lote faenado", "Fecha", "Operario", "Jaulas de origen",
+                                        "Comunidades", "Unidades", "Peso prom.", "Estado"].map(h => (
+                                            <th key={h} className="px-3 py-3 text-left text-xs
+                                     font-medium text-gray-500 uppercase tracking-wide
+                                     whitespace-nowrap">{h}</th>
+                                        ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {transitoData.map((r) => (
+                                    <tr key={r.codigoLoteFaenado} className="hover:bg-gray-50">
+                                        <td className="px-3 py-2.5 font-mono text-xs font-bold
+                                       text-primary-800">
+                                            {r.codigoLoteFaenado}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                                            {new Date(r.fechaFaenamiento).toLocaleDateString("es-EC")}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-700">{r.operario}</td>
+                                        <td className="px-3 py-2.5 font-mono text-xs text-gray-600">
+                                            {r.jaulasOrigen}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-600">{r.comunidades}</td>
+                                        <td className="px-3 py-2.5 text-center">{r.unidades}</td>
+                                        <td className="px-3 py-2.5 text-gray-600">
+                                            {r.pesoPromedioGramos}g
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <Badge label={r.estado}
+                                                variant={r.estado === "Apto" ? "success"
+                                                    : r.estado === "Rechazado" ? "danger"
+                                                        : "warning"} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            )}
+
+            {/* Tab: Salida — despachos con chofer/ruta/cliente */}
+            {tab === "salida" && (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                    {loadingSalida ? (
+                        <div className="p-8 text-center text-sm text-gray-400">
+                            Cargando reporte...
+                        </div>
+                    ) : salidaData.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-gray-400">
+                            No hay despachos en el período.
+                        </div>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    {["Lote faenado", "Fecha", "Cliente", "Chofer", "Ruta",
+                                        "Unidades", "Responsable"].map(h => (
+                                            <th key={h} className="px-3 py-3 text-left text-xs
+                                     font-medium text-gray-500 uppercase tracking-wide
+                                     whitespace-nowrap">{h}</th>
+                                        ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {salidaData.map((r, i) => (
+                                    <tr key={`${r.codigoLoteFaenado}-${i}`} className="hover:bg-gray-50">
+                                        <td className="px-3 py-2.5 font-mono text-xs font-bold
+                                       text-primary-800">
+                                            {r.codigoLoteFaenado}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                                            {new Date(r.fechaDespacho).toLocaleDateString("es-EC")}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-gray-700">{r.cliente}</td>
+                                        <td className="px-3 py-2.5 text-gray-600">{r.chofer}</td>
+                                        <td className="px-3 py-2.5 text-gray-600">{r.ruta}</td>
+                                        <td className="px-3 py-2.5 text-center">{r.unidades}</td>
+                                        <td className="px-3 py-2.5 text-gray-600">{r.responsable}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            )}
 
             {/* Tab: Por productora */}
             {tab === "productoras" && !loadingProd && prodData.length > 0 && (

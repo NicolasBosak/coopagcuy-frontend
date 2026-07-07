@@ -30,7 +30,8 @@ export interface RegistrarPagoRequest {
     loteId?: number;
     montoUsd: number;
     fechaPago: string;
-    metodoPago: string;
+    metodoPago: string;          // "Contado" | "Credito"
+    numeroLetras?: number;       // solo crédito
     responsable: string;
     observaciones?: string;
 }
@@ -44,6 +45,8 @@ export interface Pago {
     montoUsd: number;
     fechaPago: string;
     metodoPago: string;
+    numeroLetras: number | null;
+    valorPorLetra: number | null;
     responsable: string;
     observaciones: string | null;
 }

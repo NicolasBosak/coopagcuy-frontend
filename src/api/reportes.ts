@@ -1,7 +1,7 @@
 import client from "./client";
 import type {
     Dashboard, ReporteProductora, ReporteCAT, ReporteNovedad,
-    ReporteDevoluciones,
+    ReporteDevoluciones, ReporteEntrada, ReporteTransito, ReporteSalida,
 } from "../types/reportes";
 
 interface FiltroPeriodo {
@@ -85,6 +85,41 @@ export const reportesApi = {
             `/api/reportes/exportar/pdf/lote/${codigoLote}`,
             { responseType: "blob" }
         );
+        return data;
+    },
+
+    // ── Flujo de trazabilidad: Entrada / Tránsito / Salida ────────────
+    entrada: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteEntrada[]>(
+            "/api/reportes/entrada", { params: filtro });
+        return data;
+    },
+    transito: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteTransito[]>(
+            "/api/reportes/transito", { params: filtro });
+        return data;
+    },
+    salida: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<ReporteSalida[]>(
+            "/api/reportes/salida", { params: filtro });
+        return data;
+    },
+    exportarExcelEntrada: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/entrada",
+            { params: filtro, responseType: "blob" });
+        return data;
+    },
+    exportarExcelTransito: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/transito",
+            { params: filtro, responseType: "blob" });
+        return data;
+    },
+    exportarExcelSalida: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/salida",
+            { params: filtro, responseType: "blob" });
         return data;
     },
 };

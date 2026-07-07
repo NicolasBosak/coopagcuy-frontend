@@ -22,7 +22,8 @@ export function FormDespacho({ onClose }: Props) {
     const [clienteDestino, setClienteDestino] = useState("");
     const [fechaDespacho, setFechaDespacho] = useState(hoy);
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
-    const [transporte, setTransporte] = useState("");
+    const [chofer, setChofer] = useState("");
+    const [ruta, setRuta] = useState("");
     const [observaciones, setObservaciones] = useState("");
     const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +48,8 @@ export function FormDespacho({ onClose }: Props) {
             clienteDestino,
             fechaDespacho,
             responsable,
-            transporte: transporte || undefined,
+            chofer: chofer || undefined,
+            ruta: ruta || undefined,
             observaciones: observaciones || undefined,
         }),
         onSuccess: () => {
@@ -204,16 +206,33 @@ export function FormDespacho({ onClose }: Props) {
                     />
                 </div>
 
+                <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide
+                          text-gray-500 mb-1">
+                        Fecha
+                    </label>
+                    <input
+                        type="datetime-local" required
+                        value={fechaDespacho}
+                        onChange={(e) => setFechaDespacho(e.target.value)}
+                        className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
+                       text-sm focus:border-primary-500 focus:outline-none"
+                    />
+                </div>
+
+                {/* Transporte de salida: aparece en el reporte de Salida */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
                               text-gray-500 mb-1">
-                            Fecha
+                            Chofer
+                            <span className="text-gray-300 normal-case"> (opcional)</span>
                         </label>
                         <input
-                            type="datetime-local" required
-                            value={fechaDespacho}
-                            onChange={(e) => setFechaDespacho(e.target.value)}
+                            type="text"
+                            value={chofer}
+                            onChange={(e) => setChofer(e.target.value)}
+                            placeholder="Nombre del chofer"
                             className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                            text-sm focus:border-primary-500 focus:outline-none"
                         />
@@ -221,14 +240,14 @@ export function FormDespacho({ onClose }: Props) {
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
                               text-gray-500 mb-1">
-                            Transporte
+                            Ruta
                             <span className="text-gray-300 normal-case"> (opcional)</span>
                         </label>
                         <input
                             type="text"
-                            value={transporte}
-                            onChange={(e) => setTransporte(e.target.value)}
-                            placeholder="Camioneta, placa…"
+                            value={ruta}
+                            onChange={(e) => setRuta(e.target.value)}
+                            placeholder="Ej: Santa Isabel → Cuenca"
                             className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                            text-sm focus:border-primary-500 focus:outline-none"
                         />

@@ -10,7 +10,10 @@ interface Props {
     onClose: () => void;
 }
 
-const METODOS = ["Efectivo", "Transferencia"];
+const METODOS: { value: string; label: string }[] = [
+    { value: "Contado", label: "💵 Efectivo al contado" },
+    { value: "Credito", label: "🧾 Pago a crédito" },
+];
 
 // Registro digital de pago a productora (antes cuaderno manual)
 export function FormPago({ onClose }: Props) {
@@ -23,11 +26,18 @@ export function FormPago({ onClose }: Props) {
         loteId: undefined,
         montoUsd: 0,
         fechaPago: hoy,
-        metodoPago: "Efectivo",
+        metodoPago: "Contado",
+        numeroLetras: 2,
         responsable: auth.nombreCompleto ?? "",
         observaciones: "",
     });
     const [error, setError] = useState<string | null>(null);
+
+    const esCredito = form.metodoPago === "Credito";
+    // Valor de cada letra: se muestra en vivo; el backend lo recalcula
+    const valorPorLetra = esCredito && form.numeroLetras && form.montoUsd > 0
+        ? form.montoUsd / form.numeroLetras
+        : 0;
 
     const { data: productoras = [] } = useQuery({
         queryKey: ["productoras"],
@@ -44,7 +54,10 @@ export function FormPago({ onClose }: Props) {
         (l) => l.productoraId === form.productoraId);
 
     const mutation = useMutation({
-        mutationFn: () => pagosApi.registrar(form),
+        mutationFn: () => pagosApi.registrar({
+            ...form,
+            numeroLetras: esCredito ? form.numeroLetras : undefined,
+        }),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["pagos"] });
             onClose();
@@ -183,20 +196,57 @@ export function FormPago({ onClose }: Props) {
                         <div className="grid grid-cols-2 gap-2">
                             {METODOS.map((m) => (
                                 <button
-                                    key={m}
+                                    key={m.value}
                                     type="button"
-                                    onClick={() => setForm({ ...form, metodoPago: m })}
+                                    onClick={() => setForm({ ...form, metodoPago: m.value })}
                                     className={`h-12 rounded-xl border-2 text-sm font-semibold
                               transition active:scale-[0.97]
-                              ${form.metodoPago === m
+                              ${form.metodoPago === m.value
                                             ? "border-primary-600 bg-primary-50 text-primary-800"
                                             : "border-gray-200 bg-white text-gray-600"}`}
                                 >
-                                    {m === "Efectivo" ? "💵 Efectivo" : "🏦 Transferencia"}
+                                    {m.label}
                                 </button>
                             ))}
                         </div>
                     </div>
+
+                    {/* Diferido en letras: solo para pago a crédito */}
+                    {esCredito && (
+                        <div className="grid grid-cols-2 gap-3 animate-fade-in">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wide
+                                  text-gray-500 mb-1">
+                                    ¿En cuántas letras?
+                                </label>
+                                <select
+                                    value={form.numeroLetras ?? 2}
+                                    onChange={(e) => setForm({
+                                        ...form, numeroLetras: Number(e.target.value),
+                                    })}
+                                    className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
+                               text-sm focus:border-primary-500 focus:outline-none"
+                                >
+                                    {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => (
+                                        <option key={n} value={n}>{n} letras</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wide
+                                  text-gray-500 mb-1">
+                                    Valor por letra
+                                </label>
+                                <div className="h-11 px-3 rounded-xl border-2 border-primary-100
+                                    bg-primary-50 flex items-center text-base font-bold
+                                    text-primary-800">
+                                    {valorPorLetra > 0
+                                        ? `$${valorPorLetra.toFixed(2)}`
+                                        : "—"}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide

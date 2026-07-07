@@ -49,7 +49,7 @@ export default function Despacho() {
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 {["Lote faenado", "Cliente destino", "Fecha",
-                                    "Unidades", "Responsable", "Transporte"].map(h => (
+                                    "Unidades", "Responsable", "Chofer / Ruta"].map(h => (
                                         <th key={h}
                                             className="px-4 py-3 text-left text-xs font-bold
                                  text-gray-500 uppercase tracking-wide">
@@ -87,7 +87,16 @@ export default function Despacho() {
                                         {d.responsable}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">
-                                        {d.transporte ?? (
+                                        {d.chofer || d.ruta ? (
+                                            <>
+                                                {d.chofer ?? "—"}
+                                                {d.ruta && (
+                                                    <span className="block text-xs text-gray-400">
+                                                        {d.ruta}
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : (
                                             <span className="text-gray-300">—</span>
                                         )}
                                     </td>

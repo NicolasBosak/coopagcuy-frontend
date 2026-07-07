@@ -6,9 +6,16 @@ import type {
 import type { ProductoraCambio } from "../types/admin";
 
 export const productorasApi = {
-    listar: async (params?: { comunidad?: string; cat?: string }) => {
+    listar: async (params?: {
+        comunidad?: string; cat?: string; incluirInactivas?: boolean;
+    }) => {
         const { data } = await client.get<Productora[]>("/api/productoras", { params });
         return data;
+    },
+
+    // Baja/alta lógica (conserva el historial)
+    cambiarEstado: async (id: number, activa: boolean) => {
+        await client.patch(`/api/productoras/${id}/estado`, { activa });
     },
 
     obtenerPorId: async (id: number) => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productorasApi } from "../api/productoras";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
@@ -9,6 +9,7 @@ import { CENTROS_ACOPIO, type CentroAcopio, type Productora } from "../types/pro
 
 export default function Productoras() {
     const { auth } = useAuth();
+    const qc = useQueryClient();
     const esAdmin = auth.rol === "AdminCooperativa" || auth.rol === "AdminTecnico";
     // El operador de CAT solo ve su centro; el backend ya lo fuerza
     const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
@@ -19,10 +20,18 @@ export default function Productoras() {
     const [filtroBusq, setFiltroBusq] = useState("");
 
     const { data = [], isLoading } = useQuery({
-        queryKey: ["productoras", filtroCat],
-        queryFn: () => productorasApi.listar(
-            filtroCat ? { cat: filtroCat } : undefined
-        ),
+        queryKey: ["productoras", filtroCat, esAdmin],
+        // El admin ve también las inactivas para poder reactivarlas
+        queryFn: () => productorasApi.listar({
+            cat: filtroCat || undefined,
+            incluirInactivas: esAdmin,
+        }),
+    });
+
+    const toggleEstado = useMutation({
+        mutationFn: ({ id, activa }: { id: number; activa: boolean }) =>
+            productorasApi.cambiarEstado(id, activa),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ["productoras"] }),
     });
 
     const filtradas = data.filter((p) =>
@@ -141,18 +150,31 @@ export default function Productoras() {
                                             variant={p.activa ? "success" : "danger"}
                                         />
                                     </td>
-                                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                                    <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
                                         {esAdmin && (
-                                            <button
-                                                onClick={() => {
-                                                    setProductoraEditar(p);
-                                                    setShowForm(true);
-                                                }}
-                                                className="text-xs font-semibold text-primary-600
-                                   hover:text-primary-800"
-                                            >
-                                                Editar
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        setProductoraEditar(p);
+                                                        setShowForm(true);
+                                                    }}
+                                                    className="text-xs font-semibold text-primary-600
+                                       hover:text-primary-800"
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleEstado.mutate({
+                                                        id: p.id, activa: !p.activa,
+                                                    })}
+                                                    className={`text-xs font-semibold
+                                        ${p.activa
+                                                            ? "text-teja-500 hover:text-teja-700"
+                                                            : "text-primary-600 hover:text-primary-800"}`}
+                                                >
+                                                    {p.activa ? "Desactivar" : "Activar"}
+                                                </button>
+                                            </>
                                         )}
                                     </td>
                                 </tr>

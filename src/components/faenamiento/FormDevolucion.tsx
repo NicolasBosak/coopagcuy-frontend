@@ -148,8 +148,8 @@ export function FormDevolucion({ onClose }: Props) {
                         </p>
                         <p className="text-xs text-gray-400">
                             Registrado al momento del despacho
-                            {despachoElegido.transporte &&
-                                ` · ${despachoElegido.transporte}`}
+                            {despachoElegido.chofer &&
+                                ` · chofer ${despachoElegido.chofer}`}
                         </p>
                     </div>
                 )}
