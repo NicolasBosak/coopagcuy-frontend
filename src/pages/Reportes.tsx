@@ -327,7 +327,7 @@ export default function Reportes() {
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     {["Lote faenado", "Fecha", "Cliente", "Chofer", "Ruta",
-                                        "Unidades", "Responsable"].map(h => (
+                                        "Mercado", "Unidades", "Responsable"].map(h => (
                                             <th key={h} className="px-3 py-3 text-left text-xs
                                      font-medium text-gray-500 uppercase tracking-wide
                                      whitespace-nowrap">{h}</th>
@@ -347,6 +347,17 @@ export default function Reportes() {
                                         <td className="px-3 py-2.5 text-gray-700">{r.cliente}</td>
                                         <td className="px-3 py-2.5 text-gray-600">{r.chofer}</td>
                                         <td className="px-3 py-2.5 text-gray-600">{r.ruta}</td>
+                                        <td className="px-3 py-2.5">
+                                            <Badge label={r.tipoMercado}
+                                                variant={r.tipoMercado === "Internacional" ? "warning"
+                                                    : r.tipoMercado === "Nacional" ? "neutral"
+                                                        : "success"} />
+                                            {r.ubicacion !== "—" && (
+                                                <span className="block text-xs text-gray-400 mt-0.5">
+                                                    {r.ubicacion}
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="px-3 py-2.5 text-center">{r.unidades}</td>
                                         <td className="px-3 py-2.5 text-gray-600">{r.responsable}</td>
                                     </tr>

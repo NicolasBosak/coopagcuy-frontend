@@ -111,6 +111,8 @@ export interface ReporteSalida {
     cliente: string;
     chofer: string;
     ruta: string;
+    tipoMercado: string;
+    ubicacion: string;
     unidades: number;
     responsable: string;
 }

@@ -87,6 +87,10 @@ export interface RegistrarDespachoRequest {
     // Datos del transporte de salida
     chofer?: string;
     ruta?: string;
+    // Mercado de destino
+    tipoMercado: string;         // "Local" | "Nacional" | "Internacional"
+    ciudad?: string;
+    pais?: string;
     observaciones?: string;
 }
 
@@ -150,6 +154,9 @@ export interface Despacho {
     responsable: string;
     chofer: string | null;
     ruta: string | null;
+    tipoMercado: string;
+    ciudad: string | null;
+    pais: string | null;
     observaciones: string | null;
     cuyes: { codigoJaula: string; numeroEnLote: number }[];
 }
@@ -187,9 +194,14 @@ export interface PaginaPublica {
     pesoPromedioCanalGramos: number;
     estadoCanal: string;
     marca: string;
+    // Transporte CAT → Centro de Faenamiento
+    fechaSalidaCat: string | null;
+    fechaLlegadaPlanta: string | null;
     // Trazabilidad hacia adelante
     fechaComercializacion: string | null;
     destinoComercial: string | null;
+    tipoMercado: string | null;
+    ubicacionMercado: string | null;
     // Novedades registradas en planta sobre los animales faenados
     observacionesProceso: string[];
     // Comunidades que aportaron animales, con su cantidad

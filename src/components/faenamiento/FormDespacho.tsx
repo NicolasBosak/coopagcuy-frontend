@@ -24,6 +24,9 @@ export function FormDespacho({ onClose }: Props) {
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
     const [chofer, setChofer] = useState("");
     const [ruta, setRuta] = useState("");
+    const [tipoMercado, setTipoMercado] = useState("Local");
+    const [ciudad, setCiudad] = useState("");
+    const [pais, setPais] = useState("");
     const [observaciones, setObservaciones] = useState("");
     const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +53,9 @@ export function FormDespacho({ onClose }: Props) {
             responsable,
             chofer: chofer || undefined,
             ruta: ruta || undefined,
+            tipoMercado,
+            ciudad: ciudad || undefined,
+            pais: pais || undefined,
             observaciones: observaciones || undefined,
         }),
         onSuccess: () => {
@@ -248,6 +254,49 @@ export function FormDespacho({ onClose }: Props) {
                             value={ruta}
                             onChange={(e) => setRuta(e.target.value)}
                             placeholder="Ej: Santa Isabel → Cuenca"
+                            className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
+                           text-sm focus:border-primary-500 focus:outline-none"
+                        />
+                    </div>
+                </div>
+
+                {/* Mercado de destino: alimenta la trazabilidad hacia adelante */}
+                <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide
+                          text-gray-500 mb-1">
+                        Mercado de destino
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                        {["Local", "Nacional", "Internacional"].map((m) => (
+                            <button
+                                key={m}
+                                type="button"
+                                onClick={() => setTipoMercado(m)}
+                                className={`h-11 rounded-xl border-2 text-sm font-semibold
+                              transition active:scale-[0.97]
+                              ${tipoMercado === m
+                                        ? "border-primary-600 bg-primary-50 text-primary-800"
+                                        : "border-gray-200 bg-white text-gray-600"}`}
+                            >
+                                {m}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                        <input
+                            type="text"
+                            value={ciudad}
+                            onChange={(e) => setCiudad(e.target.value)}
+                            placeholder="Ciudad (ej. Cuenca)"
+                            className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
+                           text-sm focus:border-primary-500 focus:outline-none"
+                        />
+                        <input
+                            type="text"
+                            value={pais}
+                            onChange={(e) => setPais(e.target.value)}
+                            placeholder={tipoMercado === "Internacional"
+                                ? "País (ej. Perú)" : "País (opcional)"}
                             className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                            text-sm focus:border-primary-500 focus:outline-none"
                         />

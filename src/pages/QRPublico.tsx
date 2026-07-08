@@ -202,6 +202,40 @@ export default function QRPublico() {
                     </div>
                 )}
 
+                {/* Transporte CAT → Centro de Faenamiento */}
+                {(data.fechaSalidaCat || data.fechaLlegadaPlanta) && (
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                        <p className="text-xs font-medium text-primary-700 uppercase
+                          tracking-wide mb-3">
+                            Transporte al centro de faenamiento
+                        </p>
+                        <div className="space-y-2 text-sm">
+                            {data.fechaSalidaCat && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Salida del centro de acopio</span>
+                                    <span className="text-gray-800 font-medium">
+                                        {new Date(data.fechaSalidaCat)
+                                            .toLocaleDateString("es-EC", {
+                                                day: "2-digit", month: "long", year: "numeric"
+                                            })}
+                                    </span>
+                                </div>
+                            )}
+                            {data.fechaLlegadaPlanta && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Llegada a planta</span>
+                                    <span className="text-gray-800 font-medium">
+                                        {new Date(data.fechaLlegadaPlanta)
+                                            .toLocaleDateString("es-EC", {
+                                                day: "2-digit", month: "long", year: "numeric"
+                                            })}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Comercialización — trazabilidad hacia adelante */}
                 {data.fechaComercializacion && (
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -219,6 +253,16 @@ export default function QRPublico() {
                                         })}
                                 </span>
                             </div>
+                            {data.tipoMercado && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Mercado</span>
+                                    <span className="text-gray-800 font-medium text-right
+                                   max-w-[60%]">
+                                        {data.tipoMercado}
+                                        {data.ubicacionMercado && ` · ${data.ubicacionMercado}`}
+                                    </span>
+                                </div>
+                            )}
                             {data.destinoComercial && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-500">Destino</span>
