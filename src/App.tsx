@@ -63,7 +63,9 @@ export default function App() {
             } />
 
             <Route path="/reportes" element={
-              <PrivateRoute rolesPermitidos={["AdminCooperativa", "AdminTecnico"]}>
+              <PrivateRoute rolesPermitidos={[
+                "AdminCooperativa", "AdminTecnico", "OperadorFaenamiento"
+              ]}>
                 <Reportes />
               </PrivateRoute>
             } />
