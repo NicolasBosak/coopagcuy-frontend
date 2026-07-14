@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi, pagosApi } from "../../api/productoras";
-import { recepcionApi } from "../../api/recepcion";
 import { useAuth } from "../../context/AuthContext";
 import { ModalShell } from "../ui/ModalShell";
 import type { RegistrarPagoRequest } from "../../types/productora";
@@ -19,24 +18,21 @@ const METODOS: { value: string; label: string }[] = [
 export function FormPago({ onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
-    const hoy = new Date().toISOString().slice(0, 16);
-
     const [form, setForm] = useState<RegistrarPagoRequest>({
         productoraId: 0,
         loteId: undefined,
         montoUsd: 0,
-        fechaPago: hoy,
         metodoPago: "Contado",
-        numeroLetras: 2,
+        numeroDias: 2,
         responsable: auth.nombreCompleto ?? "",
         observaciones: "",
     });
     const [error, setError] = useState<string | null>(null);
 
     const esCredito = form.metodoPago === "Credito";
-    // Valor de cada letra: se muestra en vivo; el backend lo recalcula
-    const valorPorLetra = esCredito && form.numeroLetras && form.montoUsd > 0
-        ? form.montoUsd / form.numeroLetras
+    // Valor de cada día: se muestra en vivo; el backend lo recalcula
+    const valorPorDia = esCredito && form.numeroDias && form.montoUsd > 0
+        ? form.montoUsd / form.numeroDias
         : 0;
 
     const { data: productoras = [] } = useQuery({
@@ -44,22 +40,23 @@ export function FormPago({ onClose }: Props) {
         queryFn: () => productorasApi.listar(),
     });
 
-    const { data: lotes = [] } = useQuery({
-        queryKey: ["lotes"],
-        queryFn: () => recepcionApi.listarLotes(),
+    // Solo lo que se le debe a esta productora: el servidor ya descarta los
+    // lotes que ella tiene pagados y resuelve las jaulas compartidas
+    const { data: lotesPendientes = [], isLoading: cargandoLotes } = useQuery({
+        queryKey: ["lotes_pendientes_pago", form.productoraId],
+        queryFn: () => pagosApi.lotesPendientes(form.productoraId),
+        enabled: form.productoraId > 0,
     });
-
-    // Solo lotes de la productora elegida
-    const lotesDeProductora = lotes.filter(
-        (l) => l.productoraId === form.productoraId);
 
     const mutation = useMutation({
         mutationFn: () => pagosApi.registrar({
             ...form,
-            numeroLetras: esCredito ? form.numeroLetras : undefined,
+            numeroDias: esCredito ? form.numeroDias : undefined,
         }),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["pagos"] });
+            // El lote recién pagado debe desaparecer del selector
+            qc.invalidateQueries({ queryKey: ["lotes_pendientes_pago"] });
             onClose();
         },
         onError: (e: unknown) => {
@@ -132,7 +129,7 @@ export function FormPago({ onClose }: Props) {
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
                             text-gray-500 mb-1">
-                            Lote relacionado (opcional)
+                            Lote pendiente de pago (opcional)
                         </label>
                         <select
                             value={form.loteId ?? 0}
@@ -146,12 +143,21 @@ export function FormPago({ onClose }: Props) {
                          disabled:bg-gray-50 disabled:text-gray-400"
                         >
                             <option value={0}>Sin lote específico</option>
-                            {lotesDeProductora.map((l) => (
-                                <option key={l.id} value={l.id}>
-                                    {l.codigoLote} ({l.cantidadAnimales} cuyes)
+                            {/* Solo lo que se le debe: el lote ya pagado no
+                                aparece. La cantidad es su aporte a la jaula,
+                                no el total, porque la jaula puede ser de varias. */}
+                            {lotesPendientes.map((l) => (
+                                <option key={l.loteId} value={l.loteId}>
+                                    {l.codigoLote} ({l.cuyesEntregados} cuyes suyos)
                                 </option>
                             ))}
                         </select>
+                        {form.productoraId > 0 && !cargandoLotes
+                            && lotesPendientes.length === 0 && (
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Esta productora no tiene lotes pendientes de pago.
+                                </p>
+                            )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -178,13 +184,10 @@ export function FormPago({ onClose }: Props) {
                               text-gray-500 mb-1">
                                 Fecha del pago
                             </label>
-                            <input
-                                type="datetime-local" required
-                                value={form.fechaPago}
-                                onChange={(e) => setForm({ ...form, fechaPago: e.target.value })}
-                                className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
-                           text-sm focus:border-primary-500 focus:outline-none"
-                            />
+                            <div className="w-full h-11 px-3 rounded-xl border-2 border-gray-100
+                                    bg-gray-50 text-sm text-gray-500 flex items-center">
+                                Se registra automáticamente
+                            </div>
                         </div>
                     </div>
 
@@ -211,37 +214,37 @@ export function FormPago({ onClose }: Props) {
                         </div>
                     </div>
 
-                    {/* Diferido en letras: solo para pago a crédito */}
+                    {/* Diferido en días: solo para pago a crédito */}
                     {esCredito && (
                         <div className="grid grid-cols-2 gap-3 animate-fade-in">
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-wide
                                   text-gray-500 mb-1">
-                                    ¿En cuántas letras?
+                                    ¿En cuántos días?
                                 </label>
                                 <select
-                                    value={form.numeroLetras ?? 2}
+                                    value={form.numeroDias ?? 2}
                                     onChange={(e) => setForm({
-                                        ...form, numeroLetras: Number(e.target.value),
+                                        ...form, numeroDias: Number(e.target.value),
                                     })}
                                     className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                                text-sm focus:border-primary-500 focus:outline-none"
                                 >
                                     {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => (
-                                        <option key={n} value={n}>{n} letras</option>
+                                        <option key={n} value={n}>{n} días</option>
                                     ))}
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-wide
                                   text-gray-500 mb-1">
-                                    Valor por letra
+                                    Valor por día
                                 </label>
                                 <div className="h-11 px-3 rounded-xl border-2 border-primary-100
                                     bg-primary-50 flex items-center text-base font-bold
                                     text-primary-800">
-                                    {valorPorLetra > 0
-                                        ? `$${valorPorLetra.toFixed(2)}`
+                                    {valorPorDia > 0
+                                        ? `$${valorPorDia.toFixed(2)}`
                                         : "—"}
                                 </div>
                             </div>

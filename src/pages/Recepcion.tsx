@@ -390,10 +390,10 @@ export default function Recepcion() {
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {p.metodoPago}
-                                                {p.numeroLetras && p.valorPorLetra && (
+                                                {p.numeroDias && p.valorPorDia && (
                                                     <span className="block text-xs text-gray-400">
-                                                        {p.numeroLetras} letras · $
-                                                        {p.valorPorLetra.toFixed(2)} c/u
+                                                        {p.numeroDias} días · $
+                                                        {p.valorPorDia.toFixed(2)} c/u
                                                     </span>
                                                 )}
                                             </td>

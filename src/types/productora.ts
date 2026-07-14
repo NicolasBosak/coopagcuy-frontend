@@ -2,6 +2,8 @@ export interface Productora {
     id: number;
     nombreCompleto: string;
     cedula: string;
+    comunidadId: number;
+    // Nombre y cantón resueltos desde el catálogo (solo lectura)
     comunidad: string;
     canton: string;
     catAsignado: string;
@@ -15,8 +17,8 @@ export interface Productora {
 export interface CrearProductoraRequest {
     nombreCompleto: string;
     cedula: string;
-    comunidad: string;
-    canton: string;
+    // Comunidad del catálogo; el cantón se deriva de ella en el servidor
+    comunidadId: number;
     catAsignado: string;
     telefono?: string;
 }
@@ -25,13 +27,13 @@ export type CentroAcopio = "PAT" | "NIE" | "HUE" | "NAB" | "PEL";
 
 // ── Pagos a productoras (registro digital) ────────────────────────────
 
+// La fecha del pago la sella el servidor al registrarlo
 export interface RegistrarPagoRequest {
     productoraId: number;
     loteId?: number;
     montoUsd: number;
-    fechaPago: string;
     metodoPago: string;          // "Contado" | "Credito"
-    numeroLetras?: number;       // solo crédito
+    numeroDias?: number;         // solo crédito
     responsable: string;
     observaciones?: string;
 }
@@ -45,10 +47,21 @@ export interface Pago {
     montoUsd: number;
     fechaPago: string;
     metodoPago: string;
-    numeroLetras: number | null;
-    valorPorLetra: number | null;
+    numeroDias: number | null;
+    valorPorDia: number | null;
     responsable: string;
     observaciones: string | null;
+}
+
+// Lote por el que aún se le debe pagar a una productora. Cantidad y peso son
+// el aporte de esa productora a la jaula, no el total de la jaula.
+export interface LotePendientePago {
+    loteId: number;
+    codigoLote: string;
+    centroAcopio: string;
+    fechaRecepcion: string;
+    cuyesEntregados: number;
+    pesoEntregadoGramos: number;
 }
 
 export const CENTROS_ACOPIO: { value: CentroAcopio; label: string }[] = [

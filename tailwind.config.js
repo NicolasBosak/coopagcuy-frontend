@@ -39,6 +39,15 @@ export default {
                     700: "#8e2a20",
                 },
                 tierra: "#7a5230",
+                // Azul informativo: avisos que NO rechazan al animal ni exigen
+                // una acción, como el sobrepeso (>1300 g). Deliberadamente
+                // fuera de la escala ámbar→rojo, que significa "algo va mal".
+                info: {
+                    50: "#eef4fb",
+                    100: "#d6e5f6",
+                    500: "#2f6fb0",
+                    700: "#1f4b78",
+                },
             },
             animation: {
                 "fade-in-up": "fadeInUp 0.35s ease-out both",

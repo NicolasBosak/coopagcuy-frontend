@@ -122,4 +122,12 @@ export const reportesApi = {
             { params: filtro, responseType: "blob" });
         return data;
     },
+
+    // Todos los dashboards en un libro, una hoja por cada uno
+    exportarExcelGeneral: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/general",
+            { params: filtro, responseType: "blob" });
+        return data;
+    },
 };

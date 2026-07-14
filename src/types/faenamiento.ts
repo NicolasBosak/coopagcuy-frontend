@@ -39,8 +39,8 @@ export interface CuyDisponible {
     comunidad: string | null;
 }
 
+// La fecha de la sesión la sella el servidor al registrarla
 export interface RegistrarFaenamientoBatchRequest {
-    fechaFaenamiento: string;
     operarioResponsable: string;
     temperaturaAlmacenamiento?: number;
     observaciones?: string;
@@ -82,6 +82,8 @@ export interface RegistrarDespachoRequest {
     // Animales específicos que se envían
     cuyFaenamientoIds: number[];
     clienteDestino: string;
+    // Único registro que se agenda: admite fecha futura, nunca pasada.
+    // Se envía en ISO-8601 UTC.
     fechaDespacho: string;
     responsable: string;
     // Datos del transporte de salida

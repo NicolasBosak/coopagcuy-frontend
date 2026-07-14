@@ -60,38 +60,49 @@ const CUY_INICIAL: CuyRegistro = {
     signosClinicos: "",
 };
 
+type NivelCuy = "ok" | "sobrepeso" | "novedad" | "rechazo";
+
 // Evaluación local por animal: espejo de las reglas del backend
-// (SRS Apéndice 5.1 + rango operativo 875–1300 g)
+// (SRS Apéndice 5.1 + rango operativo 875–1300 g).
+//
+// "sobrepeso" es su propio nivel y no una novedad más: el animal está sano y
+// se acepta, solo queda fuera del rango comercial. Mezclarlo con el bajo peso
+// bajo el mismo ámbar hacía que la operadora leyera "problema" en los dos.
+// Un nivel posterior solo sube (ok → sobrepeso → novedad → rechazo).
+const ORDEN: NivelCuy[] = ["ok", "sobrepeso", "novedad", "rechazo"];
+const subir = (actual: NivelCuy, nuevo: NivelCuy): NivelCuy =>
+    ORDEN.indexOf(nuevo) > ORDEN.indexOf(actual) ? nuevo : actual;
+
 function evaluarCuy(c: CuyRegistro): {
-    nivel: "ok" | "novedad" | "rechazo" | null;
+    nivel: NivelCuy | null;
     motivos: string[];
 } {
     if (c.pesoGramos <= 0) return { nivel: null, motivos: [] };
 
     const motivos: string[] = [];
-    let nivel: "ok" | "novedad" | "rechazo" = "ok";
+    let nivel: NivelCuy = "ok";
 
     if (c.pesoGramos < 850) {
-        nivel = "rechazo";
+        nivel = subir(nivel, "rechazo");
         motivos.push("peso bajo el mínimo (850 g)");
     } else if (c.pesoGramos < 875) {
-        nivel = "novedad";
+        nivel = subir(nivel, "novedad");
         motivos.push("peso justo (850–874 g)");
     } else if (c.pesoGramos > 1300) {
-        nivel = "novedad";
+        nivel = subir(nivel, "sobrepeso");
         motivos.push("peso sobre 1300 g");
     }
 
     if (c.colorPelaje === "Negro") {
-        if (nivel === "ok") nivel = "novedad";
+        nivel = subir(nivel, "novedad");
         motivos.push("piel negra");
     }
     if (c.estadoOreja === "Dura") {
-        if (nivel === "ok") nivel = "novedad";
+        nivel = subir(nivel, "novedad");
         motivos.push("oreja dura");
     }
     if (c.signosClinicos?.trim()) {
-        if (nivel === "ok") nivel = "novedad";
+        nivel = subir(nivel, "novedad");
         motivos.push("signos clínicos");
     }
 
@@ -107,7 +118,6 @@ function uuid() {
 
 export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const { auth } = useAuth();
-    const hoy = new Date().toISOString().slice(0, 16);
 
     const [paso, setPaso] = useState(1);
     const [busqueda, setBusqueda] = useState("");
@@ -120,7 +130,6 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const [productoraId, setProductoraId] = useState(0);
     const [centroAcopio, setCentroAcopio] = useState<CentroAcopio>(
         catFijo ?? "PAT");
-    const [fechaRecepcion, setFechaRecepcion] = useState(hoy);
     const [cantidad, setCantidad] = useState(1);
     const [enAyunas, setEnAyunas] = useState(true);
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
@@ -173,6 +182,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const evaluaciones = cuyes.map(evaluarCuy);
     const conNovedad = evaluaciones.filter((e) => e.nivel === "novedad").length;
     const rechazados = evaluaciones.filter((e) => e.nivel === "rechazo").length;
+    const conSobrepeso = evaluaciones.filter((e) => e.nivel === "sobrepeso").length;
     const pesoTotal = cuyes.reduce((acc, c) => acc + (c.pesoGramos || 0), 0);
     const pesoPromedio = cuyes.length > 0 ? Math.round(pesoTotal / cuyes.length) : 0;
 
@@ -194,7 +204,6 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const construirRequest = (): RegistrarEntregaRequest => ({
         centroAcopio,
         productoraId,
-        fechaEntrega: fechaRecepcion,
         enAyunas,
         responsableRecepcion: responsable,
         observaciones,
@@ -210,10 +219,15 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
         try {
             const request = construirRequest();
             if (isOnline) {
+                // En línea el servidor sella la fecha: no se envía ninguna
                 await recepcionApi.registrarEntrega(request);
             } else {
                 const entregaOffline: EntregaOffline = {
                     ...request,
+                    // Sin señal no hay reloj del servidor: se sella aquí el
+                    // momento real de la recepción. Si esperáramos al sync,
+                    // la entrega quedaría fechada el día que hubo cobertura.
+                    fechaCapturaOffline: new Date().toISOString(),
                     sincronizadoOffline: true,
                     dispositivoId: localStorage.getItem("dispositivo_id")
                         ?? `tab-${Date.now()}`,
@@ -262,6 +276,11 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
 
     const semaforoCuy = evalCuy.nivel === null ? null : {
         ok: { color: "bg-primary-600", texto: "Cuy correcto" },
+        // Azul: se acepta igual, solo avisa que sale del rango comercial
+        sobrepeso: {
+            color: "bg-info-500",
+            texto: `Se acepta, fuera de rango: ${evalCuy.motivos.join(", ")}`,
+        },
         novedad: { color: "bg-bayo-500", texto: `Con observación: ${evalCuy.motivos.join(", ")}` },
         rechazo: { color: "bg-teja-500", texto: `Será RECHAZADO: ${evalCuy.motivos.join(", ")}` },
     }[evalCuy.nivel];
@@ -377,14 +396,14 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                       tracking-wide text-gray-500 mb-1">
                                             Fecha y hora
                                         </label>
-                                        <input
-                                            type="datetime-local"
-                                            value={fechaRecepcion}
-                                            onChange={(e) => setFechaRecepcion(e.target.value)}
-                                            className="w-full h-12 px-3 rounded-2xl border-2
-                                 border-gray-200 bg-white text-sm
-                                 focus:border-primary-500 focus:outline-none"
-                                        />
+                                        {/* Se sella sola al guardar. No se muestra
+                                            la hora actual porque quedaría vieja si
+                                            la operadora tarda en llenar la entrega. */}
+                                        <div className="w-full h-12 px-3 rounded-2xl border-2
+                                 border-gray-100 bg-gray-50 text-sm text-gray-500
+                                 flex items-center">
+                                            Se registra automáticamente
+                                        </div>
                                     </div>
                                 </div>
                             </>
@@ -455,6 +474,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                                             : ""}
                                       ${ev.nivel === "rechazo" ? "bg-teja-500 text-white"
                                                             : ev.nivel === "novedad" ? "bg-bayo-500 text-white"
+                                                            : ev.nivel === "sobrepeso" ? "bg-info-500 text-white"
                                                                 : ev.nivel === "ok" ? "bg-primary-500 text-white"
                                                                     : "bg-gray-200 text-gray-500"}`}
                                                 >
@@ -715,7 +735,36 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                         <div className="mt-2 space-y-1">
                                             {cuyes.map((c, i) => {
                                                 const ev = evaluarCuy(c);
-                                                if (ev.nivel === "ok" || ev.nivel === null) return null;
+                                                if (ev.nivel !== "novedad" && ev.nivel !== "rechazo")
+                                                    return null;
+                                                return (
+                                                    <p key={i} className="text-xs opacity-95">
+                                                        Cuy #{i + 1}: {ev.motivos.join(", ")}
+                                                    </p>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Aviso aparte, en azul: el sobrepeso no rechaza ni
+                                    obliga a nada, solo informa que el animal sale del
+                                    rango comercial. En su propio bloque porque un lote
+                                    puede tener solo sobrepeso y ninguna novedad. */}
+                                {conSobrepeso > 0 && (
+                                    <div className="rounded-2xl px-4 py-4 bg-info-500 text-white
+                                     animate-fade-in-up">
+                                        <p className="text-lg font-extrabold">Información</p>
+                                        <p className="font-semibold text-sm mt-1">
+                                            {conSobrepeso} {conSobrepeso === 1
+                                                ? "cuy supera los 1300 g"
+                                                : "cuyes superan los 1300 g"}. Se
+                                            aceptan; quedan fuera del rango comercial.
+                                        </p>
+                                        <div className="mt-2 space-y-1">
+                                            {cuyes.map((c, i) => {
+                                                const ev = evaluarCuy(c);
+                                                if (ev.nivel !== "sobrepeso") return null;
                                                 return (
                                                     <p key={i} className="text-xs opacity-95">
                                                         Cuy #{i + 1}: {ev.motivos.join(", ")}

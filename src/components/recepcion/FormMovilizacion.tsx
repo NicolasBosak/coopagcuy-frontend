@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../../api/recepcion";
+import { catalogosApi } from "../../api/admin";
 import { useAuth } from "../../context/AuthContext";
 import { ModalShell } from "../ui/ModalShell";
 import type { RegistrarMovilizacionRequest, Lote } from "../../types/recepcion";
@@ -26,19 +27,33 @@ const TIPOS_FORRAJE = [
 export function FormMovilizacion({ lote, onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
-    const hoy = new Date().toISOString().slice(0, 16);
 
     const [form, setForm] = useState<RegistrarMovilizacionRequest>({
-        fechaDespacho: hoy,
         conductor: "",
         cantidadMovilizada: lote.cantidadAnimales,
-        condicionesTransporte: "",
+        condicionesTransporte: [],
         tipoForraje: "",
         diasRetiroMedicamentos: undefined,
         responsableDespacho: auth.nombreCompleto ?? "",
         observaciones: "",
     });
     const [error, setError] = useState<string | null>(null);
+
+    // Las etiquetas vienen del API: son el mismo catálogo que valida el
+    // servidor, así no pueden decir una cosa aquí y otra allá
+    const { data: condiciones = [] } = useQuery({
+        queryKey: ["condiciones_transporte"],
+        queryFn: () => catalogosApi.listarCondicionesTransporte(),
+        staleTime: Infinity, // catálogo fijo: no hace falta revalidar
+    });
+
+    const alternarCondicion = (clave: string) =>
+        setForm((f) => ({
+            ...f,
+            condicionesTransporte: f.condicionesTransporte.includes(clave)
+                ? f.condicionesTransporte.filter((c) => c !== clave)
+                : [...f.condicionesTransporte, clave],
+        }));
 
     const mutation = useMutation({
         mutationFn: () => recepcionApi.registrarMovilizacion(lote.codigoLote, form),
@@ -86,13 +101,10 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                               text-gray-500 mb-1">
                                 Fecha de despacho
                             </label>
-                            <input
-                                type="datetime-local" required
-                                value={form.fechaDespacho}
-                                onChange={(e) => setForm({ ...form, fechaDespacho: e.target.value })}
-                                className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
-                           text-sm focus:border-primary-500 focus:outline-none"
-                            />
+                            <div className="w-full h-11 px-3 rounded-xl border-2 border-gray-100
+                                    bg-gray-50 text-sm text-gray-500 flex items-center">
+                                Se registra automáticamente
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-wide
@@ -132,18 +144,46 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
                             text-gray-500 mb-1">
-                            Condiciones del transporte (opcional)
+                            Condiciones del transporte
                         </label>
-                        <input
-                            type="text"
-                            value={form.condicionesTransporte}
-                            onChange={(e) => setForm({
-                                ...form, condicionesTransporte: e.target.value
+                        <p className="text-xs text-gray-500 mb-2">
+                            Marca lo que verificaste antes de salir. Lo que quede
+                            sin marcar se registra como no verificado.
+                        </p>
+                        {/* Checklist en vez de texto libre: cada CAT escribía lo
+                            suyo y las guías no eran comparables entre sí */}
+                        <div className="space-y-1">
+                            {condiciones.map((c) => {
+                                const marcada = form.condicionesTransporte.includes(c.clave);
+                                return (
+                                    <label
+                                        key={c.clave}
+                                        className={`flex items-center gap-3 min-h-[44px] px-3
+                                       rounded-xl border-2 cursor-pointer transition
+                                       ${marcada
+                                                ? "border-primary-500 bg-primary-50"
+                                                : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={marcada}
+                                            onChange={() => alternarCondicion(c.clave)}
+                                            className="w-5 h-5 accent-primary-600 shrink-0"
+                                        />
+                                        <span className={`text-sm ${marcada
+                                            ? "font-semibold text-primary-800"
+                                            : "text-gray-700"}`}>
+                                            {c.etiqueta}
+                                        </span>
+                                    </label>
+                                );
                             })}
-                            placeholder="Por ejemplo: jaulas limpias, camioneta cubierta"
-                            className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
-                         text-sm focus:border-primary-500 focus:outline-none"
-                        />
+                        </div>
+                        {condiciones.length > 0 && (
+                            <p className="mt-1.5 text-xs text-gray-400">
+                                {form.condicionesTransporte.length} de {condiciones.length} verificadas
+                            </p>
+                        )}
                     </div>
 
                     {/* Declaración de tratamientos (guía de movilización) */}

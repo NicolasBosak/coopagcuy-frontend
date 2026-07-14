@@ -12,15 +12,22 @@ interface Props {
 // faenado (FAE-…) y los cuyes específicos que van al cliente. El saldo
 // del lote baja con cada despacho y, al agotarse, el lote deja de
 // aparecer en el selector.
+// datetime-local trabaja en hora local, pero toISOString() devuelve UTC: sin
+// descontar el offset la operadora vería las 15:00 cuando en Ecuador son las
+// 10:00, y con el mínimo puesto en "ahora" no podría agendar nada.
+const aInputLocal = (d: Date) =>
+    new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+        .toISOString().slice(0, 16);
+
 export function FormDespacho({ onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
-    const hoy = new Date().toISOString().slice(0, 16);
+    const ahora = aInputLocal(new Date());
 
     const [loteFaenadoId, setLoteFaenadoId] = useState(0);
     const [seleccionados, setSeleccionados] = useState<number[]>([]);
     const [clienteDestino, setClienteDestino] = useState("");
-    const [fechaDespacho, setFechaDespacho] = useState(hoy);
+    const [fechaDespacho, setFechaDespacho] = useState(ahora);
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
     const [chofer, setChofer] = useState("");
     const [ruta, setRuta] = useState("");
@@ -49,7 +56,8 @@ export function FormDespacho({ onClose }: Props) {
             loteFaenadoId,
             cuyFaenamientoIds: seleccionados,
             clienteDestino,
-            fechaDespacho,
+            // El input da hora local; el API espera ISO-8601 UTC
+            fechaDespacho: new Date(fechaDespacho).toISOString(),
             responsable,
             chofer: chofer || undefined,
             ruta: ruta || undefined,
@@ -217,13 +225,19 @@ export function FormDespacho({ onClose }: Props) {
                           text-gray-500 mb-1">
                         Fecha
                     </label>
+                    {/* El despacho se puede agendar hacia adelante, nunca hacia
+                        atrás: min corta las fechas pasadas en el propio picker */}
                     <input
                         type="datetime-local" required
+                        min={ahora}
                         value={fechaDespacho}
                         onChange={(e) => setFechaDespacho(e.target.value)}
                         className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                        text-sm focus:border-primary-500 focus:outline-none"
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                        Puedes agendar una entrega futura.
+                    </p>
                 </div>
 
                 {/* Transporte de salida: aparece en el reporte de Salida */}

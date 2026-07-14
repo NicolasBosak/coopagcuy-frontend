@@ -13,8 +13,7 @@ interface Props {
 const EMPTY: CrearProductoraRequest = {
     nombreCompleto: "",
     cedula: "",
-    comunidad: "",
-    canton: "",
+    comunidadId: 0,
     catAsignado: "PAT",
     telefono: "",
 };
@@ -28,8 +27,7 @@ export function FormProductora({ productora = null, onClose }: Props) {
             ? {
                 nombreCompleto: productora.nombreCompleto,
                 cedula: productora.cedula,
-                comunidad: productora.comunidad,
-                canton: productora.canton,
+                comunidadId: productora.comunidadId,
                 catAsignado: productora.catAsignado,
                 telefono: productora.telefono ?? "",
             }
@@ -81,20 +79,21 @@ export function FormProductora({ productora = null, onClose }: Props) {
         mutation.mutate();
     };
 
-    // Al elegir comunidad del catálogo se autocompletan cantón y CAT
-    const elegirComunidad = (nombre: string) => {
-        const c = comunidades.find((x) => x.nombre === nombre);
+    const comunidadElegida = comunidades.find((c) => c.id === form.comunidadId);
+
+    // Al elegir comunidad del catálogo se propone su CAT de referencia
+    const elegirComunidad = (id: number) => {
+        const c = comunidades.find((x) => x.id === id);
         setForm({
             ...form,
-            comunidad: nombre,
-            canton: c?.canton ?? form.canton,
+            comunidadId: id,
             catAsignado: c?.catReferencia ?? form.catAsignado,
         });
     };
 
     const field = (
         label: string,
-        key: keyof CrearProductoraRequest,
+        key: "nombreCompleto" | "cedula" | "telefono",
         type = "text",
         placeholder = "",
         disabled = false
@@ -148,34 +147,43 @@ export function FormProductora({ productora = null, onClose }: Props) {
                               text-gray-500 mb-1">
                             Comunidad
                         </label>
-                        {comunidades.length > 0 ? (
-                            <select
-                                required
-                                value={form.comunidad}
-                                onChange={(e) => elegirComunidad(e.target.value)}
-                                className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                           text-base focus:border-primary-500 focus:outline-none"
-                            >
-                                <option value="">Seleccionar comunidad…</option>
-                                {comunidades.map((c) => (
-                                    <option key={c.id} value={c.nombre}>
-                                        {c.nombre} ({c.canton})
-                                    </option>
-                                ))}
-                            </select>
-                        ) : (
-                            <input
-                                type="text" required
-                                value={form.comunidad}
-                                onChange={(e) => setForm({ ...form, comunidad: e.target.value })}
-                                placeholder="Patococha"
-                                className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                           text-base focus:border-primary-500 focus:outline-none"
-                            />
+                        {/* Solo del catálogo: sin texto libre no hay forma de
+                            escribir "Patacocha" y partir el origen en dos */}
+                        <select
+                            required
+                            value={form.comunidadId || ""}
+                            onChange={(e) => elegirComunidad(Number(e.target.value))}
+                            className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
+                       text-base focus:border-primary-500 focus:outline-none"
+                        >
+                            <option value="">Seleccionar comunidad…</option>
+                            {comunidades.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.nombre} ({c.canton})
+                                </option>
+                            ))}
+                        </select>
+                        {comunidades.length === 0 && (
+                            <p className="mt-1 text-xs text-teja-700">
+                                No hay comunidades en el catálogo. Crea una en
+                                Administración antes de registrar productoras.
+                            </p>
                         )}
                     </div>
 
-                    {field("Cantón", "canton", "text", "Pucará")}
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wide
+                              text-gray-500 mb-1">
+                            Cantón
+                        </label>
+                        {/* Derivado de la comunidad: se muestra para confirmar
+                            la elección, pero ya no es un dato que se digite */}
+                        <div className="w-full h-12 px-3 rounded-xl border-2 border-gray-100
+                                bg-gray-50 text-base text-gray-500 flex items-center">
+                            {comunidadElegida?.canton ?? "—"}
+                        </div>
+                    </div>
+
                     {field("Teléfono (opcional)", "telefono", "tel", "0991234567")}
 
                     <div>
