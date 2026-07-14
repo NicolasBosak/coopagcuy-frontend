@@ -34,10 +34,8 @@ const TITULOS: Record<number, { titulo: string; ayuda: string }> = {
 export function FormFaenamiento({ onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
-    const hoy = new Date().toISOString().slice(0, 16);
 
     const [paso, setPaso] = useState(1);
-    const [fechaFaenamiento, setFechaFaenamiento] = useState(hoy);
     const [operario, setOperario] = useState(auth.nombreCompleto ?? "");
     const [temperatura, setTemperatura] = useState<number | undefined>(4);
     const [observaciones, setObservaciones] = useState("");
@@ -100,7 +98,7 @@ export function FormFaenamiento({ onClose }: Props) {
             (!c.pesoCanalGramos || c.pesoCanalGramos <= 0));
 
     const puedeAvanzar = () => {
-        if (paso === 1) return operario.trim().length > 0 && !!fechaFaenamiento;
+        if (paso === 1) return operario.trim().length > 0;
         if (paso === 2) return Object.keys(seleccion).length > 0;
         if (paso === 3) return incluidos.length > 0 && !faltanPeso;
         return true;
@@ -108,7 +106,6 @@ export function FormFaenamiento({ onClose }: Props) {
 
     const mutation = useMutation({
         mutationFn: () => faenamientoApi.registrarBatch({
-            fechaFaenamiento,
             operarioResponsable: operario,
             temperaturaAlmacenamiento: temperatura,
             observaciones: observaciones || undefined,
@@ -324,14 +321,11 @@ export function FormFaenamiento({ onClose }: Props) {
                                 tracking-wide text-gray-500 mb-1">
                                     Fecha y hora
                                 </label>
-                                <input
-                                    type="datetime-local" required
-                                    value={fechaFaenamiento}
-                                    onChange={(e) => setFechaFaenamiento(e.target.value)}
-                                    className="w-full h-12 px-3 rounded-2xl border-2 border-gray-200
-                             bg-white text-sm focus:border-primary-500
-                             focus:outline-none"
-                                />
+                                <div className="w-full h-12 px-3 rounded-2xl border-2
+                             border-gray-100 bg-gray-50 text-sm text-gray-500
+                             flex items-center">
+                                    Se registra automáticamente
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold uppercase

@@ -22,28 +22,85 @@ function hoy() {
     return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Estados de un panel de reporte.
+ *
+ * Antes cada pestaña colapsaba "falló la petición" y "no hay datos" en el
+ * mismo mensaje gris: un 403, un 500 o un corte de red se leían como
+ * "No hay lotes faenados en el período". Por eso el reporte de tránsito se
+ * reportó como bug sin que nadie pudiera ver qué pasaba realmente.
+ *
+ * `pista` explica qué paso del flujo alimenta el panel, para que un vacío
+ * legítimo no se confunda con el sistema roto.
+ */
+function PanelEstado({
+    cargando, error, vacio, mensajeVacio, pista, children,
+}: {
+    cargando: boolean;
+    error: boolean;
+    vacio: boolean;
+    mensajeVacio: string;
+    pista?: string;
+    children: React.ReactNode;
+}) {
+    if (cargando)
+        return (
+            <div className="p-8 text-center text-sm text-gray-400">
+                Cargando reporte...
+            </div>
+        );
+
+    if (error)
+        return (
+            <div className="p-8 text-center">
+                <p className="text-sm font-semibold text-teja-700">
+                    No se pudo cargar el reporte.
+                </p>
+                <p className="mt-1 text-xs text-gray-500 max-w-sm mx-auto">
+                    Hubo un problema al consultar el servidor. Revisa tu conexión
+                    e intenta de nuevo; si continúa, avisa al administrador.
+                </p>
+            </div>
+        );
+
+    if (vacio)
+        return (
+            <div className="p-8 text-center">
+                <p className="text-sm text-gray-500">{mensajeVacio}</p>
+                {pista && (
+                    <p className="mt-1.5 text-xs text-gray-400 max-w-md mx-auto">
+                        {pista}
+                    </p>
+                )}
+            </div>
+        );
+
+    return <>{children}</>;
+}
+
 export default function Reportes() {
     const [tab, setTab] = useState<Tab>("entrada");
     const [desde, setDesde] = useState(inicioMes());
     const [hasta, setHasta] = useState(hoy());
     const [cat, setCat] = useState<CentroAcopio | "">("");
     const [exportando, setExportando] = useState(false);
+    const [exportandoGeneral, setExportandoGeneral] = useState(false);
 
     const filtro = { desde, hasta, cat: cat || undefined };
 
-    const { data: prodData = [], isLoading: loadingProd } = useQuery({
+    const { data: prodData = [], isLoading: loadingProd, isError: errorProd } = useQuery({
         queryKey: ["reporte_productoras", desde, hasta, cat],
         queryFn: () => reportesApi.porProductora(filtro),
         enabled: tab === "productoras",
     });
 
-    const { data: catData = [], isLoading: loadingCat } = useQuery({
+    const { data: catData = [], isLoading: loadingCat, isError: errorCat } = useQuery({
         queryKey: ["reporte_cat", desde, hasta, cat],
         queryFn: () => reportesApi.porCAT(filtro),
         enabled: tab === "cat",
     });
 
-    const { data: novData = [], isLoading: loadingNov } = useQuery({
+    const { data: novData = [], isLoading: loadingNov, isError: errorNov } = useQuery({
         queryKey: ["reporte_novedades", desde, hasta, cat],
         queryFn: () => reportesApi.novedades(filtro),
         enabled: tab === "novedades",
@@ -55,19 +112,19 @@ export default function Reportes() {
         enabled: tab === "devoluciones",
     });
 
-    const { data: entradaData = [], isLoading: loadingEntrada } = useQuery({
+    const { data: entradaData = [], isLoading: loadingEntrada, isError: errorEntrada } = useQuery({
         queryKey: ["reporte_entrada", desde, hasta, cat],
         queryFn: () => reportesApi.entrada(filtro),
         enabled: tab === "entrada",
     });
 
-    const { data: transitoData = [], isLoading: loadingTransito } = useQuery({
+    const { data: transitoData = [], isLoading: loadingTransito, isError: errorTransito } = useQuery({
         queryKey: ["reporte_transito", desde, hasta, cat],
         queryFn: () => reportesApi.transito(filtro),
         enabled: tab === "transito",
     });
 
-    const { data: salidaData = [], isLoading: loadingSalida } = useQuery({
+    const { data: salidaData = [], isLoading: loadingSalida, isError: errorSalida } = useQuery({
         queryKey: ["reporte_salida", desde, hasta, cat],
         queryFn: () => reportesApi.salida(filtro),
         enabled: tab === "salida",
@@ -132,6 +189,17 @@ export default function Reportes() {
         }
     };
 
+    // Todos los dashboards del período en un libro, una hoja por cada uno
+    const handleExportarGeneral = async () => {
+        setExportandoGeneral(true);
+        try {
+            const blob = await reportesApi.exportarExcelGeneral(filtro);
+            descargarBlob(blob, `Reporte-General-${desde}-${hasta}.xlsx`);
+        } finally {
+            setExportandoGeneral(false);
+        }
+    };
+
     // ── Agregados para los gráficos de devoluciones ───────────────────
 
     const motivosDevoluciones: Record<string, number> = useMemo(() => {
@@ -163,15 +231,32 @@ export default function Reportes() {
                         Producción, calidad y novedades por período
                     </p>
                 </div>
-                <button
-                    onClick={handleExportar}
-                    disabled={exportando}
-                    className="px-4 py-2 bg-primary-600 hover:bg-primary-700
-                       disabled:bg-primary-300 text-white text-sm
-                       font-medium rounded-lg transition"
-                >
-                    {exportando ? "Exportando..." : "Exportar a Excel"}
-                </button>
+                {/* Dos alcances: la pestaña actual, o todo el período de una
+                    vez. El general va en secundario para no competir con la
+                    exportación puntual, que es la de uso diario. */}
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={handleExportarGeneral}
+                        disabled={exportandoGeneral}
+                        title="Descarga un solo archivo con una hoja por dashboard"
+                        className="min-h-[44px] sm:min-h-0 px-4 py-2 border-2
+                       border-primary-600 text-primary-700 hover:bg-primary-50
+                       disabled:opacity-50 text-sm font-medium rounded-lg transition"
+                    >
+                        {exportandoGeneral
+                            ? "Exportando todo..."
+                            : "Exportar todo"}
+                    </button>
+                    <button
+                        onClick={handleExportar}
+                        disabled={exportando}
+                        className="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600
+                       hover:bg-primary-700 disabled:bg-primary-300 text-white
+                       text-sm font-medium rounded-lg transition"
+                    >
+                        {exportando ? "Exportando..." : "Exportar a Excel"}
+                    </button>
+                </div>
             </div>
 
             <div className="mb-5">
@@ -183,8 +268,10 @@ export default function Reportes() {
                 />
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5 w-fit">
+            {/* Tabs. Envuelven en lugar de scrollear: son 7 y en un carrusel
+                horizontal las últimas quedarían fuera de vista. En móvil ocupa
+                el ancho completo; desde sm vuelve a ser una píldora compacta. */}
+            <div className="flex flex-wrap gap-1 bg-gray-100 rounded-lg p-1 mb-5 sm:w-fit">
                 {([
                     { id: "entrada", label: "Entrada" },
                     { id: "transito", label: "Tránsito" },
@@ -197,7 +284,10 @@ export default function Reportes() {
                     <button
                         key={id}
                         onClick={() => setTab(id)}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition
+                        // 44px de alto en táctil (RNF-201); en escritorio se
+                        // mantiene la píldora compacta, donde apunta un ratón
+                        className={`min-h-[44px] sm:min-h-0 px-4 py-1.5 rounded-md
+                        text-sm font-medium transition
                         ${tab === id
                                 ? "bg-white text-gray-800 shadow-sm"
                                 : "text-gray-500 hover:text-gray-700"}`}
@@ -210,15 +300,15 @@ export default function Reportes() {
             {/* Tab: Entrada — cuyes en espera de faenamiento */}
             {tab === "entrada" && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-                    {loadingEntrada ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            Cargando reporte...
-                        </div>
-                    ) : entradaData.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            No hay cuyes en espera de faenamiento en el período.
-                        </div>
-                    ) : (
+                    <PanelEstado
+                        cargando={loadingEntrada}
+                        error={errorEntrada}
+                        vacio={entradaData.length === 0}
+                        mensajeVacio="No hay cuyes en espera de faenamiento en el período."
+                        pista="Este panel se llena cuando la planta confirma la llegada de
+                               una jaula. Registrar la entrega y el envío desde el CAT no
+                               basta: falta confirmar la recepción en planta."
+                    >
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
@@ -251,22 +341,22 @@ export default function Reportes() {
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                    </PanelEstado>
                 </div>
             )}
 
             {/* Tab: Tránsito — lotes faenados completos */}
             {tab === "transito" && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-                    {loadingTransito ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            Cargando reporte...
-                        </div>
-                    ) : transitoData.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            No hay lotes faenados en el período.
-                        </div>
-                    ) : (
+                    <PanelEstado
+                        cargando={loadingTransito}
+                        error={errorTransito}
+                        vacio={transitoData.length === 0}
+                        mensajeVacio="No hay lotes faenados en el período."
+                        pista="Este panel se llena al registrar una sesión de faenamiento
+                               en la planta. Mientras el faenamiento no se registre, las
+                               entregas y llegadas no aparecen aquí."
+                    >
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
@@ -307,22 +397,21 @@ export default function Reportes() {
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                    </PanelEstado>
                 </div>
             )}
 
             {/* Tab: Salida — despachos con chofer/ruta/cliente */}
             {tab === "salida" && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-                    {loadingSalida ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            Cargando reporte...
-                        </div>
-                    ) : salidaData.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            No hay despachos en el período.
-                        </div>
-                    ) : (
+                    <PanelEstado
+                        cargando={loadingSalida}
+                        error={errorSalida}
+                        vacio={salidaData.length === 0}
+                        mensajeVacio="No hay despachos en el período."
+                        pista="Este panel se llena al registrar un despacho a cliente
+                               desde un lote ya faenado."
+                    >
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
@@ -364,7 +453,7 @@ export default function Reportes() {
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                    </PanelEstado>
                 </div>
             )}
 
@@ -380,15 +469,12 @@ export default function Reportes() {
             )}
             {tab === "productoras" && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-                    {loadingProd ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            Cargando reporte...
-                        </div>
-                    ) : prodData.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            No hay datos para el período seleccionado.
-                        </div>
-                    ) : (
+                    <PanelEstado
+                        cargando={loadingProd}
+                        error={errorProd}
+                        vacio={prodData.length === 0}
+                        mensajeVacio="No hay datos para el período seleccionado."
+                    >
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
@@ -437,7 +523,7 @@ export default function Reportes() {
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                    </PanelEstado>
                 </div>
             )}
 
@@ -453,14 +539,17 @@ export default function Reportes() {
             )}
             {tab === "cat" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {loadingCat ? (
-                        <p className="text-sm text-gray-400 col-span-full text-center py-8">
-                            Cargando reporte...
-                        </p>
-                    ) : catData.length === 0 ? (
-                        <p className="text-sm text-gray-400 col-span-full text-center py-8">
-                            No hay datos para el período seleccionado.
-                        </p>
+                    {loadingCat || errorCat || catData.length === 0 ? (
+                        <div className="col-span-full">
+                            <PanelEstado
+                                cargando={loadingCat}
+                                error={errorCat}
+                                vacio={catData.length === 0}
+                                mensajeVacio="No hay datos para el período seleccionado."
+                            >
+                                {null}
+                            </PanelEstado>
+                        </div>
                     ) : (
                         catData.map((r) => (
                             <div key={r.centroAcopio}
@@ -677,15 +766,12 @@ export default function Reportes() {
             )}
             {tab === "novedades" && (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-                    {loadingNov ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            Cargando reporte...
-                        </div>
-                    ) : novData.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-gray-400">
-                            No hay novedades registradas en el período.
-                        </div>
-                    ) : (
+                    <PanelEstado
+                        cargando={loadingNov}
+                        error={errorNov}
+                        vacio={novData.length === 0}
+                        mensajeVacio="No hay novedades registradas en el período."
+                    >
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
@@ -728,7 +814,7 @@ export default function Reportes() {
                                 ))}
                             </tbody>
                         </table>
-                    )}
+                    </PanelEstado>
                 </div>
             )}
         </MainLayout>

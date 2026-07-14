@@ -1,7 +1,7 @@
 import client from "./client";
 import type {
     Usuario, CrearUsuarioRequest, ActualizarUsuarioRequest,
-    Comunidad, GuardarComunidadRequest,
+    Comunidad, GuardarComunidadRequest, CondicionTransporte,
 } from "../types/admin";
 
 export const usuariosApi = {
@@ -31,6 +31,15 @@ export const catalogosApi = {
         const { data } = await client.get<Comunidad[]>("/api/catalogos/comunidades", {
             params: { incluirInactivas },
         });
+        return data;
+    },
+
+    // Checklist de transporte: las etiquetas viven en el API para que no se
+    // dupliquen aquí y acaben diciendo cosas distintas
+    listarCondicionesTransporte: async () => {
+        const { data } = await client.get<CondicionTransporte[]>(
+            "/api/catalogos/condiciones-transporte"
+        );
         return data;
     },
 

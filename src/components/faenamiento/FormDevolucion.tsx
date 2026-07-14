@@ -15,10 +15,8 @@ interface Props {
 export function FormDevolucion({ onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
-    const hoy = new Date().toISOString().slice(0, 16);
 
     const [despachoId, setDespachoId] = useState(0);
-    const [fechaDevolucion, setFechaDevolucion] = useState(hoy);
     const [cantidadUnidades, setCantidadUnidades] = useState(1);
     const [motivo, setMotivo] = useState("");
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
@@ -50,7 +48,6 @@ export function FormDevolucion({ onClose }: Props) {
     const mutation = useMutation({
         mutationFn: () => faenamientoApi.registrarDevolucion({
             despachoId,
-            fechaDevolucion,
             cantidadUnidades,
             motivo,
             responsable,
@@ -160,13 +157,10 @@ export function FormDevolucion({ onClose }: Props) {
                               text-gray-500 mb-1">
                             Fecha
                         </label>
-                        <input
-                            type="datetime-local" required
-                            value={fechaDevolucion}
-                            onChange={(e) => setFechaDevolucion(e.target.value)}
-                            className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
-                           text-sm focus:border-primary-500 focus:outline-none"
-                        />
+                        <div className="w-full h-11 px-3 rounded-xl border-2 border-gray-100
+                                bg-gray-50 text-sm text-gray-500 flex items-center">
+                            Se registra automáticamente
+                        </div>
                     </div>
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide

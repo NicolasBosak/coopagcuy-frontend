@@ -52,6 +52,12 @@ export interface GuardarComunidadRequest {
     catReferencia: string;
 }
 
+// Condición verificable del checklist de transporte CAT → planta
+export interface CondicionTransporte {
+    clave: string;
+    etiqueta: string;
+}
+
 export interface Devolucion {
     id: number;
     loteId: number | null;
@@ -70,10 +76,10 @@ export interface Devolucion {
     observaciones: string | null;
 }
 
-// La devolución nace de un despacho: el cliente se deriva de él
+// La devolución nace de un despacho: el cliente se deriva de él.
+// La fecha la sella el servidor al registrarla.
 export interface RegistrarDevolucionRequest {
     despachoId: number;
-    fechaDevolucion: string;
     cantidadUnidades: number;
     motivo: string;
     responsable: string;

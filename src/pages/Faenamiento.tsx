@@ -94,7 +94,6 @@ export default function Faenamiento() {
     const confirmarLlegada = useMutation({
         mutationFn: (m: Movilizacion) =>
             recepcionApi.confirmarRecepcionPlanta(m.id, {
-                fechaRecepcionPlanta: new Date().toISOString(),
                 recibidoPor: auth.nombreCompleto ?? "Operador de planta",
                 condicionLlegada: condicionLlegada || undefined,
             }),

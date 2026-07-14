@@ -68,7 +68,9 @@ export interface Lote {
 export interface RegistrarEntregaRequest {
     centroAcopio: string;
     productoraId: number;
-    fechaEntrega: string;
+    // Solo para el sync offline: momento en que la tablet capturó la entrega.
+    // En línea lo sella el servidor y este campo se omite.
+    fechaCapturaOffline?: string;
     cuyes: CuyRegistro[];
     enAyunas: boolean;
     responsableRecepcion: string;
@@ -114,19 +116,21 @@ export interface SyncResult {
 
 // ── Movilización CAT → planta (eslabón transporte) ────────────────────
 
+// La fecha de salida la sella el servidor al registrar la movilización
 export interface RegistrarMovilizacionRequest {
-    fechaDespacho: string;
     conductor: string;
     cantidadMovilizada: number;
-    condicionesTransporte?: string;
+    // Claves del catálogo de condiciones que el operador verificó.
+    // El servidor arma el texto: ya no se escribe a mano.
+    condicionesTransporte: string[];
     tipoForraje?: string;
     diasRetiroMedicamentos?: number;
     responsableDespacho: string;
     observaciones?: string;
 }
 
+// La fecha de llegada la sella el servidor al confirmar la recepción
 export interface ConfirmarRecepcionPlantaRequest {
-    fechaRecepcionPlanta: string;
     recibidoPor: string;
     condicionLlegada?: string;
 }

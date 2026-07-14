@@ -1,6 +1,6 @@
 interface BadgeProps {
     label: string;
-    variant: "success" | "warning" | "danger" | "neutral";
+    variant: "success" | "warning" | "danger" | "neutral" | "info";
 }
 
 const variants = {
@@ -8,6 +8,8 @@ const variants = {
     warning: "bg-yellow-100 text-yellow-800",
     danger: "bg-red-100    text-red-800",
     neutral: "bg-gray-100   text-gray-700",
+    // Aviso que no implica falla: se lee distinto del ámbar y del rojo
+    info: "bg-info-100   text-info-700",
 };
 
 export function Badge({ label, variant }: BadgeProps) {
