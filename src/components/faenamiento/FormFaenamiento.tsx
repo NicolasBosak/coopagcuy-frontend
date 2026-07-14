@@ -24,6 +24,26 @@ interface CuySesion extends CuyFaenamientoRequest {
 
 const TOTAL_PASOS = 4;
 
+// Rango de conservación en frío de la canal. Bajo 0 se congela y cambia la
+// textura; sobre 4 se compromete la inocuidad y ya no se sostienen los 5 días
+// de vida útil que el sistema asume para el vencimiento.
+const TEMP_MIN = 0;
+const TEMP_MAX = 4;
+
+// Advierte, no bloquea: la cámara puede estar fuera de rango y aun así hay que
+// poder registrar la sesión con la temperatura real. Ocultarla o impedir el
+// guardado solo lograría que se anote un valor falso.
+function avisoDeTemperatura(t: number | undefined): string | null {
+    if (t === undefined) return null;
+    if (t < TEMP_MIN)
+        return `${t} °C está bajo ${TEMP_MIN} °C: riesgo de congelar la canal. ` +
+            "Revisa la cámara de frío.";
+    if (t > TEMP_MAX)
+        return `${t} °C supera los ${TEMP_MAX} °C del rango de conservación. ` +
+            "Revisa la cámara de frío.";
+    return null;
+}
+
 const TITULOS: Record<number, { titulo: string; ayuda: string }> = {
     1: { titulo: "¿Cuándo y quién faena?", ayuda: "Datos de esta jornada de planta" },
     2: { titulo: "¿Qué lotes vas a faenar?", ayuda: "Puedes tomar cuyes de varios lotes" },
@@ -40,6 +60,8 @@ export function FormFaenamiento({ onClose }: Props) {
     const [temperatura, setTemperatura] = useState<number | undefined>(4);
     const [observaciones, setObservaciones] = useState("");
     const [error, setError] = useState<string | null>(null);
+
+    const avisoTemperatura = avisoDeTemperatura(temperatura);
 
     const [seleccion, setSeleccion] = useState<Record<number, CuySesion[]>>({});
     const [resultado, setResultado] = useState<{
@@ -338,10 +360,22 @@ export function FormFaenamiento({ onClose }: Props) {
                                     onChange={(e) => setTemperatura(
                                         e.target.value ? Number(e.target.value) : undefined)}
                                     placeholder="ej: 4"
-                                    className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200
-                             bg-white text-base focus:border-primary-500
-                             focus:outline-none"
+                                    aria-invalid={avisoTemperatura !== null}
+                                    className={`w-full h-12 px-4 rounded-2xl border-2 bg-white
+                             text-base focus:outline-none
+                             ${avisoTemperatura
+                                            ? "border-bayo-500 focus:border-bayo-600"
+                                            : "border-gray-200 focus:border-primary-500"}`}
                                 />
+                                {avisoTemperatura ? (
+                                    <p className="mt-1.5 text-xs font-semibold text-bayo-700">
+                                        ⚠ {avisoTemperatura}
+                                    </p>
+                                ) : (
+                                    <p className="mt-1.5 text-xs text-gray-400">
+                                        Rango de conservación: {TEMP_MIN} a {TEMP_MAX} °C
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </>
@@ -581,6 +615,15 @@ export function FormFaenamiento({ onClose }: Props) {
                                 px-4 py-3 text-sm text-teja-700 font-semibold">
                                 {retornados} {retornados === 1 ? "cuy será devuelto" : "cuyes serán devueltos"} a
                                 su productora de origen.
+                            </div>
+                        )}
+
+                        {/* La temperatura se digita en el paso 1 y se guarda en el 4:
+                            se repite aquí para que el aviso no se pierda por el camino */}
+                        {avisoTemperatura && (
+                            <div className="bg-bayo-50 border border-bayo-100 rounded-2xl
+                                px-4 py-3 text-sm text-bayo-700 font-semibold">
+                                ⚠ {avisoTemperatura}
                             </div>
                         )}
 
