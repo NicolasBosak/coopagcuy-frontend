@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { faenamientoApi } from "../../api/faenamiento";
 import { useAuth } from "../../context/AuthContext";
 import { ModalShell } from "../ui/ModalShell";
+import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import type {
     CuyFaenamientoRequest, EstadoCanal,
     AlertaNovedadPrevia, CuyDisponible,
@@ -338,17 +339,7 @@ export function FormFaenamiento({ onClose }: Props) {
                             />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-bold uppercase
-                                tracking-wide text-gray-500 mb-1">
-                                    Fecha y hora
-                                </label>
-                                <div className="w-full h-12 px-3 rounded-2xl border-2
-                             border-gray-100 bg-gray-50 text-sm text-gray-500
-                             flex items-center">
-                                    Se registra automáticamente
-                                </div>
-                            </div>
+                            <SelloDeTiempo />
                             <div>
                                 <label className="block text-xs font-bold uppercase
                                 tracking-wide text-gray-500 mb-1">
