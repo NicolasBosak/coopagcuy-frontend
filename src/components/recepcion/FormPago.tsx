@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi, pagosApi } from "../../api/productoras";
 import { useAuth } from "../../context/AuthContext";
 import { ModalShell } from "../ui/ModalShell";
+import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import type { RegistrarPagoRequest } from "../../types/productora";
 
 interface Props {
@@ -179,16 +180,7 @@ export function FormPago({ onClose }: Props) {
                            focus:outline-none"
                             />
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wide
-                              text-gray-500 mb-1">
-                                Fecha del pago
-                            </label>
-                            <div className="w-full h-11 px-3 rounded-xl border-2 border-gray-100
-                                    bg-gray-50 text-sm text-gray-500 flex items-center">
-                                Se registra automáticamente
-                            </div>
-                        </div>
+                        <SelloDeTiempo etiqueta="Fecha del pago" />
                     </div>
 
                     <div>

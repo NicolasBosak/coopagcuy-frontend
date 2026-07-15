@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { faenamientoApi } from "../../api/faenamiento";
 import { useAuth } from "../../context/AuthContext";
 import { ModalShell } from "../ui/ModalShell";
+import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 
 interface Props {
     onClose: () => void;
@@ -152,16 +153,7 @@ export function FormDevolucion({ onClose }: Props) {
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-wide
-                              text-gray-500 mb-1">
-                            Fecha
-                        </label>
-                        <div className="w-full h-11 px-3 rounded-xl border-2 border-gray-100
-                                bg-gray-50 text-sm text-gray-500 flex items-center">
-                            Se registra automáticamente
-                        </div>
-                    </div>
+                    <SelloDeTiempo />
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
                               text-gray-500 mb-1">

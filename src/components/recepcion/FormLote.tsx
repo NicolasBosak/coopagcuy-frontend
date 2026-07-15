@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { productorasApi } from "../../api/productoras";
 import { recepcionApi } from "../../api/recepcion";
 import { offlineDB } from "../../services/db";
+import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import { useAuth } from "../../context/AuthContext";
 import type {
     RegistrarEntregaRequest, ColorPelaje, CuyRegistro,
@@ -391,20 +392,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             ))}
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold uppercase
-                                      tracking-wide text-gray-500 mb-1">
-                                            Fecha y hora
-                                        </label>
-                                        {/* Se sella sola al guardar. No se muestra
-                                            la hora actual porque quedaría vieja si
-                                            la operadora tarda en llenar la entrega. */}
-                                        <div className="w-full h-12 px-3 rounded-2xl border-2
-                                 border-gray-100 bg-gray-50 text-sm text-gray-500
-                                 flex items-center">
-                                            Se registra automáticamente
-                                        </div>
-                                    </div>
+                                    <SelloDeTiempo />
                                 </div>
                             </>
                         )}
