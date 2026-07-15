@@ -5,6 +5,7 @@ import { recepcionApi } from "../api/recepcion";
 import { useAuth } from "../context/AuthContext";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
+import { Segmentado } from "../components/ui/Segmentado";
 import { FormFaenamiento } from "../components/faenamiento/FormFaenamiento";
 import { FormDevolucion } from "../components/faenamiento/FormDevolucion";
 import { PanelQR } from "../components/faenamiento/PanelQR";
@@ -72,8 +73,15 @@ export default function Faenamiento() {
                 (s) => s.estadoCanal === "ConNovedad");
             const rechazado = sesiones.every(
                 (s) => s.estadoCanal === "Rechazado");
+            // Cuántos animales de la sesión salieron con novedad. Saber que el
+            // lote "tiene novedad" no dice nada útil: 1 de 20 y 18 de 20 se
+            // leían igual, y son decisiones distintas.
+            const animalesConNovedad = sesiones.reduce(
+                (acc, s) => acc + s.cuyes.filter(
+                    (c) => c.estado === "ConNovedad").length, 0);
             return {
                 codigo,
+                animalesConNovedad,
                 esFae: !!sesiones[0].codigoLoteFaenado,
                 jaulas: sesiones.map((s) => ({
                     codigoLote: s.codigoLote,
@@ -131,25 +139,15 @@ export default function Faenamiento() {
                 )}
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-5 w-fit">
-                {([
+            <Segmentado
+                activo={tab}
+                onCambio={setTab}
+                opciones={[
                     { id: "faenamientos", label: "Faenamientos" },
                     { id: "llegadas", label: "Llegadas de CAT" },
                     { id: "devoluciones", label: "Devoluciones" },
-                ] as const).map(({ id, label }) => (
-                    <button
-                        key={id}
-                        onClick={() => setTab(id)}
-                        className={`px-5 h-10 rounded-lg text-sm font-semibold transition
-              ${tab === id
-                                ? "bg-primary-600 text-white shadow-sm"
-                                : "text-gray-500 hover:text-gray-800"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+                ]}
+            />
 
             {/* ── Tab faenamientos ── */}
             {tab === "faenamientos" && (
@@ -218,6 +216,11 @@ export default function Faenamiento() {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     {canalBadge(lf.estado)}
+                                                    {lf.animalesConNovedad > 0 && (
+                                                        <span className="block mt-1 text-xs text-gray-500">
+                                                            {lf.animalesConNovedad} de {lf.unidades} con novedad
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <span className="text-xs text-primary-600">

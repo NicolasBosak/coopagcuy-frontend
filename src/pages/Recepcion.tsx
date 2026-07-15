@@ -6,6 +6,7 @@ import { offlineDB } from "../services/db";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
+import { Segmentado } from "../components/ui/Segmentado";
 import { SyncStatus } from "../components/ui/SyncStatus";
 import { FormLote } from "../components/recepcion/FormLote";
 import { FormMovilizacion } from "../components/recepcion/FormMovilizacion";
@@ -91,7 +92,8 @@ export default function Recepcion() {
                     <SyncStatus {...sync} sincronizar={handleSync} />
                     <button
                         onClick={() => setShowForm(true)}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700
+                        className="min-h-[44px] sm:min-h-0 px-4 py-2 shrink-0
+                       bg-primary-600 hover:bg-primary-700
                        text-white text-sm font-medium rounded-lg transition"
                     >
                         + Nuevo lote
@@ -115,28 +117,18 @@ export default function Recepcion() {
             {/* Jaula en armado del CAT */}
             <JaulaEnArmado isOnline={isOnline} />
 
-            {/* Tabs */}
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5 w-fit">
-                {([
+            <Segmentado
+                activo={tabActual}
+                onCambio={setTabActual}
+                opciones={[
                     { id: "server", label: "Sincronizados" },
                     {
                         id: "local", label: `Locales${pendientes > 0
                             ? ` (${pendientes})` : ""}`
                     },
                     { id: "pagos", label: "Pagos" },
-                ] as const).map(({ id, label }) => (
-                    <button
-                        key={id}
-                        onClick={() => setTabActual(id)}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition
-                        ${tabActual === id
-                                ? "bg-white text-gray-800 shadow-sm"
-                                : "text-gray-500 hover:text-gray-700"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+                ]}
+            />
 
             {/* Tab: lotes del servidor */}
             {tabActual === "server" && (

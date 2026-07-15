@@ -90,10 +90,14 @@ export function MainLayout({ children }: { children: ReactNode }) {
                                 {auth.rol ? NOMBRE_ROL[auth.rol] ?? auth.rol : ""}
                             </span>
                         </div>
+                        {/* Estaba en 41×28: por debajo del objetivo táctil y
+                            pegado al nombre del usuario. Es la salida de sesión
+                            en una tablet compartida, tiene que poder tocarse. */}
                         <button
                             onClick={handleLogout}
-                            className="text-xs text-teja-500 hover:text-teja-700 font-bold
-                         px-2 py-1.5"
+                            className="min-h-[44px] min-w-[44px] px-3 shrink-0
+                         text-xs font-bold text-teja-500 hover:text-teja-700
+                         hover:bg-teja-50 rounded-lg transition"
                         >
                             Salir
                         </button>
