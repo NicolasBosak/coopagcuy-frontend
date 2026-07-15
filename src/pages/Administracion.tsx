@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usuariosApi, catalogosApi } from "../api/admin";
 import { MainLayout } from "../components/layout/MainLayout";
+import { Segmentado } from "../components/ui/Segmentado";
 import { Badge } from "../components/ui/Badge";
 import { FormUsuario } from "../components/admin/FormUsuario";
 import { FormComunidad } from "../components/admin/FormComunidad";
@@ -78,24 +79,14 @@ export default function Administracion() {
                 </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-5 w-fit">
-                {([
+            <Segmentado
+                activo={tab}
+                onCambio={setTab}
+                opciones={[
                     { id: "usuarios", label: "Usuarios" },
                     { id: "comunidades", label: "Comunidades" },
-                ] as const).map(({ id, label }) => (
-                    <button
-                        key={id}
-                        onClick={() => setTab(id)}
-                        className={`px-5 h-10 rounded-lg text-sm font-semibold transition
-              ${tab === id
-                                ? "bg-primary-600 text-white shadow-sm"
-                                : "text-gray-500 hover:text-gray-800"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+                ]}
+            />
 
             {aviso && (
                 <div className="bg-teja-50 border border-teja-100 rounded-xl px-4 py-3

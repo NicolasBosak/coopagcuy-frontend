@@ -70,8 +70,8 @@ export function FiltrosPeriodo({
                             key={label}
                             type="button"
                             onClick={() => aplicarPreset(r)}
-                            className={`h-9 px-3.5 rounded-full text-xs font-semibold
-                          transition-colors
+                            className={`min-h-[44px] sm:h-9 sm:min-h-0 px-3.5
+                          rounded-full text-xs font-semibold transition-colors
                           ${activo
                                     ? "bg-primary-600 text-white"
                                     : "bg-gray-100 text-gray-600 hover:bg-primary-50 hover:text-primary-700"}`}

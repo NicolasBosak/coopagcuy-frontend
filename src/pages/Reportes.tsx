@@ -4,6 +4,7 @@ import { reportesApi } from "../api/reportes";
 import { descargarBlob } from "../utils/download";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
+import { Segmentado } from "../components/ui/Segmentado";
 import { FiltrosPeriodo } from "../components/reportes/FiltrosPeriodo";
 import { BarrasCalidad, type FilaBarras } from "../components/reportes/graficos/BarrasCalidad";
 import { AnilloNovedades } from "../components/reportes/graficos/AnilloNovedades";
@@ -268,11 +269,10 @@ export default function Reportes() {
                 />
             </div>
 
-            {/* Tabs. Envuelven en lugar de scrollear: son 7 y en un carrusel
-                horizontal las últimas quedarían fuera de vista. En móvil ocupa
-                el ancho completo; desde sm vuelve a ser una píldora compacta. */}
-            <div className="flex flex-wrap gap-1 bg-gray-100 rounded-lg p-1 mb-5 sm:w-fit">
-                {([
+            <Segmentado
+                activo={tab}
+                onCambio={setTab}
+                opciones={[
                     { id: "entrada", label: "Entrada" },
                     { id: "transito", label: "Tránsito" },
                     { id: "salida", label: "Salida" },
@@ -280,22 +280,8 @@ export default function Reportes() {
                     { id: "cat", label: "Por CAT" },
                     { id: "novedades", label: "Novedades" },
                     { id: "devoluciones", label: "Devoluciones" },
-                ] as const).map(({ id, label }) => (
-                    <button
-                        key={id}
-                        onClick={() => setTab(id)}
-                        // 44px de alto en táctil (RNF-201); en escritorio se
-                        // mantiene la píldora compacta, donde apunta un ratón
-                        className={`min-h-[44px] sm:min-h-0 px-4 py-1.5 rounded-md
-                        text-sm font-medium transition
-                        ${tab === id
-                                ? "bg-white text-gray-800 shadow-sm"
-                                : "text-gray-500 hover:text-gray-700"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+                ]}
+            />
 
             {/* Tab: Entrada — cuyes en espera de faenamiento */}
             {tab === "entrada" && (

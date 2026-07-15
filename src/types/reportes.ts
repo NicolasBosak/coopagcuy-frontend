@@ -1,13 +1,21 @@
 export interface Dashboard {
     lotesActivos: number;
     animalesRecibidosPeriodo: number;
+    // Tasas sobre animales, no sobre jaulas
     tasaAceptacion: number;
     tasaConNovedad: number;
     tasaRechazado: number;
+    animalesAceptados: number;
+    animalesConNovedad: number;
+    animalesRechazados: number;
     lotesConQR: number;
     totalProductoras: number;
     totalFaenamientos: number;
     fechaCorte: string;
+    // Etapas posteriores a la recepción en el CAT
+    retornosDesdePlanta: number;
+    devolucionesClientes: number;
+    unidadesDevueltas: number;
 }
 
 export interface ReporteProductora {

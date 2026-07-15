@@ -53,7 +53,8 @@ export default function Productoras() {
                 {esAdmin && (
                     <button
                         onClick={() => { setProductoraEditar(null); setShowForm(true); }}
-                        className="px-4 py-2 bg-primary-600 hover:bg-primary-700
+                        className="min-h-[44px] sm:min-h-0 px-4 py-2 shrink-0
+                     bg-primary-600 hover:bg-primary-700
                      text-white text-sm font-medium rounded-lg transition"
                     >
                         + Nueva productora
