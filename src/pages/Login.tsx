@@ -36,26 +36,36 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-primary-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen bg-crema textura-campo flex items-center
+                justify-center p-4">
+            {/* Halo chartreuse detrás del cuy: la firma de marca, contenida
+                en un solo lugar. El mascota es el héroe del login. */}
+            <div className="absolute top-0 inset-x-0 h-72 bg-gradient-to-b
+                    from-lima-100 to-transparent pointer-events-none" />
 
-                {/* Logo y título */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16
-                          bg-primary-600 rounded-2xl mb-4">
-                        <span className="text-white text-2xl font-bold">C</span>
-                    </div>
-                    <h1 className="text-2xl font-semibold text-primary-900">
-                        Cuy Azuayito
-                    </h1>
-                    <p className="text-sm text-primary-700 mt-1">
+            <div className="relative w-full max-w-md">
+
+                {/* El logo completo es el héroe: mascota sobre chartreuse +
+                    logotipo. No repetimos el nombre debajo porque el logo ya
+                    lo dice. */}
+                <div className="text-center mb-7 animate-fade-in-up">
+                    <img
+                        src="/brand/cuy-logo-full.png"
+                        alt="Cuy Azuayito — Sabor de altura · APAGCUY"
+                        className="mx-auto w-44 sm:w-52 h-auto drop-shadow-sm"
+                    />
+                    <p className="mt-3 text-sm font-medium text-primary-700">
                         Sistema de Trazabilidad · COOPAGCUY
                     </p>
                 </div>
 
-                {/* Tarjeta del formulario */}
-                <div className="bg-white rounded-2xl shadow-sm border border-primary-100 p-8">
-                    <h2 className="text-lg font-medium text-gray-800 mb-6">
+                {/* Tarjeta del formulario, con un filo chartreuse arriba que
+                    ata la tarjeta al logo sin competir con él. */}
+                <div className="bg-white rounded-3xl shadow-lg shadow-primary-900/5
+                        border border-primary-100 overflow-hidden animate-fade-in-up">
+                    <div className="h-1.5 bg-lima-400" />
+                    <div className="p-8">
+                    <h2 className="text-xl text-gray-900 mb-6">
                         Iniciar sesión
                     </h2>
 
@@ -111,16 +121,18 @@ export default function Login() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700
-                         disabled:bg-primary-300 text-white font-medium
-                         rounded-lg text-sm transition"
+                            className="w-full min-h-[48px] px-4 bg-primary-600
+                         hover:bg-primary-700 disabled:bg-primary-300 text-white
+                         font-display rounded-xl text-base transition
+                         active:scale-[0.99]"
                         >
                             {loading ? "Ingresando..." : "Ingresar"}
                         </button>
                     </form>
+                    </div>
                 </div>
 
-                <p className="text-center text-xs text-primary-600 mt-6">
+                <p className="text-center text-xs text-gray-500 mt-6">
                     Proyecto Familias Campesinas Liderando · Comisión Europea
                 </p>
             </div>

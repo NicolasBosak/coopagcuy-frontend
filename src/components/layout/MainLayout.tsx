@@ -49,14 +49,17 @@ export function MainLayout({ children }: { children: ReactNode }) {
                          sticky top-0 z-20">
                 <div className="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 bg-primary-600 rounded-xl flex
-                            items-center justify-center shrink-0
-                            shadow-sm shadow-primary-600/30">
-                            <span className="text-white text-base font-extrabold">C</span>
+                        {/* La marca compacta: cara del cuy sobre azulejo
+                            chartreuse, igual que el ícono de la app. */}
+                        <div className="w-9 h-9 bg-lima-400 rounded-xl flex
+                            items-center justify-center shrink-0 overflow-hidden
+                            shadow-sm shadow-lima-600/30">
+                            <img src="/brand/cuy-face.png" alt="Cuy Azuayito"
+                                className="w-7 h-7 object-contain" />
                         </div>
                         <div className="leading-tight min-w-0">
-                            <span className="font-extrabold tracking-tight text-gray-900 block
-                               truncate">
+                            <span className="font-display tracking-tight text-gray-900 block
+                               truncate text-[15px]">
                                 Cuy Azuayito
                             </span>
                             <span className="hidden sm:block text-[10px] uppercase

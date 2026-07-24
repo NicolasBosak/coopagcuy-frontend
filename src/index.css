@@ -2,9 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Nexa Bold — fuente de marca provista por la cooperativa. Solo peso bold;
+   se usa como fuente de display (font-display en Tailwind). Local y offline. */
+@font-face {
+    font-family: "Nexa Bold";
+    src: url("/fonts/NexaBold.woff2") format("woff2");
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 @layer base {
     body {
         @apply bg-crema text-gray-800 antialiased;
+    }
+
+    /* Los títulos de marca llevan Nexa con un poco de tracking negativo,
+       como el logotipo. El cuerpo se queda en la sans neutra por legibilidad. */
+    h1, h2 {
+        @apply font-display tracking-tight;
     }
 
     /* Foco visible para navegación con teclado */
@@ -18,7 +34,7 @@
     /* Retícula sutil de fondo para encabezados de página */
     .textura-campo {
         background-image: radial-gradient(circle,
-                rgba(47, 107, 58, 0.07) 1px, transparent 1px);
+                rgba(90, 122, 10, 0.07) 1px, transparent 1px);
         background-size: 18px 18px;
     }
 

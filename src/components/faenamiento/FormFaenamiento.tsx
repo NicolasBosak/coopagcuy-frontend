@@ -176,7 +176,7 @@ export function FormFaenamiento({ onClose }: Props) {
 
     const colorPeso = (peso?: number) => {
         if (!peso) return "";
-        if (peso >= 907) return "text-green-600";
+        if (peso >= 907) return "text-primary-700";
         if (peso >= 880) return "text-bayo-600";
         return "text-teja-500";
     };
@@ -476,7 +476,7 @@ export function FormFaenamiento({ onClose }: Props) {
                                                         onChange={(e) => actualizarCuy(
                                                             lote.loteId, c.numeroEnLote,
                                                             { incluido: e.target.checked })}
-                                                        className="w-5 h-5 rounded accent-[#2f6b3a]"
+                                                        className="w-5 h-5 rounded accent-[#5a7a0a]"
                                                     />
                                                     Faenar
                                                 </label>
@@ -562,7 +562,7 @@ export function FormFaenamiento({ onClose }: Props) {
                                                                     lote.loteId, c.numeroEnLote, {
                                                                     retornarAProductora: e.target.checked
                                                                 })}
-                                                                className="w-5 h-5 rounded accent-[#c0392b]"
+                                                                className="w-5 h-5 rounded accent-[#f0303c]"
                                                             />
                                                             <span className="text-sm font-semibold text-teja-700">
                                                                 Devolver este cuy a su productora
