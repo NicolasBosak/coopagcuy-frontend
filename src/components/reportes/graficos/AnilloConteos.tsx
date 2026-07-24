@@ -11,12 +11,12 @@ interface Props {
 
 // Paleta andina del sistema, en orden de asignación
 const PALETA = [
-    "#c0392b", // teja
-    "#e8a13d", // bayo
-    "#3d8a4c", // verde
-    "#7a5230", // tierra
-    "#a5671f", // bayo oscuro
-    "#8e2a20", // teja oscuro
+    "#f0303c", // teja
+    "#fc9c18", // bayo
+    "#5a7a0a", // verde
+    "#90540c", // tierra
+    "#a85c00", // bayo oscuro
+    "#a81822", // teja oscuro
     "#9ca3af", // gris
 ];
 

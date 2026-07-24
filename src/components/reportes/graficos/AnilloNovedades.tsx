@@ -6,14 +6,14 @@ interface Props {
 }
 
 const TIPOS: Record<string, { nombre: string; color: string }> = {
-    BajoPeso: { nombre: "Bajo peso", color: "#e8a13d" },       // bayo
-    OrejaDura: { nombre: "Oreja dura", color: "#7a5230" },     // tierra
-    ColorNoConforme: { nombre: "Color no conforme", color: "#c0392b" }, // teja
-    SinAyuno: { nombre: "Sin ayuno", color: "#3d8a4c" },       // verde
+    BajoPeso: { nombre: "Bajo peso", color: "#fc9c18" },       // bayo
+    OrejaDura: { nombre: "Oreja dura", color: "#90540c" },     // tierra
+    ColorNoConforme: { nombre: "Color no conforme", color: "#f0303c" }, // teja
+    SinAyuno: { nombre: "Sin ayuno", color: "#5a7a0a" },       // verde
     // Azul, no ámbar: el sobrepeso informa, no señala un problema con el
     // animal. Mismo criterio que el aviso de la pantalla de recepción.
-    SobrePeso: { nombre: "Sobre peso (>1300g)", color: "#2f6fb0" }, // info
-    SignosClinicos: { nombre: "Signos clínicos", color: "#8e2a20" }, // teja oscuro
+    SobrePeso: { nombre: "Sobre peso (>1300g)", color: "#2478d8" }, // info
+    SignosClinicos: { nombre: "Signos clínicos", color: "#a81822" }, // teja oscuro
     Otro: { nombre: "Otro", color: "#9ca3af" },                // gris
 };
 

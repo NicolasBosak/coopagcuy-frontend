@@ -4,12 +4,12 @@ interface BadgeProps {
 }
 
 const variants = {
-    success: "bg-green-100  text-green-800",
-    warning: "bg-yellow-100 text-yellow-800",
-    danger: "bg-red-100    text-red-800",
-    neutral: "bg-gray-100   text-gray-700",
+    success: "bg-primary-100 text-primary-800",
+    warning: "bg-bayo-100    text-bayo-800",
+    danger: "bg-teja-100    text-teja-700",
+    neutral: "bg-gray-100    text-gray-700",
     // Aviso que no implica falla: se lee distinto del ámbar y del rojo
-    info: "bg-info-100   text-info-700",
+    info: "bg-info-100     text-info-700",
 };
 
 export function Badge({ label, variant }: BadgeProps) {

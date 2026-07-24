@@ -7,47 +7,88 @@ export default {
                 // Punto de quiebre extra pequeño para teléfonos
                 xs: "420px",
             },
+            // ── Paleta de marca Cuy Azuayito ──────────────────────────────
+            // Todos los tonos se muestrearon de los píxeles del logo oficial
+            // (logo-Cuy-1-(2).png). Los nombres de token se conservan para no
+            // romper las clases existentes; solo cambia el valor al color real
+            // de la marca. La escala de cada color se derivó del tono semilla
+            // y se verificó contra WCAG AA en los pares texto/fondo críticos.
             colors: {
+                // Verde de monte — el chartreuse de marca llevado a un verde
+                // usable y legible ("pasto de altura"). Acciones, navegación,
+                // enlaces y el estado "aceptado" del cuy.
                 primary: {
-                    50: "#f0f7f1",
-                    100: "#dcebde",
-                    300: "#8fc49a",
-                    500: "#3d8a4c",
-                    600: "#2f6b3a",
-                    700: "#27582f",
-                    800: "#1f4626",
-                    900: "#17351d",
+                    50: "#f5f8ea",
+                    100: "#e7f0c6",
+                    200: "#d3e59a",
+                    300: "#b6d15f",
+                    400: "#8fae2e",
+                    500: "#6f8c16",
+                    600: "#5a7a0a", // acción principal · blanco 4.97:1 AA
+                    700: "#47610a", // texto sobre claro · 7.04:1 AA
+                    800: "#384e0a",
+                    900: "#2b3a0b",
                 },
-                brand: "#2F6B3A",
-                // Bayo: color de pelaje aceptado del cuy — acento cálido de marca
+                brand: "#5a7a0a",
+                // Lima — el chartreuse #CCD800 tal cual del logo. Es la FIRMA:
+                // solo fondos de marca (hero del login, contenedor del cuy,
+                // acentos). Nunca texto ni etiqueta de botón: como texto da
+                // 1.57:1, ilegible. Sobre lima, el texto va SIEMPRE oscuro.
+                lima: {
+                    50: "#fbfde6",
+                    100: "#f5fabf",
+                    200: "#eaf58a",
+                    300: "#dcec4f",
+                    400: "#ccd800", // semilla de marca
+                    500: "#b3bd00",
+                    600: "#8f9600",
+                    700: "#6b7000",
+                },
+                // Bayo — el naranja de marca #FC9C18 (mejillas del cuy y
+                // "Sabor de altura"). Estado "con novedad" y acentos cálidos.
                 bayo: {
-                    50: "#fdf6ea",
-                    100: "#f9e8c8",
-                    400: "#eeb257",
-                    500: "#e8a13d",
-                    600: "#c9832a",
-                    700: "#a5671f",
+                    50: "#fff6e6",
+                    100: "#ffe8bf",
+                    400: "#ffb84d",
+                    500: "#fc9c18", // semilla de marca · fondo de insignia
+                    600: "#e07f00",
+                    700: "#a85c00", // texto sobre claro · 4.99:1 AA
+                    800: "#844500",
                 },
                 // Crema del páramo: fondo cálido de la aplicación
                 crema: "#faf7f0",
-                // Rojo teja: rechazos y errores
+                // Rojo teja — el rojo de marca #F0303C. Rechazos y errores.
                 teja: {
-                    50: "#fbeeec",
-                    100: "#f5d5d0",
-                    500: "#c0392b",
-                    600: "#a93226",
-                    700: "#8e2a20",
+                    50: "#fdecec",
+                    100: "#fbd0d2",
+                    500: "#f0303c", // semilla de marca
+                    600: "#cf1f2b", // texto · 5.41:1 AA
+                    700: "#a81822",
                 },
-                tierra: "#7a5230",
-                // Azul informativo: avisos que NO rechazan al animal ni exigen
-                // una acción, como el sobrepeso (>1300 g). Deliberadamente
-                // fuera de la escala ámbar→rojo, que significa "algo va mal".
+                // Tierra — el marrón de marca #90540C (orejas y hocico).
+                tierra: "#90540c",
+                // Azul cielo/mar — los azules de marca (#60C0E4 cielo y
+                // #2478D8 mar). Avisos informativos que NO rechazan al animal,
+                // como el sobrepeso (>1300 g).
                 info: {
-                    50: "#eef4fb",
-                    100: "#d6e5f6",
-                    500: "#2f6fb0",
-                    700: "#1f4b78",
+                    50: "#eaf4fc",
+                    100: "#cbe4f8",
+                    400: "#6cc0f0", // cielo del logo
+                    500: "#2478d8", // mar del logo
+                    600: "#1b62b8", // texto · 6.02:1 AA
+                    700: "#164e92",
                 },
+            },
+            fontFamily: {
+                // Nexa Bold: fuente de marca provista. Solo display —
+                // títulos, la palabra "Cuy Azuayito" y números grandes.
+                display: ['"Nexa Bold"', "system-ui", "sans-serif"],
+                // Cuerpo: sans neutro y legible, sin descarga adicional
+                // (importa en tablets rurales offline).
+                sans: [
+                    "system-ui", "-apple-system", '"Segoe UI"',
+                    "Roboto", "Helvetica", "Arial", "sans-serif",
+                ],
             },
             animation: {
                 "fade-in-up": "fadeInUp 0.35s ease-out both",

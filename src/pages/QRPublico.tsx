@@ -177,7 +177,7 @@ export default function QRPublico() {
                                     </span>
                                     <span className={`text-xs font-bold shrink-0
                                       ${c.estado === "Apto"
-                                            ? "text-green-700"
+                                            ? "text-primary-700"
                                             : "text-amber-600"}`}>
                                         {c.estado}
                                     </span>

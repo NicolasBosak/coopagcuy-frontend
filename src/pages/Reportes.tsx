@@ -488,7 +488,7 @@ export default function Reportes() {
                                         </td>
                                         <td className="px-3 py-2.5 text-center">{r.totalLotes}</td>
                                         <td className="px-3 py-2.5 text-center">{r.totalAnimales}</td>
-                                        <td className="px-3 py-2.5 text-center text-green-700">
+                                        <td className="px-3 py-2.5 text-center text-primary-700">
                                             {r.lotesAceptados}
                                         </td>
                                         <td className="px-3 py-2.5 text-center text-yellow-700">
@@ -557,8 +557,8 @@ export default function Reportes() {
                                         <span className="font-medium text-gray-800">{r.totalAnimales}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-green-600">Aceptados</span>
-                                        <span className="font-medium text-green-700">{r.lotesAceptados}</span>
+                                        <span className="text-primary-700">Aceptados</span>
+                                        <span className="font-medium text-primary-700">{r.lotesAceptados}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-yellow-600">Con novedad</span>

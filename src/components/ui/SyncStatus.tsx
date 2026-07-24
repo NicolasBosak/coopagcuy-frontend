@@ -27,13 +27,13 @@ export function SyncStatus({
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full
                      text-xs font-medium border
                      ${isOnline
-                ? "bg-green-50 border-green-200 text-green-700"
+                ? "bg-primary-50 border-primary-200 text-primary-700"
                 : "bg-bayo-50 border-bayo-100 text-bayo-700"}`}>
             <span className={`w-1.5 h-1.5 rounded-full
                         ${syncing
                     ? "bg-bayo-500 animate-pulse"
                     : isOnline
-                        ? "bg-green-500"
+                        ? "bg-primary-500"
                         : "bg-bayo-500 animate-pulse"}`} />
 
             {syncing ? (
