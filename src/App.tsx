@@ -11,6 +11,8 @@ import Despacho from "./pages/Despacho";
 import QRPublico from "./pages/QRPublico";
 import Reportes from "./pages/Reportes";
 import Administracion from "./pages/Administracion";
+import Sesiones from "./pages/Sesiones";
+import Vinculaciones from "./pages/Vinculaciones";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,7 +43,7 @@ export default function App() {
               </PrivateRoute>
             } />
             <Route path="/recepcion" element={
-              <PrivateRoute rolesPermitidos={[
+              <PrivateRoute disponibleOffline rolesPermitidos={[
                 "OperadorCAT", "AdminCooperativa", "AdminTecnico"
               ]}>
                 <Recepcion />
@@ -74,6 +76,18 @@ export default function App() {
             <Route path="/administracion" element={
               <PrivateRoute rolesPermitidos={["AdminCooperativa", "AdminTecnico"]}>
                 <Administracion />
+              </PrivateRoute>
+            } />
+
+            {/* Sesiones activas y bandeja de vinculación (solo administración) */}
+            <Route path="/sesiones" element={
+              <PrivateRoute rolesPermitidos={["AdminCooperativa", "AdminTecnico"]}>
+                <Sesiones />
+              </PrivateRoute>
+            } />
+            <Route path="/vinculaciones" element={
+              <PrivateRoute rolesPermitidos={["AdminCooperativa", "AdminTecnico"]}>
+                <Vinculaciones />
               </PrivateRoute>
             } />
 

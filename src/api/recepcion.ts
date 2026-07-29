@@ -4,6 +4,7 @@ import type {
     RegistrarEntregaRequest, EntregaResultado,
     Movilizacion, RegistrarMovilizacionRequest,
     ConfirmarRecepcionPlantaRequest,
+    VinculacionPendiente,
 } from "../types/recepcion";
 
 export const recepcionApi = {
@@ -73,5 +74,23 @@ export const recepcionApi = {
         const { data } = await client.get<Movilizacion>(
             `/api/recepcion/lotes/${codigoLote}/movilizacion`);
         return data;
+    },
+
+    // ── Bandeja de vinculación (admin) ────────────────────────────────
+
+    listarVinculaciones: async () => {
+        const { data } = await client.get<VinculacionPendiente[]>(
+            "/api/recepcion/vinculaciones");
+        return data;
+    },
+
+    // Asigna la entrega pendiente a una productora y la registra en su jaula
+    resolverVinculacion: async (id: number, productoraId: number) => {
+        await client.post(`/api/recepcion/vinculaciones/${id}/resolver`,
+            { productoraId });
+    },
+
+    descartarVinculacion: async (id: number) => {
+        await client.delete(`/api/recepcion/vinculaciones/${id}`);
     },
 };

@@ -10,7 +10,11 @@ export interface LoginResponse {
     rol: string;
     // CAT asignado: un Operador de CAT solo registra en su centro
     catAsignado: string | null;
+    // Expiración del access token (corto)
     expira: string;
+    // Fin de la sesión de 7 días (refresh token): hasta cuándo se permite
+    // "entrar directo" sin conexión
+    sesionExpira: string;
 }
 
 export type RolUsuario =

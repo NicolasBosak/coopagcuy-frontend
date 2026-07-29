@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { productorasApi } from "../../api/productoras";
 import { recepcionApi } from "../../api/recepcion";
 import { offlineDB } from "../../services/db";
+import { esCedulaValida } from "../../utils/validarCedula";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import { useAuth } from "../../context/AuthContext";
 import type {
@@ -129,6 +130,10 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const catFijo = auth.rol === "OperadorCAT"
         ? (auth.catAsignado as CentroAcopio | null) : null;
     const [productoraId, setProductoraId] = useState(0);
+    // Registro sin catálogo (offline): cédula de la productora digitada a mano.
+    // El servidor la resuelve al sincronizar; si no coincide con ninguna
+    // productora del centro, la entrega va a la bandeja de vinculación.
+    const [cedulaManual, setCedulaManual] = useState("");
     const [centroAcopio, setCentroAcopio] = useState<CentroAcopio>(
         catFijo ?? "PAT");
     const [cantidad, setCantidad] = useState(1);
@@ -141,9 +146,22 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const [cuyActual, setCuyActual] = useState(0);
     const [conObservacionSanitaria, setConObservacionSanitaria] = useState(false);
 
+    // Con señal: se trae el catálogo y se cachea en IndexedDB para el offline.
+    // Sin señal (o si la petición falla): se lee la última copia cacheada.
     const { data: productoras = [] } = useQuery({
         queryKey: ["productoras"],
-        queryFn: () => productorasApi.listar(),
+        queryFn: async () => {
+            if (navigator.onLine) {
+                try {
+                    const data = await productorasApi.listar();
+                    await offlineDB.guardarProductoras(data);
+                    return data;
+                } catch {
+                    return offlineDB.obtenerProductorasCache();
+                }
+            }
+            return offlineDB.obtenerProductorasCache();
+        },
     });
 
     const productorasFiltradas = useMemo(() => {
@@ -187,8 +205,12 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const pesoTotal = cuyes.reduce((acc, c) => acc + (c.pesoGramos || 0), 0);
     const pesoPromedio = cuyes.length > 0 ? Math.round(pesoTotal / cuyes.length) : 0;
 
+    // Para avanzar del paso 1: o hay productora elegida, o (sin catálogo) una
+    // cédula ecuatoriana válida digitada a mano
+    const cedulaManualValida = esCedulaValida(cedulaManual);
+
     const puedeAvanzar = () => {
-        if (paso === 1) return productoraId !== 0;
+        if (paso === 1) return productoraId !== 0 || cedulaManualValida;
         if (paso === 2) return cantidad >= 1;
         if (paso === 3) return cuyes.every((c) => c.pesoGramos > 0);
         if (paso === 4) return responsable.trim().length > 0;
@@ -197,6 +219,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
 
     const elegirProductora = (id: number, cat: string) => {
         setProductoraId(id);
+        setCedulaManual("");   // productora y cédula manual son excluyentes
         // Con CAT fijo del operador no se cambia el centro
         if (!catFijo && CENTROS_ACOPIO.some((c) => c.value === cat))
             setCentroAcopio(cat as CentroAcopio);
@@ -205,6 +228,9 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const construirRequest = (): RegistrarEntregaRequest => ({
         centroAcopio,
         productoraId,
+        // Sin productora elegida se envía la cédula: el servidor la resuelve
+        cedulaProductora: productoraId === 0 && cedulaManualValida
+            ? cedulaManual.trim() : undefined,
         enAyunas,
         responsableRecepcion: responsable,
         observaciones,
@@ -370,6 +396,45 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             `prod-${p.id}`
                                         ))}
                                 </div>
+
+                                {/* Sin señal: si la productora no está en la
+                                    lista cacheada, se registra por su cédula.
+                                    El servidor la vincula al sincronizar. */}
+                                {!isOnline && (
+                                    <div className="rounded-2xl border-2 border-dashed
+                                        border-bayo-200 bg-bayo-50/50 p-3 space-y-2">
+                                        <label className="block text-xs font-bold uppercase
+                                            tracking-wide text-bayo-700">
+                                            ¿No está en la lista? Ingresa su cédula
+                                        </label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={10}
+                                            value={cedulaManual}
+                                            onChange={(e) => {
+                                                setCedulaManual(
+                                                    e.target.value.replace(/\D/g, ""));
+                                                setProductoraId(0);
+                                            }}
+                                            placeholder="0102030405"
+                                            className="w-full h-12 px-4 rounded-2xl border-2
+                                                border-gray-200 bg-white text-base
+                                                focus:border-primary-500 focus:outline-none"
+                                        />
+                                        {cedulaManual.length === 10 && !cedulaManualValida && (
+                                            <p className="text-xs font-medium text-red-600">
+                                                Esa cédula no es válida. Revísala.
+                                            </p>
+                                        )}
+                                        {cedulaManualValida && (
+                                            <p className="text-xs font-medium text-primary-700">
+                                                ✓ Cédula válida — se vinculará a la productora
+                                                al recuperar señal.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-3 pt-2">
                                     <div>
@@ -766,7 +831,9 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                 {[
                                     ["Productora", productoraElegida
                                         ? `${productoraElegida.nombreCompleto} (${productoraElegida.comunidad})`
-                                        : "—"],
+                                        : cedulaManualValida
+                                            ? `Cédula ${cedulaManual} (por vincular)`
+                                            : "—"],
                                     ["Centro de acopio", CENTROS_ACOPIO.find(
                                         c => c.value === centroAcopio)?.label ?? centroAcopio],
                                     ["Cantidad", `${cuyes.length} cuyes`],

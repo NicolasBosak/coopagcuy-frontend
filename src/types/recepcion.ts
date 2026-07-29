@@ -2,7 +2,10 @@ export type EstadoLote = "Aceptado" | "ConNovedad" | "Rechazado";
 export type EstadoOreja = "Blanda" | "Semiblanda" | "Dura";
 export type ColorPelaje = "Blanco" | "Bayo" | "Plomo" | "Combinado" | "Negro";
 export type TamanoAnimal = "Normal" | "Pequeno" | "Grande";
-export type EstadoSync = "pendiente" | "sincronizado" | "error";
+// "en_revision": la entrega se envió pero su cédula no tenía productora en el
+// centro; quedó en la bandeja de vinculación del administrador. El dispositivo
+// ya no la reenvía.
+export type EstadoSync = "pendiente" | "sincronizado" | "error" | "en_revision";
 
 // Datos de un cuy individual dentro del lote
 export interface CuyRegistro {
@@ -68,6 +71,11 @@ export interface Lote {
 export interface RegistrarEntregaRequest {
     centroAcopio: string;
     productoraId: number;
+    // Captura offline sin catálogo: cuando no se tiene el Id de la productora
+    // se envía su cédula y el servidor la resuelve al sincronizar. Si la
+    // cédula es válida pero no coincide con ninguna productora del centro, la
+    // entrega va a la bandeja de vinculación.
+    cedulaProductora?: string;
     // Solo para el sync offline: momento en que la tablet capturó la entrega.
     // En línea lo sella el servidor y este campo se omite.
     fechaCapturaOffline?: string;
@@ -106,12 +114,33 @@ export interface SyncResult {
     // sin duplicar animales
     totalDuplicados: number;
     totalConError: number;
+    // Entregas con cédula válida sin productora: encoladas en la bandeja
+    totalPendientesVinculacion: number;
     resultados: {
         idCliente: string | null;
         exito: boolean;
         duplicada: boolean;
+        pendienteVinculacion: boolean;
         motivo: string | null;
     }[];
+}
+
+// ── Bandeja de vinculación (admin) ────────────────────────────────────
+
+// Entrega capturada offline con cédula válida sin productora en el centro.
+// Un administrador la asigna a la productora correcta o la descarta.
+export interface VinculacionPendiente {
+    id: number;
+    cedula: string;
+    centroAcopio: string;
+    fechaCaptura: string;
+    enAyunas: boolean;
+    responsableRecepcion: string;
+    observaciones: string | null;
+    cantidadCuyes: number;
+    pesoTotalGramos: number;
+    dispositivoId: string;
+    fechaCreacion: string;
 }
 
 // ── Movilización CAT → planta (eslabón transporte) ────────────────────
