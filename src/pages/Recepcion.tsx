@@ -309,12 +309,14 @@ export default function Recepcion() {
                                                 label={
                                                     l._estado === "pendiente" ? "Pendiente" :
                                                         l._estado === "sincronizado" ? "Sincronizado" :
-                                                            "Error"
+                                                            l._estado === "en_revision" ? "En revisión" :
+                                                                "Error"
                                                 }
                                                 variant={
                                                     l._estado === "pendiente" ? "warning" :
                                                         l._estado === "sincronizado" ? "success" :
-                                                            "danger"
+                                                            l._estado === "en_revision" ? "info" :
+                                                                "danger"
                                                 }
                                             />
                                         </div>

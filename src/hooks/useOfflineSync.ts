@@ -55,6 +55,11 @@ export function useOfflineSync() {
                 if (!r.idCliente) continue;
                 if (r.exito) {
                     await offlineDB.marcarSincronizado(r.idCliente);
+                } else if (r.pendienteVinculacion) {
+                    // Cédula válida sin productora: quedó en la bandeja de
+                    // vinculación del admin. Ya no se reenvía desde la tablet.
+                    await offlineDB.marcarEnRevision(
+                        r.idCliente, r.motivo ?? undefined);
                 } else {
                     await offlineDB.marcarError(
                         r.idCliente, r.motivo ?? "Error desconocido");

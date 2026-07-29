@@ -10,7 +10,9 @@ const navItems: { to: string; label: string; roles: string[] | null }[] = [
     { to: "/faenamiento", label: "Faenamiento", roles: ["OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"] },
     { to: "/despacho", label: "Despacho", roles: ["OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"] },
     { to: "/reportes", label: "Reportes", roles: ["AdminCooperativa", "AdminTecnico", "OperadorFaenamiento"] },
+    { to: "/vinculaciones", label: "Vinculaciones", roles: ["AdminCooperativa", "AdminTecnico"] },
     { to: "/administracion", label: "Administración", roles: ["AdminCooperativa", "AdminTecnico"] },
+    { to: "/sesiones", label: "Sesiones", roles: ["AdminCooperativa", "AdminTecnico"] },
 ];
 
 const NOMBRE_ROL: Record<string, string> = {

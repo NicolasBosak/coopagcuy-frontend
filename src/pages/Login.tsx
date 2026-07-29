@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import client from "../api/client";
-import type { LoginRequest, LoginResponse } from "../types/auth";
+import { authApi } from "../api/auth";
+import type { LoginRequest } from "../types/auth";
 
 export default function Login() {
     const { login } = useAuth();
@@ -18,7 +18,7 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const { data } = await client.post<LoginResponse>("/api/auth/login", form);
+            const data = await authApi.login(form);
             login(data);
             navigate("/dashboard");
         } catch (e: unknown) {
