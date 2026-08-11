@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { offlineDB } from "../services/db";
 import client from "../api/client";
 import type { SyncResult } from "../types/recepcion";
+import { omitir } from "../utils/omitir";
 
 export function useOfflineSync() {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -40,11 +41,11 @@ export function useOfflineSync() {
                     dispositivoId,
                     // El _id local viaja como idCliente: es la clave de
                     // idempotencia y de emparejamiento del resultado
-                    entregas: entregas.map(({ _id, _tipo, _estado,
-                        _fechaCreacion, _intentos, _error, ...rest }) => ({
-                            ...rest,
-                            idCliente: _id,
-                        })),
+                    entregas: entregas.map((e) => ({
+                        ...omitir(e, ["_id", "_tipo", "_estado",
+                            "_fechaCreacion", "_intentos", "_error"]),
+                        idCliente: e._id,
+                    })),
                 }
             );
 
@@ -88,7 +89,9 @@ export function useOfflineSync() {
 
         window.addEventListener("online", onOnline);
         window.addEventListener("offline", onOffline);
-        actualizarConteo();
+        // Envuelto en una función async (en vez de llamarlo directo) para
+        // no invocar setState de forma síncrona en el cuerpo del efecto.
+        void (async () => { await actualizarConteo(); })();
 
         return () => {
             window.removeEventListener("online", onOnline);

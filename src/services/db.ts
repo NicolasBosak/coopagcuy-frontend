@@ -33,15 +33,17 @@ function transaccion<T>(
     modo: IDBTransactionMode,
     fn: (store: IDBObjectStore) => IDBRequest<T>
 ): Promise<T> {
-    return new Promise(async (resolve, reject) => {
-        const db = await abrirDB();
+    // El executor no es async: si abrirDB() rechaza, un executor async no
+    // propagaría el error a este Promise (quedaría como rechazo no
+    // manejado) y la llamada se quedaría colgada en vez de fallar.
+    return abrirDB().then((db) => new Promise<T>((resolve, reject) => {
         const tx = db.transaction(STORE, modo);
         const store = tx.objectStore(STORE);
         const req = fn(store);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
         tx.oncomplete = () => db.close();
-    });
+    }));
 }
 
 // El almacén puede contener registros del formato antiguo (lotes por
@@ -57,8 +59,7 @@ const soloEntregas = (registros: unknown[]): EntregaOffline[] =>
 function actualizarEstado(
     id: string, mutar: (registro: EntregaOffline) => void
 ): Promise<void> {
-    return new Promise<void>(async (resolve, reject) => {
-        const db = await abrirDB();
+    return abrirDB().then((db) => new Promise<void>((resolve, reject) => {
         const tx = db.transaction(STORE, "readwrite");
         const store = tx.objectStore(STORE);
         const get = store.get(id);
@@ -68,7 +69,7 @@ function actualizarEstado(
         };
         tx.oncomplete = () => { db.close(); resolve(); };
         tx.onerror = () => reject(tx.error);
-    });
+    }));
 }
 
 export const offlineDB = {
@@ -76,8 +77,7 @@ export const offlineDB = {
         transaccion("readwrite", (s) => s.put(entrega)),
 
     obtenerPendientes: (): Promise<EntregaOffline[]> =>
-        new Promise(async (resolve, reject) => {
-            const db = await abrirDB();
+        abrirDB().then((db) => new Promise<EntregaOffline[]>((resolve, reject) => {
             const tx = db.transaction(STORE, "readonly");
             const store = tx.objectStore(STORE);
             const idx = store.index("_estado");
@@ -85,18 +85,17 @@ export const offlineDB = {
             req.onsuccess = () => resolve(soloEntregas(req.result));
             req.onerror = () => reject(req.error);
             tx.oncomplete = () => db.close();
-        }),
+        })),
 
     obtenerTodos: (): Promise<EntregaOffline[]> =>
-        new Promise(async (resolve, reject) => {
-            const db = await abrirDB();
+        abrirDB().then((db) => new Promise<EntregaOffline[]>((resolve, reject) => {
             const tx = db.transaction(STORE, "readonly");
             const store = tx.objectStore(STORE);
             const req = store.getAll();
             req.onsuccess = () => resolve(soloEntregas(req.result));
             req.onerror = () => reject(req.error);
             tx.oncomplete = () => db.close();
-        }),
+        })),
 
     marcarSincronizado: (id: string) =>
         actualizarEstado(id, (r) => { r._estado = "sincronizado"; }),
@@ -117,8 +116,7 @@ export const offlineDB = {
         }),
 
     limpiarSincronizados: () =>
-        new Promise<void>(async (resolve, reject) => {
-            const db = await abrirDB();
+        abrirDB().then((db) => new Promise<void>((resolve, reject) => {
             const tx = db.transaction(STORE, "readwrite");
             const store = tx.objectStore(STORE);
             const idx = store.index("_estado");
@@ -129,30 +127,28 @@ export const offlineDB = {
             };
             tx.oncomplete = () => { db.close(); resolve(); };
             tx.onerror = () => reject(tx.error);
-        }),
+        })),
 
     // ── Caché de productoras para el registro offline ─────────────────
 
     // Reemplaza el catálogo cacheado con el más reciente (traído con señal)
     guardarProductoras: (productoras: Productora[]) =>
-        new Promise<void>(async (resolve, reject) => {
-            const db = await abrirDB();
+        abrirDB().then((db) => new Promise<void>((resolve, reject) => {
             const tx = db.transaction(STORE_PRODUCTORAS, "readwrite");
             const store = tx.objectStore(STORE_PRODUCTORAS);
             store.clear();
             for (const p of productoras) store.put(p);
             tx.oncomplete = () => { db.close(); resolve(); };
             tx.onerror = () => reject(tx.error);
-        }),
+        })),
 
     obtenerProductorasCache: (): Promise<Productora[]> =>
-        new Promise(async (resolve, reject) => {
-            const db = await abrirDB();
+        abrirDB().then((db) => new Promise<Productora[]>((resolve, reject) => {
             const tx = db.transaction(STORE_PRODUCTORAS, "readonly");
             const store = tx.objectStore(STORE_PRODUCTORAS);
             const req = store.getAll();
             req.onsuccess = () => resolve(req.result as Productora[]);
             req.onerror = () => reject(req.error);
             tx.oncomplete = () => db.close();
-        }),
+        })),
 };

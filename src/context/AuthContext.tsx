@@ -1,5 +1,5 @@
 import {
-    createContext, useContext, useState, useEffect,
+    useState, useEffect,
     type ReactNode
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { tokenStore } from "../api/tokenStore";
 import { session, type Identidad } from "../api/session";
 import { authApi } from "../api/auth";
 import type { LoginResponse, RolUsuario } from "../types/auth";
+import { AuthContext } from "./AuthContextInstance";
 
 interface AuthState {
     nombreCompleto: string | null;
@@ -15,7 +16,7 @@ interface AuthState {
     catAsignado: string | null;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
     auth: AuthState;
     // true mientras se intenta restaurar la sesión al arrancar (refresh o
     // "entrar directo" offline); PrivateRoute espera a que termine
@@ -31,8 +32,6 @@ interface AuthContextType {
 const VACIO: AuthState = {
     nombreCompleto: null, cedula: null, rol: null, catAsignado: null,
 };
-
-const AuthContext = createContext<AuthContextType | null>(null);
 
 function aEstado(id: Identidad): AuthState {
     return {
@@ -134,10 +133,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             {children}
         </AuthContext.Provider>
     );
-}
-
-export function useAuth() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuth debe usarse dentro de AuthProvider");
-    return ctx;
 }

@@ -26,8 +26,13 @@ function useContador(destino: number, duracionMs = 700) {
         const reduceMotion = window.matchMedia(
             "(prefers-reduced-motion: reduce)").matches;
         if (reduceMotion || destino === 0) {
-            setValor(destino);
-            return;
+            // Se difiere al siguiente frame (en vez de llamar a setState de
+            // forma síncrona en el efecto) para no disparar un render en
+            // cascada justo después del commit.
+            ref.current = requestAnimationFrame(() => setValor(destino));
+            return () => {
+                if (ref.current) cancelAnimationFrame(ref.current);
+            };
         }
 
         const inicio = performance.now();

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi, pagosApi } from "../../api/productoras";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import type { RegistrarPagoRequest } from "../../types/productora";

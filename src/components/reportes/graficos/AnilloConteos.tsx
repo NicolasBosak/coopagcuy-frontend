@@ -24,6 +24,14 @@ const RADIO = 52;
 const GROSOR = 16;
 const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
 
+interface Arco {
+    etiqueta: string;
+    valor: number;
+    fraccion: number;
+    offset: number;
+    color: string;
+}
+
 export function AnilloConteos({ titulo, conteos, unidad = "registros", vacio }: Props) {
     const entradas = Object.entries(conteos)
         .filter(([, v]) => v > 0)
@@ -31,13 +39,21 @@ export function AnilloConteos({ titulo, conteos, unidad = "registros", vacio }: 
         .slice(0, 7);
     const total = Object.values(conteos).reduce((acc, v) => acc + v, 0);
 
-    let acumulado = 0;
-    const arcos = entradas.map(([etiqueta, valor], i) => {
-        const fraccion = valor / total;
-        const arco = { etiqueta, valor, fraccion, offset: acumulado, color: PALETA[i % PALETA.length] };
-        acumulado += fraccion;
-        return arco;
-    });
+    // Cada arco arranca donde terminó el anterior (suma acumulada sin
+    // mutar variables externas al callback, para mantener el render puro)
+    const { arcos } = entradas.reduce<{ arcos: Arco[]; acumulado: number }>(
+        (estado, [etiqueta, valor], i) => {
+            const fraccion = valor / total;
+            return {
+                arcos: [...estado.arcos, {
+                    etiqueta, valor, fraccion,
+                    offset: estado.acumulado, color: PALETA[i % PALETA.length],
+                }],
+                acumulado: estado.acumulado + fraccion,
+            };
+        },
+        { arcos: [], acumulado: 0 },
+    );
 
     return (
         <div className="bg-white rounded-2xl border border-gray-200 p-5">

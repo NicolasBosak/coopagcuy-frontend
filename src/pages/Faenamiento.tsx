@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { faenamientoApi } from "../api/faenamiento";
 import { recepcionApi } from "../api/recepcion";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
 import { Segmentado } from "../components/ui/Segmentado";

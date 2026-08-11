@@ -26,20 +26,30 @@ export function PanelQR({ codigoLote }: Props) {
     });
 
     // La imagen del QR se descarga con el token (un <img src> directo
-    // al endpoint no enviaría la autenticación)
+    // al endpoint no enviaría la autenticación). Todo el cuerpo corre
+    // dentro de una función asíncrona (como en AuthContext) para no
+    // llamar a setState de forma síncrona en el efecto.
     useEffect(() => {
+        let cancelado = false;
         let url: string | null = null;
-        if (qr) {
-            faenamientoApi.descargarQRPng(codigoLote)
-                .then((blob) => {
-                    url = URL.createObjectURL(blob);
-                    setImagenUrl(url);
-                })
-                .catch(() => setImagenUrl(null));
-        } else {
-            setImagenUrl(null);
-        }
+
+        (async () => {
+            if (!qr) {
+                if (!cancelado) setImagenUrl(null);
+                return;
+            }
+            try {
+                const blob = await faenamientoApi.descargarQRPng(codigoLote);
+                if (cancelado) return;
+                url = URL.createObjectURL(blob);
+                setImagenUrl(url);
+            } catch {
+                if (!cancelado) setImagenUrl(null);
+            }
+        })();
+
         return () => {
+            cancelado = true;
             if (url) URL.revokeObjectURL(url);
         };
     }, [qr, codigoLote]);
