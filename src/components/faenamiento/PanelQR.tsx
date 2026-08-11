@@ -9,7 +9,10 @@ interface Props { codigoLote: string; }
 export function PanelQR({ codigoLote }: Props) {
     const [generando, setGenerando] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+    // Se guarda junto con el codigoLote al que corresponde: si el usuario
+    // cambia de lote antes de que la descarga termine, `imagenUrl` (abajo)
+    // no muestra la imagen del lote anterior ni una URL ya revocada.
+    const [descarga, setDescarga] = useState<{ url: string; codigoLote: string } | null>(null);
 
     const { data: qr, refetch, isLoading: cargandoQR } = useQuery({
         queryKey: ["qr", codigoLote],
@@ -26,33 +29,34 @@ export function PanelQR({ codigoLote }: Props) {
     });
 
     // La imagen del QR se descarga con el token (un <img src> directo
-    // al endpoint no enviaría la autenticación). Todo el cuerpo corre
-    // dentro de una función asíncrona (como en AuthContext) para no
-    // llamar a setState de forma síncrona en el efecto.
+    // al endpoint no enviaría la autenticación). Si no hay QR generado no
+    // hay nada que descargar ni que limpiar: no se llama a setState aquí,
+    // el valor derivado `imagenUrl` de abajo ya trata "sin descarga
+    // vigente" como "sin imagen que mostrar".
     useEffect(() => {
+        if (!qr) return;
         let cancelado = false;
         let url: string | null = null;
 
-        (async () => {
-            if (!qr) {
-                if (!cancelado) setImagenUrl(null);
-                return;
-            }
-            try {
-                const blob = await faenamientoApi.descargarQRPng(codigoLote);
+        faenamientoApi.descargarQRPng(codigoLote)
+            .then((blob) => {
                 if (cancelado) return;
                 url = URL.createObjectURL(blob);
-                setImagenUrl(url);
-            } catch {
-                if (!cancelado) setImagenUrl(null);
-            }
-        })();
+                setDescarga({ url, codigoLote });
+            })
+            .catch(() => {
+                if (!cancelado) setDescarga(null);
+            });
 
         return () => {
             cancelado = true;
             if (url) URL.revokeObjectURL(url);
         };
     }, [qr, codigoLote]);
+
+    // Solo válida si corresponde al lote que se está mostrando ahora mismo.
+    const imagenUrl = descarga && descarga.codigoLote === codigoLote
+        ? descarga.url : null;
 
     const handleGenerar = async () => {
         setGenerando(true);

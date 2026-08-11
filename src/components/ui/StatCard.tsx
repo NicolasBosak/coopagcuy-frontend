@@ -22,18 +22,18 @@ function useContador(destino: number, duracionMs = 700) {
     const [valor, setValor] = useState(0);
     const ref = useRef<number | null>(null);
 
+    // Se lee en cada render (no en el efecto): así el caso "sin animación"
+    // se resuelve devolviendo `destino` directamente más abajo, sin pasar
+    // por setState. Evita dos problemas reales de diferir ese setState a
+    // requestAnimationFrame: un frame de más mostrando "0", y que en una
+    // pestaña/PWA en segundo plano rAF queda pausado y la tarjeta se
+    // congela en 0 hasta que vuelve el foco.
+    const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)").matches;
+    const instantaneo = reduceMotion || destino === 0;
+
     useEffect(() => {
-        const reduceMotion = window.matchMedia(
-            "(prefers-reduced-motion: reduce)").matches;
-        if (reduceMotion || destino === 0) {
-            // Se difiere al siguiente frame (en vez de llamar a setState de
-            // forma síncrona en el efecto) para no disparar un render en
-            // cascada justo después del commit.
-            ref.current = requestAnimationFrame(() => setValor(destino));
-            return () => {
-                if (ref.current) cancelAnimationFrame(ref.current);
-            };
-        }
+        if (instantaneo) return;
 
         const inicio = performance.now();
         const tick = (ahora: number) => {
@@ -47,9 +47,9 @@ function useContador(destino: number, duracionMs = 700) {
         return () => {
             if (ref.current) cancelAnimationFrame(ref.current);
         };
-    }, [destino, duracionMs]);
+    }, [destino, duracionMs, instantaneo]);
 
-    return valor;
+    return instantaneo ? destino : valor;
 }
 
 export function StatCard({
