@@ -38,8 +38,28 @@ jobs:
       # vulnerables no llegan al usuario y bloquearlas sería ruido; es el
       # mismo criterio que en el repo del API, donde el escaneo bloquea por
       # el proyecto que se despliega e informa por el de pruebas.
+      #
+      # Bloquea en Pull Request, informa en push: mismo criterio que la
+      # cabecera de seguridad.yml en el repo del API ("en PR los hallazgos
+      # bloquean; en push a main solo informan, para no dejar al proyecto
+      # sin poder desplegar un arreglo urgente"). Este job despliega en
+      # push, así que un HIGH publicado en cualquier dependencia —incluido
+      # el propio hotfix que lo arregla— no puede bloquear producción. Y
+      # `pnpm audit` consulta el registro de npm en vivo: una caída de
+      # npmjs tampoco debe tumbar un despliegue.
+      #
+      # `if` explícito y no `... || exit 1` encadenado: mismo motivo que en
+      # el repo del API, más explícito sobre qué evento bloquea.
       - name: Auditoría de dependencias
-        run: pnpm audit --prod --audit-level high
+        run: |
+          estado=0
+          pnpm audit --prod --audit-level high || estado=$?
+          if [ "$estado" -ne 0 ]; then
+            echo "pnpm audit encontró dependencias vulnerables (o no pudo consultar el registro de npm)."
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              exit 1
+            fi
+          fi
 
       # Compila con la URL del API del entorno (staging o producción).
       # tsc -b corre dentro del script build, así que el typecheck
