@@ -1,0 +1,39 @@
+name: CodeQL
+
+# En PR bloquea; en push a main solo publica. El cron existe porque las reglas
+# de CodeQL mejoran con el tiempo: código que hoy pasa puede no pasar mañana.
+# Se escalona 30 minutos respecto al cron del API (lunes 06:00 UTC) para que
+# ambas ejecuciones no compitan por los runners compartidos de la organización.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [develop, main]
+  schedule:
+    - cron: "30 6 * * 1"   # lunes 06:30 UTC, escalonado respecto al API
+  workflow_dispatch:
+
+jobs:
+  analizar:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # TypeScript no necesita compilarse para el análisis: el extractor
+          # de CodeQL entiende el código fuente directamente.
+          build-mode: none
+          queries: security-extended
+
+      - name: Analizar
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
