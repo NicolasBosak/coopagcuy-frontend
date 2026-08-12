@@ -6,7 +6,10 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // dist: build de producción. dev-dist: artefactos del service worker en
+  // modo dev (vite-plugin-pwa), igual que en .gitignore; nunca hay código
+  // fuente propio ahí y no existen en un checkout limpio de CI.
+  globalIgnores(['dist', 'dev-dist']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

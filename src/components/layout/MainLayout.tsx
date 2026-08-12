@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 
 // Cada ítem declara qué roles pueden verlo; null = todos
 const navItems: { to: string; label: string; roles: string[] | null }[] = [

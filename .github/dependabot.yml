@@ -1,0 +1,38 @@
+version: 2
+updates:
+  # pnpm-lock.yaml en la raíz: el ecosistema "npm" de Dependabot también
+  # entiende lockfiles de pnpm, no hace falta un ecosistema aparte
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: develop
+    commit-message:
+      prefix: "deps"
+    groups:
+      # React 19 y sus tipos van acoplados entre sí: subirlos por separado
+      # deja versiones desalineadas entre runtime y @types
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # ESLint 10 y typescript-eslint 8 se versionan juntos; un PR por
+      # paquete generaría conflictos de peer dependencies
+      eslint:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "typescript-eslint"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: develop
+    commit-message:
+      prefix: "ci"

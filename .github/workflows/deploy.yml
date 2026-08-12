@@ -1,6 +1,21 @@
 name: Desplegar Front
 
-# develop -> staging; main -> producción (con aprobación en el entorno).
+# main -> producción (con aprobación manual del entorno "production").
+# develop y los Pull Requests solo verifican (lint, auditoría y build con
+# typecheck); no despliegan. El entorno de staging se eliminó de Azure
+# para reducir costes, así que ya no hay a dónde desplegar develop.
+#
+# Por qué son DOS jobs y no uno solo con "environment: production": ese
+# era justo el atajo tentador ahora que solo queda un entorno. Pero un
+# job referencia su "environment" sin importar a qué resuelva el nombre,
+# y las reglas de protección de ese entorno (la aprobación manual) se
+# aplican ANTES de que el job arranque. Si "verify" (que corre en cada PR
+# y en cada push a develop) tuviera "environment: production", cada PR y
+# cada push a develop se quedarían esperando esa aprobación manual, y el
+# CI del front dejaría de servir para el día a día. Separando "verify"
+# (sin entorno, corre siempre) de "deploy" (con "environment: production",
+# solo en push a main) el gate de aprobación queda reservado de verdad
+# para el despliegue.
 on:
   push:
     branches: [develop, main]
@@ -13,11 +28,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-deploy:
+  # ── 1. Verificación: lint, auditoría y build/typecheck ───────────────
+  # Corre siempre (PR y push a develop o main). No referencia ningún
+  # "environment" de GitHub a propósito: así nunca dispara la aprobación
+  # manual de producción.
+  verify:
     runs-on: ubuntu-latest
-    # Solo despliega en push; los PR se quedan en build/typecheck
-    environment:
-      name: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,17 +47,74 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Compila con la URL del API del entorno (staging o producción).
-      # tsc -b corre dentro del script build, así que el typecheck
-      # también bloquea aquí.
-      - name: Compilar
+      - name: Lint
+        run: pnpm lint
+
+      # --prod: solo lo que se sirve al navegador. Las devDependencies
+      # vulnerables no llegan al usuario y bloquearlas sería ruido; es el
+      # mismo criterio que en el repo del API, donde el escaneo bloquea por
+      # el proyecto que se despliega e informa por el de pruebas.
+      #
+      # Bloquea en Pull Request, informa en push: mismo criterio que la
+      # cabecera de seguridad.yml en el repo del API ("en PR los hallazgos
+      # bloquean; en push a main solo informan, para no dejar al proyecto
+      # sin poder desplegar un arreglo urgente"). El despliegue real ocurre
+      # en push a main, así que un HIGH publicado en cualquier dependencia
+      # —incluido el propio hotfix que lo arregla— no puede bloquear
+      # producción. Y `pnpm audit` consulta el registro de npm en vivo: una
+      # caída de npmjs tampoco debe tumbar un despliegue.
+      #
+      # `if` explícito y no `... || exit 1` encadenado: mismo motivo que en
+      # el repo del API, más explícito sobre qué evento bloquea.
+      - name: Auditoría de dependencias
+        run: |
+          estado=0
+          pnpm audit --prod --audit-level high || estado=$?
+          if [ "$estado" -ne 0 ]; then
+            echo "pnpm audit encontró dependencias vulnerables (o no pudo consultar el registro de npm)."
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              exit 1
+            fi
+          fi
+
+      # Build de verificación: no se publica (eso lo hace el job "deploy",
+      # con la VITE_API_URL real de producción, que solo existe en ese
+      # entorno). tsc -b corre dentro del script build, así que el
+      # typecheck bloquea igual aquí sin tocar ningún entorno de GitHub.
+      - name: Compilar (typecheck)
+        run: pnpm build
+
+  # ── 2. Despliegue a producción (solo push a main) ────────────────────
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    # Único entorno: production, con la aprobación manual ya configurada
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Se recompila aquí (y no se reusa el artefacto de "verify") porque
+      # esta compilación necesita la VITE_API_URL de producción, que es
+      # una variable del entorno "production" y solo se resuelve dentro
+      # de un job que lo referencia.
+      - name: Compilar con la URL del API
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: pnpm build
 
-      # Los PR solo verifican; el despliegue real ocurre en push
       - name: Desplegar a Static Web Apps
-        if: github.event_name == 'push'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOY_TOKEN }}

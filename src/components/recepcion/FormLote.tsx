@@ -5,7 +5,7 @@ import { recepcionApi } from "../../api/recepcion";
 import { offlineDB } from "../../services/db";
 import { esCedulaValida } from "../../utils/validarCedula";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import type {
     RegistrarEntregaRequest, ColorPelaje, CuyRegistro,
     EstadoOreja, TamanoAnimal, EntregaOffline
