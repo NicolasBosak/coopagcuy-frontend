@@ -4,7 +4,7 @@ import { productorasApi } from "../api/productoras";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
 import { FormProductora } from "../components/productoras/FormProductora";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { CENTROS_ACOPIO, type CentroAcopio, type Productora } from "../types/productora";
 
 export default function Productoras() {

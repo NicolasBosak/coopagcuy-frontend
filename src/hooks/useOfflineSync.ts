@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { offlineDB } from "../services/db";
 import client from "../api/client";
 import type { SyncResult } from "../types/recepcion";
+import { omitir } from "../utils/omitir";
 
 export function useOfflineSync() {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -14,10 +15,17 @@ export function useOfflineSync() {
     // competirían por las mismas entregas
     const syncEnCurso = useRef(false);
 
-    // Contar pendientes al montar
+    // Contar pendientes al montar. Si IndexedDB no abre (bloqueada, modo
+    // privado, cuota agotada) esto ya no debe quedar como una promesa
+    // rechazada sin manejar: se registra el error y el contador se queda
+    // en su último valor conocido en vez de romper en silencio.
     const actualizarConteo = useCallback(async () => {
-        const lotes = await offlineDB.obtenerPendientes();
-        setPendientes(lotes.length);
+        try {
+            const lotes = await offlineDB.obtenerPendientes();
+            setPendientes(lotes.length);
+        } catch (err) {
+            console.error("No se pudo leer la cola offline:", err);
+        }
     }, []);
 
     // Sincroniza las entregas pendientes con el backend
@@ -40,11 +48,11 @@ export function useOfflineSync() {
                     dispositivoId,
                     // El _id local viaja como idCliente: es la clave de
                     // idempotencia y de emparejamiento del resultado
-                    entregas: entregas.map(({ _id, _tipo, _estado,
-                        _fechaCreacion, _intentos, _error, ...rest }) => ({
-                            ...rest,
-                            idCliente: _id,
-                        })),
+                    entregas: entregas.map((e) => ({
+                        ...omitir(e, ["_id", "_tipo", "_estado",
+                            "_fechaCreacion", "_intentos", "_error"]),
+                        idCliente: e._id,
+                    })),
                 }
             );
 
@@ -88,6 +96,12 @@ export function useOfflineSync() {
 
         window.addEventListener("online", onOnline);
         window.addEventListener("offline", onOffline);
+        // Falso positivo de la regla: actualizarConteo() es async y su
+        // propio setPendientes ocurre después de un `await
+        // offlineDB.obtenerPendientes()` interno (IndexedDB), nunca en el
+        // mismo tick que este efecto. La regla no atraviesa el await de una
+        // función externa para verlo.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         actualizarConteo();
 
         return () => {

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { faenamientoApi } from "../../api/faenamiento";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
+import { omitir } from "../../utils/omitir";
 import type {
     CuyFaenamientoRequest, EstadoCanal,
     AlertaNovedadPrevia, CuyDisponible,
@@ -78,7 +79,8 @@ export function FormFaenamiento({ onClose }: Props) {
     const toggleLote = (loteId: number, cuyes: CuyDisponible[]) => {
         setSeleccion((prev) => {
             if (prev[loteId]) {
-                const { [loteId]: _, ...resto } = prev;
+                const resto = { ...prev };
+                delete resto[loteId];
                 return resto;
             }
             return {
@@ -137,8 +139,8 @@ export function FormFaenamiento({ onClose }: Props) {
                     loteId: Number(loteId),
                     cuyes: cuyes
                         .filter((c) => c.incluido)
-                        .map(({ incluido, recepcion, ...c }) => ({
-                            ...c,
+                        .map((c) => ({
+                            ...omitir(c, ["incluido", "recepcion"]),
                             motivo: c.motivo?.trim() || undefined,
                         })),
                 }))

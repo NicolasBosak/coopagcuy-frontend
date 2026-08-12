@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../../api/recepcion";
 import { catalogosApi } from "../../api/admin";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import type { RegistrarMovilizacionRequest, Lote } from "../../types/recepcion";
