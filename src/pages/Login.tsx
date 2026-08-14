@@ -104,7 +104,7 @@ export default function Login() {
                         src="/brand/aliados/cuy-azuayito.png"
                         alt="Cuy Azuayito — Sabor de altura · COOPPAGCUY"
                         fetchPriority="high"
-                        className="h-28 sm:h-32 w-auto mx-auto mb-10
+                        className="h-[140px] sm:h-40 w-auto mx-auto mb-10
                              animate-fade-in-up"
                     />
 
