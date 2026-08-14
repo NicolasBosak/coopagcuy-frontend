@@ -290,7 +290,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
             type="button"
             onClick={onClick}
             className={`min-h-[56px] rounded-2xl border-2 px-3 py-2.5 text-left
-                transition-all active:scale-[0.97]
+                transition-[colors,box-shadow] duration-150 ease-salida
                 ${activa
                     ? "border-primary-600 bg-primary-50 shadow-sm"
                     : "border-gray-200 bg-white hover:border-primary-300"}`}
@@ -315,7 +315,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center
                 justify-center z-50 p-3 overflow-y-auto animate-fade-in">
-            <div className="bg-crema rounded-3xl shadow-2xl w-full max-w-xl my-4
+            <div className="bg-superficie rounded-3xl shadow-2xl w-full max-w-xl my-4
                     flex flex-col max-h-[94vh]">
 
                 {/* Encabezado con progreso */}
@@ -423,7 +423,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                                 focus:border-primary-500 focus:outline-none"
                                         />
                                         {cedulaManual.length === 10 && !cedulaManualValida && (
-                                            <p className="text-xs font-medium text-red-600">
+                                            <p className="text-xs font-medium text-teja-600">
                                                 Esa cédula no es válida. Revísala.
                                             </p>
                                         )}

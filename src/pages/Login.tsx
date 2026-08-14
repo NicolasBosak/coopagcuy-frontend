@@ -4,6 +4,54 @@ import { useAuth } from "../context/useAuth";
 import { authApi } from "../api/auth";
 import type { LoginRequest } from "../types/auth";
 
+/* Un azulejo por logo. Los PNG de las instituciones traen fondo blanco
+   opaco, así que en vez de disimularlo lo declaramos: el blanco es la
+   superficie de contenido del sistema y el logo se apoya en ella. */
+function Azulejo({ src, alto, nombre, caja, retraso, prioritario = false }: {
+    src: string;
+    /* Altura explícita por logo. Es lo que equilibra ópticamente logos de
+       proporciones muy distintas: con cajas iguales y object-contain, un
+       logotipo horizontal aplasta siempre a uno vertical. */
+    alto: string;
+    /* Altura y respiro de la caja: uniformes dentro de cada nivel. El ancho
+       lo pone el logo, y por eso los azulejos de un nivel tienen anchos
+       distintos y la misma altura. */
+    caja: string;
+    nombre: string;
+    retraso: number;
+    /* Los logos sobre el pliegue se cargan de inmediato: diferirlos retrasa
+       el primer pintado grande, que en este login son justamente ellos. */
+    prioritario?: boolean;
+}) {
+    return (
+        <div
+            className={`azulejo ${caja} animate-fade-in-up`}
+            style={{ animationDelay: `${retraso}ms` }}
+        >
+            <img src={src} alt={nombre}
+                loading={prioritario ? "eager" : "lazy"}
+                fetchPriority={prioritario ? "high" : "auto"}
+                className={`${alto} w-auto max-w-full object-contain`} />
+        </div>
+    );
+}
+
+/* Separador entre niveles de la jerarquía. La etiqueta dice la relación
+   real de cada institución con el proyecto; no es decoración. */
+function Nivel({ etiqueta, retraso }: { etiqueta: string; retraso: number }) {
+    return (
+        <div className="flex items-center gap-4 animate-fade-in"
+            style={{ animationDelay: `${retraso}ms` }}>
+            <span className="h-px flex-1 bg-gray-300" />
+            <span className="text-[11px] font-semibold uppercase
+                       tracking-[0.18em] text-gray-500 whitespace-nowrap">
+                {etiqueta}
+            </span>
+            <span className="h-px flex-1 bg-gray-300" />
+        </div>
+    );
+}
+
 export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -35,48 +83,45 @@ export default function Login() {
         }
     };
 
+    const campo = "w-full px-3.5 py-3 bg-blanco border border-gray-300 rounded-xl "
+        + "text-sm text-gray-900 placeholder:text-gray-400 "
+        + "focus:border-primary-600 focus:outline-none "
+        + "transition-colors duration-150";
+
     return (
-        <div className="min-h-screen bg-crema textura-campo flex items-center
-                justify-center p-4">
-            {/* Halo chartreuse detrás del cuy: la firma de marca, contenida
-                en un solo lugar. El mascota es el héroe del login. */}
-            <div className="absolute top-0 inset-x-0 h-72 bg-gradient-to-b
-                    from-lima-100 to-transparent pointer-events-none" />
+        <div className="min-h-screen flex flex-col lg:flex-row">
 
-            <div className="relative w-full max-w-md">
+            {/* ── Columna del formulario · blanco · 35% ─────────────────── */}
+            <div className="bg-blanco w-full lg:w-[35%] lg:min-w-[400px] shrink-0
+                      flex items-center justify-center
+                      px-6 py-10 sm:px-10 lg:px-12">
+                <div className="w-full max-w-sm">
 
-                {/* El logo completo es el héroe: mascota sobre chartreuse +
-                    logotipo. No repetimos el nombre debajo porque el logo ya
-                    lo dice. */}
-                <div className="text-center mb-7 animate-fade-in-up">
-                    <img
-                        src="/brand/cuy-logo-full.png"
-                        alt="Cuy Azuayito — Sabor de altura · APAGCUY"
-                        className="mx-auto w-44 sm:w-52 h-auto drop-shadow-sm"
-                    />
-                    <p className="mt-3 text-sm font-medium text-primary-700">
-                        Sistema de Trazabilidad · COOPAGCUY
+                    <div className="filo h-1 w-10 rounded-full mb-5
+                              animate-filo-ancho origin-left" />
+
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em]
+                            text-primary-700 animate-fade-in-up">
+                        Sistema de trazabilidad · COOPAGCUY
                     </p>
-                </div>
 
-                {/* Tarjeta del formulario, con un filo chartreuse arriba que
-                    ata la tarjeta al logo sin competir con él. */}
-                <div className="bg-white rounded-3xl shadow-lg shadow-primary-900/5
-                        border border-primary-100 overflow-hidden animate-fade-in-up">
-                    <div className="h-1.5 bg-lima-400" />
-                    <div className="p-8">
-                    <h2 className="text-xl text-gray-900 mb-6">
+                    <h1 className="text-3xl text-gray-900 mt-2 mb-8 animate-fade-in-up"
+                        style={{ animationDelay: "60ms" }}>
                         Iniciar sesión
-                    </h2>
+                    </h1>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="animate-fade-in-up"
+                            style={{ animationDelay: "120ms" }}>
+                            <label htmlFor="cedula"
+                                className="block text-sm font-medium text-gray-700 mb-1.5">
                                 Número de cédula
                             </label>
                             <input
+                                id="cedula"
                                 type="text"
                                 required
+                                autoFocus
                                 inputMode="numeric"
                                 autoComplete="username"
                                 maxLength={10}
@@ -87,33 +132,32 @@ export default function Login() {
                                     cedula: e.target.value.replace(/\D/g, ""),
                                 })}
                                 placeholder="0102030405"
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg
-                           text-sm focus:outline-none focus:ring-2
-                           focus:ring-primary-500 focus:border-transparent
-                           transition"
+                                className={campo}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <div className="animate-fade-in-up"
+                            style={{ animationDelay: "180ms" }}>
+                            <label htmlFor="password"
+                                className="block text-sm font-medium text-gray-700 mb-1.5">
                                 Contraseña
                             </label>
                             <input
+                                id="password"
                                 type="password"
                                 required
+                                autoComplete="current-password"
                                 value={form.password}
                                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                                 placeholder="••••••••"
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg
-                           text-sm focus:outline-none focus:ring-2
-                           focus:ring-primary-500 focus:border-transparent
-                           transition"
+                                className={campo}
                             />
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg
-                              px-3 py-2.5 text-sm text-red-700">
+                            <div role="alert"
+                                className="bg-teja-50 border border-teja-200 rounded-xl
+                              px-3.5 py-3 text-sm text-teja-700 animate-fade-in">
                                 {error}
                             </div>
                         )}
@@ -121,20 +165,105 @@ export default function Login() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full min-h-[48px] px-4 bg-primary-600
-                         hover:bg-primary-700 disabled:bg-primary-300 text-white
-                         font-display rounded-xl text-base transition
-                         active:scale-[0.99]"
+                            style={{ animationDelay: "240ms" }}
+                            className="w-full min-h-[52px] px-4 bg-primary-600
+                         hover:bg-primary-700 disabled:bg-primary-300
+                         disabled:cursor-not-allowed text-blanco
+                         font-display text-base rounded-xl
+                         shadow-sm shadow-primary-900/20
+                         transition-colors duration-150
+                         animate-fade-in-up"
                         >
-                            {loading ? "Ingresando..." : "Ingresar"}
+                            {loading ? "Ingresando…" : "Ingresar"}
                         </button>
                     </form>
+
+                    <p className="text-xs text-gray-500 mt-10 leading-relaxed
+                            animate-fade-in" style={{ animationDelay: "300ms" }}>
+                        Proyecto Familias Campesinas Liderando
+                        <br />
+                        Cofinanciado por la Unión Europea
+                    </p>
+                </div>
+            </div>
+
+            {/* ── El filo ───────────────────────────────────────────────────
+                La firma del sistema y, aquí, la división entre las columnas.
+                Blanco contra gris da 1.19:1 — se distingue apenas —, así que
+                el filo no es adorno: es lo que hace legible la separación. */}
+            <div className="filo w-full h-1 lg:w-1 lg:h-auto
+                      lg:animate-filo-crecer lg:origin-top" />
+
+            {/* ── Columna de los logotipos · gris · 65% ─────────────────── */}
+            <div className="bg-superficie flex-1 flex items-center justify-center
+                      px-6 py-12 sm:px-10 lg:px-14
+                      lg:shadow-[inset_10px_0_20px_-14px_rgba(0,0,0,0.15)]">
+                <div className="w-full max-w-2xl space-y-7 sm:space-y-9">
+
+                    {/* Nivel 1 — el producto y el proyecto */}
+                    <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+                        <Azulejo
+                            src="/brand/aliados/cuy-azuayito.png"
+                            nombre="Cuy Azuayito — Sabor de altura · COOPPAGCUY"
+                            caja="h-48 sm:h-56 px-8 sm:px-10"
+                            alto="h-32 sm:h-40"
+                            retraso={60} prioritario
+                        />
+                        <Azulejo
+                            src="/brand/aliados/familias-campesinas.png"
+                            nombre="Familias Campesinas Liderando"
+                            caja="h-48 sm:h-56 px-8 sm:px-10"
+                            alto="h-20 sm:h-24"
+                            retraso={100} prioritario
+                        />
+                    </div>
+
+                    <Nivel etiqueta="Con el apoyo de" retraso={140} />
+
+                    {/* Nivel 2 — quien cofinancia y quien ejecuta */}
+                    <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
+                        <Azulejo
+                            src="/brand/aliados/ayuda-en-accion.png"
+                            nombre="Ayuda en Acción"
+                            caja="h-24 sm:h-28 px-8 sm:px-10"
+                            alto="h-9 sm:h-10"
+                            retraso={170}
+                        />
+                        <Azulejo
+                            src="/brand/aliados/union-europea.png"
+                            nombre="Cofinanciado por la Unión Europea"
+                            caja="h-24 sm:h-28 px-8 sm:px-10"
+                            alto="h-9 sm:h-10"
+                            retraso={200}
+                        />
+                    </div>
+
+                    <Nivel etiqueta="Aliados locales" retraso={230} />
+
+                    {/* Nivel 3 — gobiernos locales y academia */}
+                    <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                        <Azulejo
+                            src="/brand/aliados/nabon.png"
+                            nombre="Alcaldía de Nabón"
+                            caja="h-24 px-6" alto="h-11" retraso={255}
+                        />
+                        <Azulejo
+                            src="/brand/aliados/santa-isabel.png"
+                            nombre="Alcaldía de Santa Isabel"
+                            caja="h-24 px-6" alto="h-12" retraso={275}
+                        />
+                        <Azulejo
+                            src="/brand/aliados/pucara.png"
+                            nombre="Alcaldía de Pucará"
+                            caja="h-24 px-6" alto="h-12" retraso={300}
+                        />
+                        <Azulejo
+                            src="/brand/aliados/universidad-catolica.png"
+                            nombre="Universidad Católica de Cuenca"
+                            caja="h-24 px-6" alto="h-12" retraso={320}
+                        />
                     </div>
                 </div>
-
-                <p className="text-center text-xs text-gray-500 mt-6">
-                    Proyecto Familias Campesinas Liderando · Comisión Europea
-                </p>
             </div>
         </div>
     );

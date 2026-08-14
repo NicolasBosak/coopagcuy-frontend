@@ -11,8 +11,8 @@ interface Props {
     footer?: ReactNode;
     /** Ancho máximo en escritorio (clase max-w-*) */
     maxWidth?: string;
-    /** Fondo del cuerpo: blanco para formularios, crema para asistentes */
-    tone?: "white" | "crema";
+    /** Fondo del cuerpo: blanco para formularios, gris para asistentes */
+    tone?: "white" | "superficie";
 }
 
 // Contenedor común de ventanas modales. En móvil se comporta como hoja
@@ -35,7 +35,7 @@ export function ModalShell({
                     max-h-[92vh] sm:max-h-[88vh]
                     rounded-t-3xl sm:rounded-3xl shadow-2xl
                     animate-sheet-up sm:animate-fade-in-up
-                    ${tone === "crema" ? "bg-crema" : "bg-white"}`}
+                    ${tone === "superficie" ? "bg-superficie" : "bg-white"}`}
             >
                 {/* Encabezado */}
                 {header ?? (

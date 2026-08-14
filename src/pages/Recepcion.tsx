@@ -300,7 +300,7 @@ export default function Recepcion() {
                                                     {l.responsableRecepcion}
                                                 </p>
                                                 {l._error && (
-                                                    <p className="text-xs text-red-500 mt-1">
+                                                    <p className="text-xs text-teja-500 mt-1">
                                                         Error: {l._error}
                                                     </p>
                                                 )}

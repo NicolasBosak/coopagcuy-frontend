@@ -22,6 +22,15 @@ const NOMBRE_ROL: Record<string, string> = {
     AdminTecnico: "Admin. técnico",
 };
 
+// Gobiernos locales y academia que respaldan el proyecto. Mismo orden que
+// en el login para que la lectura sea la misma en todo el sistema.
+const ALIADOS_LOCALES = [
+    { src: "/brand/aliados/nabon.png", nombre: "Alcaldía de Nabón", alto: "h-8" },
+    { src: "/brand/aliados/santa-isabel.png", nombre: "Alcaldía de Santa Isabel", alto: "h-9" },
+    { src: "/brand/aliados/pucara.png", nombre: "Alcaldía de Pucará", alto: "h-9" },
+    { src: "/brand/aliados/universidad-catolica.png", nombre: "Universidad Católica de Cuenca", alto: "h-9" },
+];
+
 export function MainLayout({ children }: { children: ReactNode }) {
     const { auth, logout } = useAuth();
     const navigate = useNavigate();
@@ -45,17 +54,17 @@ export function MainLayout({ children }: { children: ReactNode }) {
         (i) => i.roles === null || (auth.rol && i.roles.includes(auth.rol)));
 
     return (
-        <div className="min-h-screen bg-crema flex flex-col">
-            {/* Barra superior: marca + estado + salir */}
-            <header className="bg-white/90 backdrop-blur border-b border-gray-200
+        <div className="min-h-screen bg-superficie flex flex-col">
+            {/* Barra superior: marca + proyecto + estado + salir */}
+            <header className="bg-blanco/90 backdrop-blur border-b border-gray-200
                          sticky top-0 z-20">
                 <div className="px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        {/* La marca compacta: cara del cuy sobre azulejo
-                            chartreuse, igual que el ícono de la app. */}
-                        <div className="w-9 h-9 bg-lima-400 rounded-xl flex
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        {/* La marca compacta: cara del cuy sobre azulejo oliva,
+                            igual que el ícono de la app. */}
+                        <div className="w-9 h-9 bg-oliva-400 rounded-xl flex
                             items-center justify-center shrink-0 overflow-hidden
-                            shadow-sm shadow-lima-600/30">
+                            shadow-sm shadow-oliva-600/30">
                             <img src="/brand/cuy-face.png" alt="Cuy Azuayito"
                                 className="w-7 h-7 object-contain" />
                         </div>
@@ -69,6 +78,17 @@ export function MainLayout({ children }: { children: ReactNode }) {
                                 Coopagcuy · Trazabilidad
                             </span>
                         </div>
+
+                        {/* El filo separa el producto del proyecto que lo
+                            respalda: son dos marcas distintas, no una sola. */}
+                        <span className="hidden xs:block filo w-1 h-8 rounded-full
+                                   ml-1 sm:ml-2" />
+                        <img
+                            src="/brand/aliados/familias-campesinas.png"
+                            alt="Familias Campesinas Liderando"
+                            className="hidden xs:block h-8 sm:h-9 w-auto object-contain
+                                 shrink-0"
+                        />
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -102,30 +122,43 @@ export function MainLayout({ children }: { children: ReactNode }) {
                             onClick={handleLogout}
                             className="min-h-[44px] min-w-[44px] px-3 shrink-0
                          text-xs font-bold text-teja-500 hover:text-teja-700
-                         hover:bg-teja-50 rounded-lg transition"
+                         hover:bg-teja-50 rounded-lg
+                         transition-colors duration-150"
                         >
                             Salir
                         </button>
                     </div>
                 </div>
 
-                {/* Navegación: fila propia que se desliza en pantallas chicas */}
+                {/* Navegación: fila propia que se desliza en pantallas chicas.
+                    El ítem activo lleva el filo oliva. El color y el peso del
+                    texto cargan el estado: el filo solo da 1.51:1 contra
+                    blanco y no puede ser la única señal. */}
                 <nav className="px-2 sm:px-6 border-t border-gray-100">
                     <div className="flex items-center gap-0.5 overflow-x-auto
-                          no-scrollbar py-1.5">
+                          no-scrollbar">
                         {itemsVisibles.map(({ to, label }) => (
                             <NavLink
                                 key={to}
                                 to={to}
                                 className={({ isActive }) =>
-                                    `px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap
-                   transition-colors
+                                    `relative px-3 pt-2.5 pb-2 text-sm whitespace-nowrap
+                   rounded-t-lg transition-colors duration-150
                    ${isActive
-                                        ? "bg-primary-600 text-white shadow-sm"
-                                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`
+                                        ? "text-primary-700 font-bold"
+                                        : "text-gray-500 font-semibold hover:text-gray-900 hover:bg-gray-50"}`
                                 }
                             >
-                                {label}
+                                {({ isActive }) => (
+                                    <>
+                                        {label}
+                                        {isActive && (
+                                            <span className="absolute inset-x-2 bottom-0 h-[3px]
+                                       bg-oliva-400 rounded-full
+                                       animate-filo-ancho origin-left" />
+                                        )}
+                                    </>
+                                )}
                             </NavLink>
                         ))}
                     </div>
@@ -138,8 +171,35 @@ export function MainLayout({ children }: { children: ReactNode }) {
                 {children}
             </main>
 
-            <footer className="text-center text-[11px] text-gray-400 pb-4">
-                Proyecto Familias Campesinas Liderando · Comisión Europea · Ayuda en Acción
+            {/* Pie: los gobiernos locales y la academia que respaldan el
+                proyecto. Un logo institucional no se recolorea ni se pone en
+                escala de grises, así que van a color sobre azulejo blanco. */}
+            <footer className="bg-blanco border-t border-gray-200 mt-8">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-7">
+                    <div className="flex items-center gap-4 mb-5">
+                        <span className="text-[11px] font-semibold uppercase
+                               tracking-[0.18em] text-gray-500 whitespace-nowrap">
+                            Aliados locales
+                        </span>
+                        <span className="h-px flex-1 bg-gray-200" />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center
+                            sm:justify-start gap-3 sm:gap-4">
+                        {ALIADOS_LOCALES.map(({ src, nombre, alto }) => (
+                            <div key={src} className="azulejo h-[68px] px-5">
+                                <img src={src} alt={nombre} loading="lazy"
+                                    className={`${alto} w-auto max-w-full object-contain`} />
+                            </div>
+                        ))}
+                    </div>
+
+                    <p className="text-[11px] text-gray-400 mt-6 leading-relaxed
+                            text-center sm:text-left">
+                        Proyecto Familias Campesinas Liderando · Cofinanciado por la
+                        Unión Europea · Ayuda en Acción
+                    </p>
+                </div>
             </footer>
         </div>
     );

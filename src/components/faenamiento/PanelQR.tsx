@@ -110,8 +110,8 @@ export function PanelQR({ codigoLote }: Props) {
                         Aún no se ha generado el QR para este lote.
                     </p>
                     {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg
-                            px-3 py-2 text-xs text-red-700">
+                        <div className="bg-teja-50 border border-teja-200 rounded-lg
+                            px-3 py-2 text-xs text-teja-700">
                             {error}
                         </div>
                     )}
@@ -202,7 +202,7 @@ export function PanelQR({ codigoLote }: Props) {
                     </a>
 
                     {error && (
-                        <p className="text-xs text-red-600">{error}</p>
+                        <p className="text-xs text-teja-600">{error}</p>
                     )}
                 </div>
             )}

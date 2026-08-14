@@ -39,8 +39,8 @@ export default function Dashboard() {
             )}
 
             {isError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4
-                        text-red-700 text-sm">
+                <div className="bg-teja-50 border border-teja-200 rounded-xl p-4
+                        text-teja-700 text-sm">
                     {sinPermiso
                         ? "Tu rol no tiene acceso a estos indicadores. " +
                           "Avisa al administrador del sistema."
