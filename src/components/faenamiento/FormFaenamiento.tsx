@@ -319,7 +319,7 @@ export function FormFaenamiento({ onClose }: Props) {
             header={header}
             footer={footer}
             maxWidth="max-w-2xl"
-            tone="crema"
+            tone="superficie"
         >
             <div className="animate-slide-in space-y-4" key={paso}>
 
@@ -478,7 +478,7 @@ export function FormFaenamiento({ onClose }: Props) {
                                                         onChange={(e) => actualizarCuy(
                                                             lote.loteId, c.numeroEnLote,
                                                             { incluido: e.target.checked })}
-                                                        className="w-5 h-5 rounded accent-[#5a7a0a]"
+                                                        className="w-5 h-5 rounded accent-primary-600"
                                                     />
                                                     Faenar
                                                 </label>
@@ -564,7 +564,7 @@ export function FormFaenamiento({ onClose }: Props) {
                                                                     lote.loteId, c.numeroEnLote, {
                                                                     retornarAProductora: e.target.checked
                                                                 })}
-                                                                className="w-5 h-5 rounded accent-[#f0303c]"
+                                                                className="w-5 h-5 rounded accent-teja-500"
                                                             />
                                                             <span className="text-sm font-semibold text-teja-700">
                                                                 Devolver este cuy a su productora

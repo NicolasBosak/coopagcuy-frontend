@@ -12,8 +12,10 @@ export default defineConfig({
         name: "Cuy Azuayito — Trazabilidad COOPAGCUY",
         short_name: "Cuy Azuayito",
         description: "Sistema de trazabilidad digital de la cadena de valor del cuy — COOPAGCUY",
-        theme_color: "#ccd800",
-        background_color: "#faf7f0",
+        // Cian, no oliva: este color tiñe la barra de estado de Android y
+        // el oliva #cddd00 dejaría el texto blanco del sistema ilegible.
+        theme_color: "#006C79",
+        background_color: "#ebebea",
         display: "standalone",
         orientation: "portrait",
         scope: "/",

@@ -7,98 +7,153 @@ export default {
                 // Punto de quiebre extra pequeño para teléfonos
                 xs: "420px",
             },
-            // ── Paleta de marca Cuy Azuayito ──────────────────────────────
-            // Todos los tonos se muestrearon de los píxeles del logo oficial
-            // (logo-Cuy-1-(2).png). Los nombres de token se conservan para no
-            // romper las clases existentes; solo cambia el valor al color real
-            // de la marca. La escala de cada color se derivó del tono semilla
-            // y se verificó contra WCAG AA en los pares texto/fondo críticos.
+            // ── Paleta institucional del proyecto ─────────────────────────
+            // La paleta ES el consorcio: cada color pertenece a una de las
+            // instituciones que sostienen el proyecto. No es una elección
+            // estética suelta, es la identidad de quienes financian, ejecutan
+            // y respaldan la cadena.
+            //
+            //   cyan    #006C79 → Familias Campesinas Liderando
+            //   oliva   #cddd00 → Cuy Azuayito (el producto)
+            //   naranja #F87C56 → Ayuda en Acción
+            //   azul    #304f9e → Unión Europea
+            //   gris    #ebebea → el suelo donde todo se apoya
+            //   blanco  #FFFFFF → la superficie de contenido
+            //
+            // Los nombres de token se conservan para no romper los ~400 usos
+            // existentes; solo cambia el valor. Cada escala se derivó de su
+            // semilla y se verificó contra WCAG AA en los pares críticos.
             colors: {
-                // Verde de monte — el chartreuse de marca llevado a un verde
-                // usable y legible ("pasto de altura"). Acciones, navegación,
-                // enlaces y el estado "aceptado" del cuy.
+                // Cyan de Familias Campesinas. El caballo de batalla del
+                // sistema: acciones, navegación, enlaces, estructura y el
+                // estado "aceptado" del cuy.
                 primary: {
-                    50: "#f5f8ea",
-                    100: "#e7f0c6",
-                    200: "#d3e59a",
-                    300: "#b6d15f",
-                    400: "#8fae2e",
-                    500: "#6f8c16",
-                    600: "#5a7a0a", // acción principal · blanco 4.97:1 AA
-                    700: "#47610a", // texto sobre claro · 7.04:1 AA
-                    800: "#384e0a",
-                    900: "#2b3a0b",
+                    50: "#e6f2f3",
+                    100: "#c2e0e3",
+                    200: "#8ec6cc",
+                    300: "#4da5af",
+                    400: "#1b8894",
+                    500: "#006c79", // semilla · texto sobre blanco 6.14:1 AA
+                    600: "#005a66", // acción principal · blanco 7.92:1 AA
+                    700: "#004954", // texto sobre claro · 10.1:1 AAA
+                    800: "#003a43",
+                    900: "#002b32",
                 },
-                brand: "#5a7a0a",
-                // Lima — el chartreuse #CCD800 tal cual del logo. Es la FIRMA:
-                // solo fondos de marca (hero del login, contenedor del cuy,
-                // acentos). Nunca texto ni etiqueta de botón: como texto da
-                // 1.57:1, ilegible. Sobre lima, el texto va SIEMPRE oscuro.
-                lima: {
-                    50: "#fbfde6",
-                    100: "#f5fabf",
-                    200: "#eaf58a",
-                    300: "#dcec4f",
-                    400: "#ccd800", // semilla de marca
-                    500: "#b3bd00",
-                    600: "#8f9600",
-                    700: "#6b7000",
+                brand: "#006c79",
+
+                // Verde oliva — el verde del logo Cuy. Es la FIRMA del
+                // sistema: el filo que marca "aquí es donde estás". Solo
+                // filos, foco y realce activo.
+                //
+                // REGLA DURA: sobre blanco da 1.51:1. Nunca es texto, nunca
+                // lleva texto blanco encima y nunca es relleno grande sobre
+                // claro. Cuando se usa como fondo, el texto va casi negro.
+                oliva: {
+                    50: "#fbfde8",
+                    100: "#f6fbc2",
+                    200: "#edf78c",
+                    300: "#dfef46",
+                    400: "#cddd00", // semilla de marca
+                    500: "#b4c200",
+                    600: "#8d9900",
+                    700: "#6a7200", // único tono legible como texto · 5.22:1 AA
+                    800: "#4e5400",
                 },
-                // Bayo — el naranja de marca #FC9C18 (mejillas del cuy y
-                // "Sabor de altura"). Estado "con novedad" y acentos cálidos.
+
+                // Naranja de Ayuda en Acción. Estado "con novedad" y acentos
+                // cálidos. Como relleno lleva texto oscuro (2.62:1 con
+                // blanco); para texto sobre claro se usa bayo-700.
                 bayo: {
-                    50: "#fff6e6",
-                    100: "#ffe8bf",
-                    400: "#ffb84d",
-                    500: "#fc9c18", // semilla de marca · fondo de insignia
-                    600: "#e07f00",
-                    700: "#a85c00", // texto sobre claro · 4.99:1 AA
-                    800: "#844500",
+                    50: "#fef2ee",
+                    100: "#fddfd5",
+                    200: "#fbc0ac",
+                    300: "#fa9e81",
+                    400: "#f87c56", // semilla de marca · fondo de insignia
+                    500: "#f05f33",
+                    600: "#d64a20",
+                    700: "#a83914", // texto sobre claro · 6.44:1 AA
+                    800: "#832d10",
                 },
-                // Crema del páramo: fondo cálido de la aplicación
-                crema: "#faf7f0",
-                // Rojo teja — el rojo de marca #F0303C. Rechazos y errores.
+
+                // Rojo de apoyo — el rojo del logo Cuy (#F0303C) oscurecido
+                // y enfriado. NO está en la paleta de cinco: se añadió porque
+                // el sistema tiene que distinguir "tiene una observación"
+                // (naranja) de "no pasó el control" (rojo), y en trazabilidad
+                // alimentaria esa diferencia decide si un lote sale o no.
+                // Separado en tono del naranja a propósito.
+                // Uso exclusivo: rechazo, error y acción destructiva.
                 teja: {
-                    50: "#fdecec",
-                    100: "#fbd0d2",
-                    500: "#f0303c", // semilla de marca
-                    600: "#cf1f2b", // texto · 5.41:1 AA
-                    700: "#a81822",
+                    50: "#fcecee",
+                    100: "#f7ccd0",
+                    200: "#ee9aa1",
+                    300: "#e26670",
+                    400: "#cd3f4a",
+                    500: "#b02a32", // semilla · texto sobre blanco 6.51:1 AA
+                    600: "#96222a",
+                    700: "#771a21",
+                    800: "#5d141a",
                 },
-                // Tierra — el marrón de marca #90540C (orejas y hocico).
-                tierra: "#90540c",
-                // Azul cielo/mar — los azules de marca (#60C0E4 cielo y
-                // #2478D8 mar). Avisos informativos que NO rechazan al animal,
-                // como el sobrepeso (>1300 g).
+
+                // Azul de la Unión Europea. Avisos informativos que NO
+                // rechazan al animal (como el sobrepeso >1300 g) y segunda
+                // serie en los gráficos.
                 info: {
-                    50: "#eaf4fc",
-                    100: "#cbe4f8",
-                    400: "#6cc0f0", // cielo del logo
-                    500: "#2478d8", // mar del logo
-                    600: "#1b62b8", // texto · 6.02:1 AA
-                    700: "#164e92",
+                    50: "#eef1f9",
+                    100: "#d2daee",
+                    200: "#a8b8dd",
+                    300: "#7b91c8",
+                    400: "#5470b4",
+                    500: "#304f9e", // semilla · texto sobre blanco 7.68:1 AA
+                    600: "#27407f",
+                    700: "#1d3062",
+                    800: "#16244a",
                 },
+
+                // ── Las dos superficies del sistema ───────────────────────
+                // Blanco es el contenido, gris es el suelo. Sin excepciones:
+                // formularios, tarjetas, cabecera, pie y azulejos de logo van
+                // en blanco; el fondo de la aplicación va en gris.
+                blanco: "#ffffff",
+                superficie: "#ebebea",
             },
             fontFamily: {
-                // Nexa Bold: fuente de marca provista. Solo display —
-                // títulos, la palabra "Cuy Azuayito" y números grandes.
+                // Nexa Bold: fuente de marca provista por la cooperativa.
+                // Solo display — títulos, la palabra "Cuy Azuayito" y
+                // números grandes.
                 display: ['"Nexa Bold"', "system-ui", "sans-serif"],
-                // Cuerpo: sans neutro y legible, sin descarga adicional
-                // (importa en tablets rurales offline).
+                // IBM Plex Sans: cuerpo. Auto-alojada y variable (un archivo
+                // cubre todos los pesos). Trae cifras tabulares, que importan
+                // en un sistema lleno de pesos en gramos y conteos.
                 sans: [
-                    "system-ui", "-apple-system", '"Segoe UI"',
-                    "Roboto", "Helvetica", "Arial", "sans-serif",
+                    '"IBM Plex Sans"', "system-ui", "-apple-system",
+                    '"Segoe UI"', "Roboto", "Helvetica", "Arial", "sans-serif",
                 ],
             },
+            // ── Curvas de movimiento ──────────────────────────────────────
+            // Las curvas nativas de CSS son demasiado flojas: les falta el
+            // acento que hace que una animación se sienta intencionada.
+            transitionTimingFunction: {
+                // Entradas y salidas: arranca rápido, se siente reactivo.
+                salida: "cubic-bezier(0.23, 1, 0.32, 1)",
+                // Movimiento en pantalla: acelera y frena natural.
+                suave: "cubic-bezier(0.77, 0, 0.175, 1)",
+                // Hojas y cajones, curva tipo iOS.
+                hoja: "cubic-bezier(0.32, 0.72, 0, 1)",
+            },
             animation: {
-                "fade-in-up": "fadeInUp 0.35s ease-out both",
-                "fade-in": "fadeIn 0.25s ease-out both",
-                "slide-in": "slideIn 0.3s ease-out both",
-                "sheet-up": "sheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
+                // Todo por debajo de 300 ms salvo la entrada escalonada:
+                // es una herramienta de trabajo, no una landing.
+                "fade-in": "fadeIn 220ms cubic-bezier(0.23, 1, 0.32, 1) both",
+                "fade-in-up": "fadeInUp 300ms cubic-bezier(0.23, 1, 0.32, 1) both",
+                "slide-in": "slideIn 280ms cubic-bezier(0.23, 1, 0.32, 1) both",
+                "sheet-up": "sheetUp 300ms cubic-bezier(0.32, 0.72, 0, 1) both",
+                // El filo oliva creciendo desde arriba: la firma entrando.
+                "filo-crecer": "filoCrecer 420ms cubic-bezier(0.77, 0, 0.175, 1) both",
+                "filo-ancho": "filoAncho 380ms cubic-bezier(0.77, 0, 0.175, 1) both",
             },
             keyframes: {
                 fadeInUp: {
-                    "0%": { opacity: "0", transform: "translateY(12px)" },
+                    "0%": { opacity: "0", transform: "translateY(10px)" },
                     "100%": { opacity: "1", transform: "translateY(0)" },
                 },
                 fadeIn: {
@@ -106,13 +161,23 @@ export default {
                     "100%": { opacity: "1" },
                 },
                 slideIn: {
-                    "0%": { opacity: "0", transform: "translateX(24px)" },
+                    "0%": { opacity: "0", transform: "translateX(20px)" },
                     "100%": { opacity: "1", transform: "translateX(0)" },
                 },
                 // Entrada tipo hoja inferior en móvil
                 sheetUp: {
                     "0%": { transform: "translateY(100%)" },
                     "100%": { transform: "translateY(0)" },
+                },
+                // El filo vertical del login se dibuja de arriba a abajo
+                filoCrecer: {
+                    "0%": { transform: "scaleY(0)" },
+                    "100%": { transform: "scaleY(1)" },
+                },
+                // El filo corto sobre un encabezado se dibuja hacia la derecha
+                filoAncho: {
+                    "0%": { transform: "scaleX(0)" },
+                    "100%": { transform: "scaleX(1)" },
                 },
             },
         },

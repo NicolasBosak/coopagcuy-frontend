@@ -1,20 +1,22 @@
 // Anillo de distribución de novedades por tipo, en SVG puro.
 // Los arcos se redibujan con transición cuando cambian los filtros.
 
+import { PALETA, INFORMATIVO, RECHAZADO, GRAVE, NEUTRO, PISTA } from "./paleta";
+
 interface Props {
     conteos: Record<string, number>;
 }
 
 const TIPOS: Record<string, { nombre: string; color: string }> = {
-    BajoPeso: { nombre: "Bajo peso", color: "#fc9c18" },       // bayo
-    OrejaDura: { nombre: "Oreja dura", color: "#90540c" },     // tierra
-    ColorNoConforme: { nombre: "Color no conforme", color: "#f0303c" }, // teja
-    SinAyuno: { nombre: "Sin ayuno", color: "#5a7a0a" },       // verde
-    // Azul, no ámbar: el sobrepeso informa, no señala un problema con el
+    BajoPeso: { nombre: "Bajo peso", color: PALETA[1] },        // naranja
+    OrejaDura: { nombre: "Oreja dura", color: PALETA[4] },       // oliva
+    ColorNoConforme: { nombre: "Color no conforme", color: RECHAZADO },
+    SinAyuno: { nombre: "Sin ayuno", color: PALETA[5] },        // cian claro
+    // Azul, no naranja: el sobrepeso informa, no señala un problema con el
     // animal. Mismo criterio que el aviso de la pantalla de recepción.
-    SobrePeso: { nombre: "Sobre peso (>1300g)", color: "#2478d8" }, // info
-    SignosClinicos: { nombre: "Signos clínicos", color: "#a81822" }, // teja oscuro
-    Otro: { nombre: "Otro", color: "#9ca3af" },                // gris
+    SobrePeso: { nombre: "Sobre peso (>1300g)", color: INFORMATIVO },
+    SignosClinicos: { nombre: "Signos clínicos", color: GRAVE },
+    Otro: { nombre: "Otro", color: NEUTRO },
 };
 
 const RADIO = 52;
@@ -69,19 +71,20 @@ export function AnilloNovedades({ conteos }: Props) {
                     >
                         <circle
                             cx="70" cy="70" r={RADIO}
-                            fill="none" stroke="#f3f4f6" strokeWidth={GROSOR}
+                            fill="none" stroke={PISTA} strokeWidth={GROSOR}
                         />
                         {arcos.map((a) => (
                             <circle
                                 key={a.tipo}
                                 cx="70" cy="70" r={RADIO}
                                 fill="none"
-                                stroke={TIPOS[a.tipo]?.color ?? "#9ca3af"}
+                                stroke={TIPOS[a.tipo]?.color ?? NEUTRO}
                                 strokeWidth={GROSOR}
                                 strokeDasharray={
                                     `${a.fraccion * CIRCUNFERENCIA} ${CIRCUNFERENCIA}`}
                                 strokeDashoffset={-a.offset * CIRCUNFERENCIA}
-                                className="transition-all duration-700 ease-out"
+                                className="transition-[stroke-dasharray,stroke-dashoffset]
+                                     duration-700 ease-salida"
                             />
                         ))}
                         {/* Total al centro (contrarrotado) */}
@@ -99,7 +102,7 @@ export function AnilloNovedades({ conteos }: Props) {
 
                     <div className="flex-1 min-w-[180px] space-y-2">
                         {arcos.map((a) => {
-                            const info = TIPOS[a.tipo] ?? { nombre: a.tipo, color: "#9ca3af" };
+                            const info = TIPOS[a.tipo] ?? { nombre: a.tipo, color: NEUTRO };
                             return (
                                 <div key={a.tipo}
                                     className="flex items-center justify-between gap-3">
