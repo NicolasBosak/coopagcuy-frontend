@@ -13,6 +13,8 @@ import Reportes from "./pages/Reportes";
 import Administracion from "./pages/Administracion";
 import Sesiones from "./pages/Sesiones";
 import Vinculaciones from "./pages/Vinculaciones";
+import RecuperarPassword from "./pages/RecuperarPassword";
+import CambiarPassword from "./pages/CambiarPassword";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,10 +32,14 @@ export default function App() {
             {/* Rutas públicas */}
             <Route path="/login" element={<Login />} />
             <Route path="/qr/:codigoLote" element={<QRPublico />} />
+            <Route path="/recuperar-password" element={<RecuperarPassword />} />
 
             {/* Rutas privadas */}
             <Route path="/dashboard" element={
               <PrivateRoute><Dashboard /></PrivateRoute>
+            } />
+            <Route path="/cambiar-password" element={
+              <PrivateRoute><CambiarPassword /></PrivateRoute>
             } />
             <Route path="/productoras" element={
               <PrivateRoute rolesPermitidos={[
@@ -80,8 +86,10 @@ export default function App() {
             } />
 
             {/* Sesiones activas y bandeja de vinculación (solo administración) */}
+            {/* Sesiones activas: solo el administrador técnico. Revocar
+                sesiones es soporte, no gestión. */}
             <Route path="/sesiones" element={
-              <PrivateRoute rolesPermitidos={["AdminCooperativa", "AdminTecnico"]}>
+              <PrivateRoute rolesPermitidos={["AdminTecnico"]}>
                 <Sesiones />
               </PrivateRoute>
             } />

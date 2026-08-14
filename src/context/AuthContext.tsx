@@ -25,6 +25,10 @@ export interface AuthContextType {
     // La sesión se restauró SIN conexión: el access token no está disponible,
     // solo se permiten los registros offline
     modoOffline: boolean;
+    // El usuario entró con una contraseña temporal: hasta que ponga una
+    // propia, PrivateRoute lo mantiene en /cambiar-password
+    debeCambiarPassword: boolean;
+    marcarPasswordCambiada: () => void;
     login: (data: LoginResponse) => void;
     logout: () => void;
 }
@@ -51,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [auth, setAuth] = useState<AuthState>(VACIO);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [modoOffline, setModoOffline] = useState(false);
+    const [debeCambiarPassword, setDebeCambiarPassword] = useState(false);
     const [bootstrapping, setBootstrapping] = useState(true);
 
     // Restaurar la sesión al abrir la app
@@ -93,10 +98,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    function finalizar(estado: AuthState, autenticado: boolean, offline: boolean) {
+    // La restauración offline no pasa cambioPendiente: sin conexión no se
+    // puede cambiar la contraseña de todos modos, y la única pantalla
+    // disponible es la de recepción. Al recuperar señal, el refresh trae
+    // la bandera real desde el servidor.
+    function finalizar(
+        estado: AuthState, autenticado: boolean, offline: boolean,
+        cambioPendiente = false,
+    ) {
         setAuth(estado);
         setIsAuthenticated(autenticado);
         setModoOffline(offline);
+        setDebeCambiarPassword(cambioPendiente);
         setBootstrapping(false);
     }
 
@@ -111,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenStore.set(data.token);
         session.guardar(identidad);
         if (limpiarCache) queryClient.clear();
-        finalizar(aEstado(identidad), true, false);
+        finalizar(aEstado(identidad), true, false, data.debeCambiarPassword);
     }
 
     const login = (data: LoginResponse) => aplicarLogin(data, true);
@@ -124,11 +137,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuth(VACIO);
         setIsAuthenticated(false);
         setModoOffline(false);
+        setDebeCambiarPassword(false);
     };
+
+    // La llama la pantalla de cambio: evita tener que recargar la sesión
+    // entera solo para enterarse de que la obligación ya se cumplió
+    const marcarPasswordCambiada = () => setDebeCambiarPassword(false);
 
     return (
         <AuthContext.Provider value={{
-            auth, bootstrapping, isAuthenticated, modoOffline, login, logout,
+            auth, bootstrapping, isAuthenticated, modoOffline,
+            debeCambiarPassword, marcarPasswordCambiada, login, logout,
         }}>
             {children}
         </AuthContext.Provider>

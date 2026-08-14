@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { authApi } from "../api/auth";
 import type { LoginRequest } from "../types/auth";
@@ -190,6 +190,16 @@ export default function Login() {
                             {loading ? "Ingresando…" : "Ingresar"}
                         </button>
                     </form>
+
+                    <Link
+                        to="/recuperar-password"
+                        className="block text-center mt-5 text-sm font-semibold
+                       text-primary-600 hover:text-primary-800
+                       animate-fade-in-up"
+                        style={{ animationDelay: "280ms" }}
+                    >
+                        ¿Olvidaste tu contraseña?
+                    </Link>
 
                     <p className="text-xs text-gray-500 mt-10 leading-relaxed
                             animate-fade-in" style={{ animationDelay: "300ms" }}>

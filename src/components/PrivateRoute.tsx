@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import type { RolUsuario } from "../types/auth";
 
@@ -11,7 +11,9 @@ interface Props {
 }
 
 export function PrivateRoute({ children, rolesPermitidos, disponibleOffline }: Props) {
-    const { isAuthenticated, bootstrapping, modoOffline, auth } = useAuth();
+    const { isAuthenticated, bootstrapping, modoOffline, auth,
+        debeCambiarPassword } = useAuth();
+    const location = useLocation();
 
     // Mientras se restaura la sesión (refresh online o "entrar directo"
     // offline) no se decide nada, para no parpadear al login por un instante
@@ -26,6 +28,17 @@ export function PrivateRoute({ children, rolesPermitidos, disponibleOffline }: P
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
+    }
+
+    // Entró con una contraseña temporal: no se le deja ir a ninguna otra
+    // pantalla hasta que ponga una propia. La comprobación va antes que la
+    // de roles porque aplica a todos por igual.
+    //
+    // Se lee la ruta con useLocation y no con window.location.pathname: el
+    // hook re-renderiza al navegar, la propiedad del navegador no, y con ella
+    // la guarda se quedaría evaluando la ruta anterior.
+    if (debeCambiarPassword && location.pathname !== "/cambiar-password") {
+        return <Navigate to="/cambiar-password" replace />;
     }
 
     if (rolesPermitidos && auth.rol && !rolesPermitidos.includes(auth.rol)) {

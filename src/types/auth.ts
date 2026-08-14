@@ -15,6 +15,9 @@ export interface LoginResponse {
     // Fin de la sesión de 7 días (refresh token): hasta cuándo se permite
     // "entrar directo" sin conexión
     sesionExpira: string;
+    // Se activó tras un restablecimiento: hay que cambiar la contraseña antes
+    // de poder usar el resto de la aplicación
+    debeCambiarPassword: boolean;
 }
 
 export type RolUsuario =
