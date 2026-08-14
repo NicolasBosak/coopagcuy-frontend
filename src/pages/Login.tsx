@@ -97,12 +97,25 @@ export default function Login() {
                       px-6 py-10 sm:px-10 lg:px-12">
                 <div className="w-full max-w-sm">
 
+                    {/* El logo corona la columna. Es el único de los ocho con
+                        transparencia real, así que es también el único que no
+                        necesita azulejo: se apoya directo sobre el blanco. */}
+                    <img
+                        src="/brand/aliados/cuy-azuayito.png"
+                        alt="Cuy Azuayito — Sabor de altura · COOPPAGCUY"
+                        fetchPriority="high"
+                        className="h-28 sm:h-32 w-auto mx-auto mb-10
+                             animate-fade-in-up"
+                    />
+
                     <div className="filo h-1 w-10 rounded-full mb-5
                               animate-filo-ancho origin-left" />
 
+                    {/* El logo ya dice COOPAGCUY; repetirlo aquí sobra. */}
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em]
-                            text-primary-700 animate-fade-in-up">
-                        Sistema de trazabilidad · COOPAGCUY
+                            text-primary-700 animate-fade-in-up"
+                        style={{ animationDelay: "60ms" }}>
+                        Sistema de trazabilidad
                     </p>
 
                     <h1 className="text-3xl text-gray-900 mt-2 mb-8 animate-fade-in-up"
@@ -200,25 +213,19 @@ export default function Login() {
                       lg:shadow-[inset_10px_0_20px_-14px_rgba(0,0,0,0.15)]">
                 <div className="w-full max-w-2xl space-y-7 sm:space-y-9">
 
-                    {/* Nivel 1 — el producto y el proyecto */}
-                    <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
-                        <Azulejo
-                            src="/brand/aliados/cuy-azuayito.png"
-                            nombre="Cuy Azuayito — Sabor de altura · COOPPAGCUY"
-                            caja="h-48 sm:h-56 px-8 sm:px-10"
-                            alto="h-32 sm:h-40"
-                            retraso={60} prioritario
-                        />
+                    {/* Nivel 1 — el proyecto que respalda el sistema. Va solo y
+                        centrado: el producto ahora corona la otra columna. */}
+                    <div className="flex justify-center">
                         <Azulejo
                             src="/brand/aliados/familias-campesinas.png"
                             nombre="Familias Campesinas Liderando"
-                            caja="h-48 sm:h-56 px-8 sm:px-10"
-                            alto="h-20 sm:h-24"
-                            retraso={100} prioritario
+                            caja="h-52 sm:h-64 px-12 sm:px-16"
+                            alto="h-24 sm:h-32"
+                            retraso={60} prioritario
                         />
                     </div>
 
-                    <Nivel etiqueta="Con el apoyo de" retraso={140} />
+                    <Nivel etiqueta="Con el apoyo de" retraso={110} />
 
                     {/* Nivel 2 — quien cofinancia y quien ejecuta */}
                     <div className="flex flex-wrap justify-center gap-4 sm:gap-5">
@@ -227,25 +234,25 @@ export default function Login() {
                             nombre="Ayuda en Acción"
                             caja="h-24 sm:h-28 px-8 sm:px-10"
                             alto="h-9 sm:h-10"
-                            retraso={170}
+                            retraso={150}
                         />
                         <Azulejo
                             src="/brand/aliados/union-europea.png"
                             nombre="Cofinanciado por la Unión Europea"
                             caja="h-24 sm:h-28 px-8 sm:px-10"
                             alto="h-9 sm:h-10"
-                            retraso={200}
+                            retraso={180}
                         />
                     </div>
 
-                    <Nivel etiqueta="Aliados locales" retraso={230} />
+                    <Nivel etiqueta="Aliados locales" retraso={220} />
 
                     {/* Nivel 3 — gobiernos locales y academia */}
                     <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
                         <Azulejo
                             src="/brand/aliados/nabon.png"
                             nombre="Alcaldía de Nabón"
-                            caja="h-24 px-6" alto="h-11" retraso={255}
+                            caja="h-24 px-6" alto="h-11" retraso={250}
                         />
                         <Azulejo
                             src="/brand/aliados/santa-isabel.png"
