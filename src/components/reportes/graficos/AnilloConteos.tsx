@@ -9,16 +9,7 @@ interface Props {
     vacio?: string;
 }
 
-// Paleta andina del sistema, en orden de asignación
-const PALETA = [
-    "#f0303c", // teja
-    "#fc9c18", // bayo
-    "#5a7a0a", // verde
-    "#90540c", // tierra
-    "#a85c00", // bayo oscuro
-    "#a81822", // teja oscuro
-    "#9ca3af", // gris
-];
+import { PALETA, PISTA } from "./paleta";
 
 const RADIO = 52;
 const GROSOR = 16;
@@ -75,7 +66,7 @@ export function AnilloConteos({ titulo, conteos, unidad = "registros", vacio }: 
                     >
                         <circle
                             cx="70" cy="70" r={RADIO}
-                            fill="none" stroke="#f3f4f6" strokeWidth={GROSOR}
+                            fill="none" stroke={PISTA} strokeWidth={GROSOR}
                         />
                         {arcos.map((a) => (
                             <circle
@@ -87,7 +78,8 @@ export function AnilloConteos({ titulo, conteos, unidad = "registros", vacio }: 
                                 strokeDasharray={
                                     `${a.fraccion * CIRCUNFERENCIA} ${CIRCUNFERENCIA}`}
                                 strokeDashoffset={-a.offset * CIRCUNFERENCIA}
-                                className="transition-all duration-700 ease-out"
+                                className="transition-[stroke-dasharray,stroke-dashoffset]
+                                     duration-700 ease-salida"
                             />
                         ))}
                         <g transform="rotate(90 70 70)">

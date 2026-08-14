@@ -12,20 +12,61 @@
     font-display: swap;
 }
 
+/* IBM Plex Sans — cuerpo. Archivo variable de 46 KB con eje de peso 100-700:
+   una sola descarga cubre todos los pesos, y el service worker la cachea para
+   el trabajo sin conexión. Trae cifras tabulares, que es la razón de elegirla:
+   este sistema es sobre todo columnas de pesos en gramos y conteos. */
+@font-face {
+    font-family: "IBM Plex Sans";
+    src: url("/fonts/IBMPlexSans-latin.woff2") format("woff2");
+    font-weight: 100 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 @layer base {
     body {
-        @apply bg-crema text-gray-800 antialiased;
+        @apply bg-superficie text-gray-800 antialiased;
     }
 
     /* Los títulos de marca llevan Nexa con un poco de tracking negativo,
-       como el logotipo. El cuerpo se queda en la sans neutra por legibilidad. */
-    h1, h2 {
+       como el logotipo. El cuerpo se queda en Plex por legibilidad. */
+    h1,
+    h2 {
         @apply font-display tracking-tight;
     }
 
-    /* Foco visible para navegación con teclado */
+    /* Las cifras no bailan entre filas: en una tabla de pesos y conteos,
+       el ancho fijo por dígito es lo que hace la columna legible. */
+    input[type="number"],
+    input[inputmode="numeric"],
+    input[inputmode="decimal"],
+    table,
+    time {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Foco visible para navegación con teclado.
+       El hilo oscuro pegado al elemento es el que cumple el 3:1 que exige
+       WCAG 2.2 para el indicador de foco: el oliva solo da 1.51:1 contra
+       blanco. Con el hilo dentro, el oliva puede seguir siendo la firma
+       sin dejar a nadie sin ver dónde está parado. */
     :focus-visible {
-        @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-crema;
+        outline: 3px solid theme("colors.oliva.400");
+        outline-offset: 2px;
+        box-shadow: 0 0 0 1px theme("colors.primary.800");
+    }
+
+    /* Todo lo que se presiona responde al presionarse. Es el detalle que
+       nadie nota y que hace que la interfaz se sienta viva en una tablet. */
+    button:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]) {
+        transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    button:not(:disabled):active,
+    [role="button"]:not([aria-disabled="true"]):active {
+        transform: scale(0.97);
     }
 }
 
@@ -34,7 +75,7 @@
     /* Retícula sutil de fondo para encabezados de página */
     .textura-campo {
         background-image: radial-gradient(circle,
-                rgba(90, 122, 10, 0.07) 1px, transparent 1px);
+                rgba(0, 108, 121, 0.08) 1px, transparent 1px);
         background-size: 18px 18px;
     }
 
@@ -47,16 +88,64 @@
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
+
+    /* ── El filo ───────────────────────────────────────────────────────
+       La firma del sistema. Un solo gesto que siempre significa lo mismo:
+       aquí es donde estás. Divide las columnas del login, subraya el ítem
+       activo de navegación y corona la tarjeta primaria.
+
+       Aporta solo el color y el no-encogerse: el tamaño lo pone quien lo
+       usa. Si el filo declarara su propio ancho, en el login ganaría sobre
+       el `w-full` del móvil —ambas son utilidades y decide el orden del
+       CSS, no la intención— y el filo quedaría de 4×4 px. */
+    .filo {
+        @apply bg-oliva-400 shrink-0;
+    }
+
+    /* Los azulejos de logo: los PNG de las instituciones traen fondo blanco
+       opaco, así que el blanco deja de ser un defecto de recorte y pasa a ser
+       una superficie declarada. Un logo institucional no se recolorea, no se
+       pone en escala de grises y no se altera. */
+    /* Sin estado hover a propósito: un azulejo no es un enlace ni un botón,
+       no pasa nada al tocarlo. Levantarlo al pasar el puntero prometería una
+       interacción que no existe. */
+    .azulejo {
+        @apply bg-blanco rounded-2xl flex items-center justify-center
+        ring-1 ring-black/[0.04] shadow-sm shadow-black/[0.04];
+    }
 }
 
-/* Usuarios que prefieren menos movimiento: sin animaciones */
+/* Usuarios que prefieren menos movimiento.
+   Menos movimiento no es cero animación: el desvanecido sigue explicando que
+   algo entró o salió, y eso ayuda a entender. Lo que se va es el
+   desplazamiento, que es lo que provoca mareo. */
 @media (prefers-reduced-motion: reduce) {
 
     *,
     *::before,
     *::after {
-        animation-duration: 0.01ms !important;
+        animation-duration: 180ms !important;
+        animation-delay: 0ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        transition-duration: 140ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Toda entrada con desplazamiento colapsa a un simple desvanecido */
+    .animate-fade-in-up,
+    .animate-slide-in,
+    .animate-sheet-up,
+    .animate-filo-crecer,
+    .animate-filo-ancho {
+        animation-name: fadeIn !important;
+    }
+
+    /* Sin transiciones de transformación: ni escalas al presionar,
+       ni desplazamientos al pasar el puntero. */
+    *,
+    *::before,
+    *::after {
+        transition-property: opacity, color, background-color, border-color,
+            box-shadow, outline-color, fill, stroke !important;
     }
 }

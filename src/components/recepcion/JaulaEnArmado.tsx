@@ -108,7 +108,7 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     {/* Barra de progreso de la jaula */}
                     <div className="h-4 rounded-full bg-gray-100 overflow-hidden mb-3">
                         <div
-                            className={`h-full rounded-full transition-all duration-700 ease-out
+                            className={`h-full rounded-full transition-[width] duration-700 ease-salida
                           ${jaula.cantidadAnimales >= 20
                                     ? "bg-primary-600" : "bg-bayo-500"}`}
                             style={{ width: `${progreso}%` }}

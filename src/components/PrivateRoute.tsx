@@ -17,7 +17,7 @@ export function PrivateRoute({ children, rolesPermitidos, disponibleOffline }: P
     // offline) no se decide nada, para no parpadear al login por un instante
     if (bootstrapping) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-crema">
+            <div className="min-h-screen flex items-center justify-center bg-superficie">
                 <div className="w-8 h-8 rounded-full border-2 border-primary-500
                     border-t-transparent animate-spin" />
             </div>

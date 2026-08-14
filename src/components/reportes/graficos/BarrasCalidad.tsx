@@ -20,11 +20,15 @@ interface Props {
     unidad?: string;
 }
 
-// Mismo semáforo del resto del sistema: verde / bayo / teja
+// Mismo semáforo del resto del sistema: cian / naranja / rojo.
+// El color del número va con el segmento y no al revés: sobre el naranja de
+// marca el blanco solo da 3.29:1 y el número quedaría ilegible, así que ahí
+// el texto es oscuro. Es la misma regla que rige el naranja en todo el
+// sistema — como relleno, siempre lleva texto oscuro encima.
 const SEGMENTOS = [
-    { key: "aceptados" as const, color: "bg-primary-500", nombre: "Aceptados" },
-    { key: "conNovedad" as const, color: "bg-bayo-500", nombre: "Con novedad" },
-    { key: "rechazados" as const, color: "bg-teja-500", nombre: "Rechazados" },
+    { key: "aceptados" as const, color: "bg-primary-600", texto: "text-white", nombre: "Aceptados" },
+    { key: "conNovedad" as const, color: "bg-bayo-400", texto: "text-gray-900", nombre: "Con novedad" },
+    { key: "rechazados" as const, color: "bg-teja-500", texto: "text-white", nombre: "Rechazados" },
 ];
 
 export function BarrasCalidad({ titulo, filas, maxFilas = 8, unidad = "lotes" }: Props) {
@@ -86,13 +90,14 @@ export function BarrasCalidad({ titulo, filas, maxFilas = 8, unidad = "lotes" }:
                                             <div
                                                 key={s.key}
                                                 className={`${s.color} h-full
-                                    transition-all duration-700 ease-out
+                                    transition-[width] duration-700 ease-salida
                                     flex items-center justify-center`}
                                                 style={{ width: `${ancho}%` }}
                                                 title={`${s.nombre}: ${valor}`}
                                             >
                                                 {ancho > 8 && (
-                                                    <span className="text-[10px] font-bold text-white/95">
+                                                    <span className={`text-[10px] font-bold
+                                              tabular-nums ${s.texto}`}>
                                                         {valor}
                                                     </span>
                                                 )}
