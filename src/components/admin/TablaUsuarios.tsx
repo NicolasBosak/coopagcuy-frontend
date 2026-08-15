@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usuariosApi } from "../../api/admin";
+import { recuperacionApi } from "../../api/recuperacion";
 import { Badge } from "../ui/Badge";
 import { FormUsuario } from "./FormUsuario";
+import { ModalPasswordTemporal } from "./ModalPasswordTemporal";
+import { useAuth } from "../../context/useAuth";
 import type { Usuario } from "../../types/admin";
+import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
 import { CENTROS_ACOPIO } from "../../types/productora";
 
@@ -12,6 +16,8 @@ export function TablaUsuarios() {
     const [usuarioEditar, setUsuarioEditar] = useState<Usuario | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [aviso, setAviso] = useState<string | null>(null);
+    const { auth } = useAuth();
+    const [temporal, setTemporal] = useState<PasswordTemporal | null>(null);
 
     const { data: usuarios = [], isLoading } = useQuery({
         queryKey: ["usuarios"],
@@ -26,6 +32,16 @@ export function TablaUsuarios() {
             const err = e as { response?: { data?: { mensaje?: string } } };
             setAviso(err.response?.data?.mensaje
                 ?? "No se pudo cambiar el estado del usuario.");
+        },
+    });
+
+    const restablecer = useMutation({
+        mutationFn: (id: number) => recuperacionApi.restablecerPorUsuario(id),
+        onSuccess: (datos) => setTemporal(datos),
+        onError: (e: unknown) => {
+            const err = e as { response?: { data?: { mensaje?: string } } };
+            setAviso(err.response?.data?.mensaje
+                ?? "No se pudo restablecer la contraseña.");
         },
     });
 
@@ -114,6 +130,22 @@ export function TablaUsuarios() {
                                         >
                                             Editar
                                         </button>
+                                        {/* Oculto en usuarios inactivos y en la
+                                            fila del propio administrador: el
+                                            servidor rechaza ambos con 409, y un
+                                            botón que siempre falla es peor que
+                                            un botón ausente */}
+                                        {u.activo && u.cedula !== auth.cedula && (
+                                            <button
+                                                disabled={restablecer.isPending}
+                                                onClick={() => restablecer.mutate(u.id)}
+                                                className="text-xs font-semibold
+                                   text-primary-600 hover:text-primary-800
+                                   disabled:text-gray-300"
+                                            >
+                                                Restablecer
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => toggle.mutate({
                                                 id: u.id, activo: !u.activo
@@ -137,6 +169,14 @@ export function TablaUsuarios() {
                 <FormUsuario
                     usuario={usuarioEditar}
                     onClose={() => setShowForm(false)}
+                />
+            )}
+
+            {temporal && (
+                <ModalPasswordTemporal
+                    datos={temporal}
+                    onClose={() => setTemporal(null)}
+                    sesionesRevocadas
                 />
             )}
         </>

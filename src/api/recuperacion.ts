@@ -27,6 +27,13 @@ export const recuperacionApi = {
         await client.post(`/api/auth/recuperacion/${id}/descartar`);
     },
 
+    // Restablecimiento por iniciativa del administrador, sin solicitud previa
+    restablecerPorUsuario: async (usuarioId: number) => {
+        const { data } = await client.post<PasswordTemporal>(
+            `/api/auth/recuperacion/usuario/${usuarioId}`);
+        return data;
+    },
+
     cambiarPassword: async (passwordActual: string, passwordNueva: string) => {
         await client.post("/api/auth/cambiar-password",
             { passwordActual, passwordNueva });

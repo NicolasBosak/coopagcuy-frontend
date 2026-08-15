@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usuariosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
+import { ModalPasswordTemporal } from "./ModalPasswordTemporal";
 import type { Usuario } from "../../types/admin";
+import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
 import { CENTROS_ACOPIO } from "../../types/productora";
 
@@ -18,7 +20,9 @@ export function FormUsuario({ usuario, onClose }: Props) {
     const [nombre, setNombre] = useState(usuario?.nombreCompleto ?? "");
     const [cedula, setCedula] = useState(usuario?.cedula ?? "");
     const [email, setEmail] = useState(usuario?.email ?? "");
-    const [password, setPassword] = useState("");
+    // Al crear, la contraseña la genera el servidor y llega en la respuesta:
+    // el formulario da paso al modal que la muestra una única vez
+    const [temporal, setTemporal] = useState<PasswordTemporal | null>(null);
     const [rol, setRol] = useState(usuario?.rol ?? "OperadorCAT");
     const [catAsignado, setCatAsignado] = useState(usuario?.catAsignado ?? "PAT");
     const [error, setError] = useState<string | null>(null);
@@ -34,19 +38,28 @@ export function FormUsuario({ usuario, onClose }: Props) {
                     email: email || undefined,
                     rol,
                     catAsignado: cat,
-                    nuevaPassword: password || undefined,
                 });
-            } else {
-                await usuariosApi.crear({
-                    nombreCompleto: nombre, cedula,
-                    email: email || undefined, password, rol,
-                    catAsignado: cat,
-                });
+                return null;
             }
+            return await usuariosApi.crear({
+                nombreCompleto: nombre, cedula,
+                email: email || undefined, rol,
+                catAsignado: cat,
+            });
         },
-        onSuccess: () => {
+        onSuccess: (creado) => {
             qc.invalidateQueries({ queryKey: ["usuarios"] });
-            onClose();
+            // Al editar se cierra sin más; al crear hay que entregar la
+            // temporal antes de cerrar, o el usuario nuevo no puede entrar
+            if (creado === null) {
+                onClose();
+                return;
+            }
+            setTemporal({
+                passwordTemporal: creado.passwordTemporal,
+                nombreCompleto: creado.usuario.nombreCompleto,
+                cedula: creado.usuario.cedula,
+            });
         },
         onError: (e: unknown) => {
             const err = e as { response?: { data?: { mensaje?: string } } };
@@ -62,12 +75,16 @@ export function FormUsuario({ usuario, onClose }: Props) {
             setError("El número de cédula debe tener 10 dígitos.");
             return;
         }
-        if (!editando && password.length < 8) {
-            setError("La contraseña debe tener al menos 8 caracteres, con una letra y un número.");
-            return;
-        }
         mutation.mutate();
     };
+
+    // El usuario ya está creado: el formulario cede el sitio a la temporal.
+    // Cerrar este modal cierra también el formulario — no hay nada más que
+    // hacer con él. No se pasa sesionesRevocadas: una cuenta recién creada no
+    // tiene sesiones abiertas que cerrar.
+    if (temporal) {
+        return <ModalPasswordTemporal datos={temporal} onClose={onClose} />;
+    }
 
     return (
         <ModalShell
@@ -135,23 +152,6 @@ export function FormUsuario({ usuario, onClose }: Props) {
                         type="email" value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Solo si la persona tiene correo"
-                        className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                       text-base focus:border-primary-500 focus:outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-bold uppercase tracking-wide
-                        text-gray-500 mb-1">
-                        {editando ? "Nueva contraseña (dejar vacío para no cambiar)" : "Contraseña"}
-                    </label>
-                    <input
-                        type="password"
-                        required={!editando}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Mínimo 8 caracteres, con letra y número"
-                        autoComplete="new-password"
                         className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
                        text-base focus:border-primary-500 focus:outline-none"
                     />

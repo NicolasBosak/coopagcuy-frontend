@@ -11,6 +11,8 @@ export interface SolicitudPassword {
     // contraseña devolvería el acceso a alguien ya apartado
     usuarioActivo: boolean;
     estado: EstadoSolicitud;
+    // Quién puso en marcha el restablecimiento
+    origen: "Usuario" | "Administrador";
     fechaCreacion: string;
     fechaResolucion: string | null;
     resueltaPor: string | null;

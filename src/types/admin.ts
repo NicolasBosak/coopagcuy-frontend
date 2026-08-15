@@ -18,7 +18,6 @@ export interface CrearUsuarioRequest {
     nombreCompleto: string;
     cedula: string;
     email?: string;
-    password: string;
     rol: string;
     catAsignado?: string;
 }
@@ -28,7 +27,13 @@ export interface ActualizarUsuarioRequest {
     email?: string;
     rol: string;
     catAsignado?: string;
-    nuevaPassword?: string;
+}
+
+// Respuesta del alta: la contraseña temporal viaja UNA sola vez y no se puede
+// volver a consultar.
+export interface UsuarioCreado {
+    usuario: Usuario;
+    passwordTemporal: string;
 }
 
 export const ROLES: { value: string; label: string }[] = [

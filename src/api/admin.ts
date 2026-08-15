@@ -1,6 +1,6 @@
 import client from "./client";
 import type {
-    Usuario, CrearUsuarioRequest, ActualizarUsuarioRequest,
+    Usuario, UsuarioCreado, CrearUsuarioRequest, ActualizarUsuarioRequest,
     Comunidad, GuardarComunidadRequest, CondicionTransporte,
 } from "../types/admin";
 
@@ -13,7 +13,7 @@ export const usuariosApi = {
     },
 
     crear: async (body: CrearUsuarioRequest) => {
-        const { data } = await client.post<Usuario>("/api/usuarios", body);
+        const { data } = await client.post<UsuarioCreado>("/api/usuarios", body);
         return data;
     },
 

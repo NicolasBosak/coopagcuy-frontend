@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recuperacionApi } from "../../api/recuperacion";
-import { ModalShell } from "../ui/ModalShell";
+import { ModalPasswordTemporal } from "./ModalPasswordTemporal";
 import { Badge } from "../ui/Badge";
 import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
@@ -40,7 +40,6 @@ export function SolicitudesPassword() {
     const qc = useQueryClient();
     const [verHistorial, setVerHistorial] = useState(false);
     const [temporal, setTemporal] = useState<PasswordTemporal | null>(null);
-    const [copiada, setCopiada] = useState(false);
     const [aviso, setAviso] = useState<string | null>(null);
 
     const { data: solicitudes = [], isLoading } = useQuery({
@@ -60,7 +59,6 @@ export function SolicitudesPassword() {
         mutationFn: (id: number) => recuperacionApi.resolver(id),
         onSuccess: (datos) => {
             setTemporal(datos);
-            setCopiada(false);
             invalidar();
         },
         onError: (e) => mensajeError(e,
@@ -117,7 +115,7 @@ export function SolicitudesPassword() {
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                {["Usuario", "Cédula", "Rol", "Solicitada", "Estado", ""]
+                                {["Usuario", "Cédula", "Rol", "Origen", "Solicitada", "Estado", ""]
                                     .map((h) => (
                                         <th key={h}
                                             className="px-4 py-3 text-left text-xs font-bold
@@ -144,6 +142,15 @@ export function SolicitudesPassword() {
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">
                                         {nombreRol(s.rol)}
+                                    </td>
+                                    {/* En palabras y no con el valor crudo del
+                                        enum: lo que importa al leer la bandeja
+                                        es quién dio el primer paso, no cómo se
+                                        llama el campo en la base */}
+                                    <td className="px-4 py-3 text-gray-600">
+                                        {s.origen === "Administrador"
+                                            ? "Iniciado por el admin."
+                                            : "Lo pidió el usuario"}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">
                                         {antiguedad(s.fechaCreacion)}
@@ -192,60 +199,12 @@ export function SolicitudesPassword() {
                 )}
             </div>
 
-            {/* La contraseña temporal existe fuera del hash una sola vez, aquí.
-                Si el administrador cierra sin anotarla, no hay forma de
-                recuperarla: hay que restablecer otra vez. */}
             {temporal && (
-                <ModalShell
+                <ModalPasswordTemporal
+                    datos={temporal}
                     onClose={() => setTemporal(null)}
-                    title="Contraseña temporal"
-                    subtitle={`Para ${temporal.nombreCompleto} · ${temporal.cedula}`}
-                    footer={
-                        <button
-                            onClick={() => setTemporal(null)}
-                            className="w-full min-h-[48px] bg-primary-600
-                         hover:bg-primary-700 text-white text-sm
-                         font-semibold rounded-xl transition"
-                        >
-                            Ya la anoté, cerrar
-                        </button>
-                    }
-                >
-                    <p className="text-sm text-gray-600 leading-relaxed mb-5">
-                        Díctasela por teléfono o entrégasela en persona.
-                        Al entrar, el sistema le pedirá crear una propia.
-                    </p>
-
-                    <div className="bg-superficie border border-gray-200 rounded-2xl
-                          px-5 py-6 text-center">
-                        <p className="font-mono text-2xl font-bold tracking-wide
-                          text-gray-900 select-all">
-                            {temporal.passwordTemporal}
-                        </p>
-                    </div>
-
-                    <button
-                        onClick={() => {
-                            navigator.clipboard
-                                ?.writeText(temporal.passwordTemporal)
-                                .then(() => setCopiada(true))
-                                .catch(() => setCopiada(false));
-                        }}
-                        className="w-full mt-3 min-h-[44px] text-sm font-semibold
-                       text-primary-600 hover:text-primary-800"
-                    >
-                        {copiada ? "✓ Copiada" : "Copiar"}
-                    </button>
-
-                    <div className="mt-5 bg-teja-50 border border-teja-100 rounded-xl
-                          px-4 py-3">
-                        <p className="text-sm text-teja-700 leading-relaxed">
-                            <strong>No se volverá a mostrar.</strong> Anótala
-                            antes de cerrar esta ventana. Las sesiones abiertas
-                            de este usuario ya fueron cerradas.
-                        </p>
-                    </div>
-                </ModalShell>
+                    sesionesRevocadas
+                />
             )}
         </>
     );
