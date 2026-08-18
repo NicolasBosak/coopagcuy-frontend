@@ -11,6 +11,7 @@ import { AnilloNovedades } from "../components/reportes/graficos/AnilloNovedades
 import { AnilloConteos } from "../components/reportes/graficos/AnilloConteos";
 import type { CentroAcopio } from "../types/productora";
 import { useAuth } from "../context/useAuth";
+import { fechaLocal } from "../utils/fechaLocal";
 
 type Tab = "entrada" | "transito" | "salida"
     | "productoras" | "cat" | "novedades" | "devoluciones";
@@ -39,11 +40,10 @@ function tabsVisibles(rol: string | null) {
 
 function inicioMes() {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1)
-        .toISOString().slice(0, 10);
+    return fechaLocal(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 function hoy() {
-    return new Date().toISOString().slice(0, 10);
+    return fechaLocal();
 }
 
 /**

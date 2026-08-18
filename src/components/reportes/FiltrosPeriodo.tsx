@@ -1,4 +1,5 @@
 import { CENTROS_ACOPIO, type CentroAcopio } from "../../types/productora";
+import { fechaLocal } from "../../utils/fechaLocal";
 
 interface Props {
     desde: string;
@@ -9,7 +10,7 @@ interface Props {
     onCatChange: (v: CentroAcopio | "") => void;
 }
 
-const fmt = (d: Date) => d.toISOString().slice(0, 10);
+const fmt = fechaLocal;
 
 // Rangos rápidos de un toque: el más usado primero
 const PRESETS: { label: string; rango: () => [string, string] }[] = [
