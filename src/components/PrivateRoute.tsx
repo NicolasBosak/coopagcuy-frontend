@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import type { RolUsuario } from "../types/auth";
+import { rutaInicial } from "../utils/rutaInicial";
 
 interface Props {
     children: React.ReactNode;
@@ -41,8 +42,12 @@ export function PrivateRoute({ children, rolesPermitidos, disponibleOffline }: P
         return <Navigate to="/cambiar-password" replace />;
     }
 
+    // Se manda a la pantalla de inicio de SU rol y no a "/sin-acceso", que
+    // nunca existió como ruta: caía en el comodín y acababa en el login,
+    // pareciendo una sesión caducada. Con el admin técnico perdiendo cinco
+    // rutas, ese camino pasó de rareza a algo que se pisa a diario.
     if (rolesPermitidos && auth.rol && !rolesPermitidos.includes(auth.rol)) {
-        return <Navigate to="/sin-acceso" replace />;
+        return <Navigate to={rutaInicial(auth.rol)} replace />;
     }
 
     // Sin conexión solo se permiten las pantallas de registro: el resto

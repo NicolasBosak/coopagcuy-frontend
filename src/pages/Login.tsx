@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { rutaInicial } from "../utils/rutaInicial";
 import { useAuth } from "../context/useAuth";
 import { authApi } from "../api/auth";
 import type { LoginRequest } from "../types/auth";
@@ -68,7 +69,9 @@ export default function Login() {
         try {
             const data = await authApi.login(form);
             login(data);
-            navigate("/dashboard");
+            // Cada rol aterriza en su propia pantalla: el admin técnico ya no
+            // puede abrir el panel, así que mandarlo allí sería un rebote.
+            navigate(rutaInicial(data.rol));
         } catch (e: unknown) {
             // Sin respuesta del servidor = problema de conexión (red, CORS,
             // API apagada), no de credenciales: mensajes distintos para

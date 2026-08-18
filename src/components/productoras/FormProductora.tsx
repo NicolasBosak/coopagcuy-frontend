@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi } from "../../api/productoras";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
+import { useAuth } from "../../context/useAuth";
 import { CENTROS_ACOPIO, type CrearProductoraRequest, type Productora } from "../../types/productora";
 
 interface Props {
@@ -20,7 +21,13 @@ const EMPTY: CrearProductoraRequest = {
 
 export function FormProductora({ productora = null, onClose }: Props) {
     const queryClient = useQueryClient();
+    const { auth } = useAuth();
     const editando = productora !== null;
+
+    // El operador de CAT queda fijado a su centro. Solo se le ofrecen las
+    // comunidades de ese centro: el servidor rechaza las demás con 403, así
+    // que mostrarlas solo serviría para que eligiera algo que va a fallar.
+    const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
 
     const [form, setForm] = useState<CrearProductoraRequest>(
         editando
@@ -31,7 +38,9 @@ export function FormProductora({ productora = null, onClose }: Props) {
                 catAsignado: productora.catAsignado,
                 telefono: productora.telefono ?? "",
             }
-            : EMPTY
+            // El alta arranca en el centro del operador, no en el primero de
+            // la lista: el servidor lo va a sellar así de todos modos.
+            : { ...EMPTY, catAsignado: catFijo ?? EMPTY.catAsignado }
     );
     const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +49,12 @@ export function FormProductora({ productora = null, onClose }: Props) {
         queryKey: ["comunidades"],
         queryFn: () => catalogosApi.listarComunidades(),
     });
+
+    const comunidadesVisibles = useMemo(
+        () => catFijo
+            ? comunidades.filter((c) => c.catReferencia === catFijo)
+            : comunidades,
+        [comunidades, catFijo]);
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -83,7 +98,7 @@ export function FormProductora({ productora = null, onClose }: Props) {
 
     // Al elegir comunidad del catálogo se propone su CAT de referencia
     const elegirComunidad = (id: number) => {
-        const c = comunidades.find((x) => x.id === id);
+        const c = comunidadesVisibles.find((x) => x.id === id);
         setForm({
             ...form,
             comunidadId: id,
@@ -157,16 +172,19 @@ export function FormProductora({ productora = null, onClose }: Props) {
                        text-base focus:border-primary-500 focus:outline-none"
                         >
                             <option value="">Seleccionar comunidad…</option>
-                            {comunidades.map((c) => (
+                            {comunidadesVisibles.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.nombre} ({c.canton})
                                 </option>
                             ))}
                         </select>
-                        {comunidades.length === 0 && (
+                        {comunidadesVisibles.length === 0 && (
                             <p className="mt-1 text-xs text-teja-700">
-                                No hay comunidades en el catálogo. Crea una en
-                                Administración antes de registrar productoras.
+                                {catFijo
+                                    ? "Tu centro de acopio no tiene comunidades en el " +
+                                      "catálogo. Pide a un administrador que registre una."
+                                    : "No hay comunidades en el catálogo. Crea una en " +
+                                      "Administración antes de registrar productoras."}
                             </p>
                         )}
                     </div>
@@ -191,16 +209,28 @@ export function FormProductora({ productora = null, onClose }: Props) {
                               text-gray-500 mb-1">
                             Centro de acopio
                         </label>
-                        <select
-                            value={form.catAsignado}
-                            onChange={(e) => setForm({ ...form, catAsignado: e.target.value })}
-                            className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                         text-base focus:border-primary-500 focus:outline-none"
-                        >
-                            {CENTROS_ACOPIO.map(({ value, label }) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
+                        {/* Al operador se le muestra fijo: el servidor sella la
+                            productora con el CAT de su token e ignora lo que
+                            llegue en el cuerpo, así que un desplegable editable
+                            prometería una elección que no existe. */}
+                        {catFijo ? (
+                            <div className="w-full h-12 px-3 rounded-xl border-2 border-gray-100
+                                    bg-gray-50 text-base text-gray-500 flex items-center">
+                                {CENTROS_ACOPIO.find((c) => c.value === catFijo)?.label
+                                    ?? catFijo}
+                            </div>
+                        ) : (
+                            <select
+                                value={form.catAsignado}
+                                onChange={(e) => setForm({ ...form, catAsignado: e.target.value })}
+                                className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
+                             text-base focus:border-primary-500 focus:outline-none"
+                            >
+                                {CENTROS_ACOPIO.map(({ value, label }) => (
+                                    <option key={value} value={value}>{label}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     {error && (

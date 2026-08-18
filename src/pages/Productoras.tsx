@@ -10,9 +10,13 @@ import { CENTROS_ACOPIO, type CentroAcopio, type Productora } from "../types/pro
 export default function Productoras() {
     const { auth } = useAuth();
     const qc = useQueryClient();
-    const esAdmin = auth.rol === "AdminCooperativa" || auth.rol === "AdminTecnico";
+    const esOperadorCat = auth.rol === "OperadorCAT";
+    // Desde que el operador de CAT crea, edita, desactiva y reactiva, "ser
+    // admin" dejó de ser lo que habilita la gestión. El admin técnico ya no
+    // entra aquí: la API le responde 403.
+    const puedeGestionar = auth.rol === "AdminCooperativa" || esOperadorCat;
     // El operador de CAT solo ve su centro; el backend ya lo fuerza
-    const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
+    const catFijo = esOperadorCat ? auth.catAsignado : null;
 
     const [showForm, setShowForm] = useState(false);
     const [productoraEditar, setProductoraEditar] = useState<Productora | null>(null);
@@ -20,11 +24,12 @@ export default function Productoras() {
     const [filtroBusq, setFiltroBusq] = useState("");
 
     const { data = [], isLoading } = useQuery({
-        queryKey: ["productoras", filtroCat, esAdmin],
-        // El admin ve también las inactivas para poder reactivarlas
+        queryKey: ["productoras", filtroCat, puedeGestionar],
+        // Quien puede gestionar ve también las inactivas: sin ellas a la vista
+        // no hay forma de reactivar ninguna.
         queryFn: () => productorasApi.listar({
             cat: filtroCat || undefined,
-            incluirInactivas: esAdmin,
+            incluirInactivas: puedeGestionar,
         }),
     });
 
@@ -50,7 +55,7 @@ export default function Productoras() {
                         {data.length} registradas en el sistema
                     </p>
                 </div>
-                {esAdmin && (
+                {puedeGestionar && (
                     <button
                         onClick={() => { setProductoraEditar(null); setShowForm(true); }}
                         className="min-h-[44px] sm:min-h-0 px-4 py-2 shrink-0
@@ -152,7 +157,7 @@ export default function Productoras() {
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                                        {esAdmin && (
+                                        {puedeGestionar && (
                                             <>
                                                 <button
                                                     onClick={() => {

@@ -10,6 +10,12 @@ const NOMBRE_ROL: Record<string, string> = {
     AdminTecnico: "Admin. técnico",
 };
 
+/** Últimos 6 caracteres del identificador: distingue una tablet de otra sin
+ *  volcar un UUID entero en una pantalla que se lee en un móvil. */
+function tabletCorta(id: string | null): string | null {
+    return id ? `#${id.slice(-6)}` : null;
+}
+
 function fecha(iso: string): string {
     return new Date(iso).toLocaleString("es-EC", {
         day: "2-digit", month: "2-digit", year: "numeric",
@@ -89,6 +95,12 @@ export default function Sesiones() {
                                     {NOMBRE_ROL[s.rol] ?? s.rol}
                                     {s.catAsignado ? ` · ${s.catAsignado}` : ""}
                                     {" · "}cédula {s.cedula}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {s.dispositivo}
+                                    {tabletCorta(s.dispositivoId)
+                                        ? ` · ${tabletCorta(s.dispositivoId)}` : ""}
+                                    {s.ipCreacion ? ` · ${s.ipCreacion}` : ""}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-0.5">
                                     Último uso: {fecha(s.fechaUltimoUso)}

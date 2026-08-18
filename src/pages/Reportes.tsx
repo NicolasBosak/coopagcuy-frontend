@@ -10,9 +10,32 @@ import { BarrasCalidad, type FilaBarras } from "../components/reportes/graficos/
 import { AnilloNovedades } from "../components/reportes/graficos/AnilloNovedades";
 import { AnilloConteos } from "../components/reportes/graficos/AnilloConteos";
 import type { CentroAcopio } from "../types/productora";
+import { useAuth } from "../context/useAuth";
 
 type Tab = "entrada" | "transito" | "salida"
     | "productoras" | "cat" | "novedades" | "devoluciones";
+
+// El flujo físico del producto (entrada → tránsito → salida) es operación. El
+// admin técnico conserva los reportes de gestión y calidad, no esos tres: la
+// API le devuelve 403 en ellos, así que mostrárselos solo produciría un error
+// de carga sin explicación.
+const TABS: { id: Tab; label: string }[] = [
+    { id: "entrada", label: "Entrada" },
+    { id: "transito", label: "Tránsito" },
+    { id: "salida", label: "Salida" },
+    { id: "productoras", label: "Por productora" },
+    { id: "cat", label: "Por CAT" },
+    { id: "novedades", label: "Novedades" },
+    { id: "devoluciones", label: "Devoluciones" },
+];
+
+const TABS_FLUJO: Tab[] = ["entrada", "transito", "salida"];
+
+function tabsVisibles(rol: string | null) {
+    return rol === "AdminTecnico"
+        ? TABS.filter((t) => !TABS_FLUJO.includes(t.id))
+        : TABS;
+}
 
 function inicioMes() {
     const d = new Date();
@@ -80,7 +103,11 @@ function PanelEstado({
 }
 
 export default function Reportes() {
-    const [tab, setTab] = useState<Tab>("entrada");
+    const { auth } = useAuth();
+    const visibles = useMemo(() => tabsVisibles(auth.rol), [auth.rol]);
+    // La pestaña inicial es la primera visible: abrir en "entrada" dejaría al
+    // admin técnico mirando un error de carga nada más entrar.
+    const [tab, setTab] = useState<Tab>(visibles[0].id);
     const [desde, setDesde] = useState(inicioMes());
     const [hasta, setHasta] = useState(hoy());
     const [cat, setCat] = useState<CentroAcopio | "">("");
@@ -272,15 +299,7 @@ export default function Reportes() {
             <Segmentado
                 activo={tab}
                 onCambio={setTab}
-                opciones={[
-                    { id: "entrada", label: "Entrada" },
-                    { id: "transito", label: "Tránsito" },
-                    { id: "salida", label: "Salida" },
-                    { id: "productoras", label: "Por productora" },
-                    { id: "cat", label: "Por CAT" },
-                    { id: "novedades", label: "Novedades" },
-                    { id: "devoluciones", label: "Devoluciones" },
-                ]}
+                opciones={visibles}
             />
 
             {/* Tab: Entrada — cuyes en espera de faenamiento */}

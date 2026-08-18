@@ -26,6 +26,8 @@ export interface SesionActiva {
     fechaUltimoUso: string;
     fechaExpiracion: string;
     esSesionActual: boolean;
+    // User-Agent ya traducido por el servidor ("Chrome · Android").
+    dispositivo: string;
 }
 
 export const authApi = {

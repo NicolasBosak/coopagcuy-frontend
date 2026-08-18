@@ -36,35 +36,39 @@ export default function App() {
 
             {/* Rutas privadas */}
             <Route path="/dashboard" element={
-              <PrivateRoute><Dashboard /></PrivateRoute>
+              <PrivateRoute rolesPermitidos={[
+                "AdminCooperativa", "OperadorCAT", "OperadorFaenamiento"
+              ]}>
+                <Dashboard />
+              </PrivateRoute>
             } />
             <Route path="/cambiar-password" element={
               <PrivateRoute><CambiarPassword /></PrivateRoute>
             } />
             <Route path="/productoras" element={
               <PrivateRoute rolesPermitidos={[
-                "AdminCooperativa", "AdminTecnico", "OperadorCAT"
+                "AdminCooperativa", "OperadorCAT"
               ]}>
                 <Productoras />
               </PrivateRoute>
             } />
             <Route path="/recepcion" element={
               <PrivateRoute disponibleOffline rolesPermitidos={[
-                "OperadorCAT", "AdminCooperativa", "AdminTecnico"
+                "OperadorCAT", "AdminCooperativa"
               ]}>
                 <Recepcion />
               </PrivateRoute>
             } />
             <Route path="/faenamiento" element={
               <PrivateRoute rolesPermitidos={[
-                "OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"
+                "OperadorFaenamiento", "AdminCooperativa"
               ]}>
                 <Faenamiento />
               </PrivateRoute>
             } />
             <Route path="/despacho" element={
               <PrivateRoute rolesPermitidos={[
-                "OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"
+                "OperadorFaenamiento", "AdminCooperativa"
               ]}>
                 <Despacho />
               </PrivateRoute>

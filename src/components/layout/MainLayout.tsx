@@ -2,13 +2,15 @@ import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 
-// Cada ítem declara qué roles pueden verlo; null = todos
+// Cada ítem declara qué roles pueden verlo. El admin técnico atiende soporte:
+// no aparece en la operación de la cadena. Ocultarlo aquí es cosmética — la
+// restricción de verdad vive en los [Authorize] de la API.
 const navItems: { to: string; label: string; roles: string[] | null }[] = [
-    { to: "/dashboard", label: "Panel", roles: null },
-    { to: "/productoras", label: "Productoras", roles: ["AdminCooperativa", "AdminTecnico", "OperadorCAT"] },
-    { to: "/recepcion", label: "Recepción CAT", roles: ["OperadorCAT", "AdminCooperativa", "AdminTecnico"] },
-    { to: "/faenamiento", label: "Faenamiento", roles: ["OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"] },
-    { to: "/despacho", label: "Despacho", roles: ["OperadorFaenamiento", "AdminCooperativa", "AdminTecnico"] },
+    { to: "/dashboard", label: "Panel", roles: ["AdminCooperativa", "OperadorCAT", "OperadorFaenamiento"] },
+    { to: "/productoras", label: "Productoras", roles: ["AdminCooperativa", "OperadorCAT"] },
+    { to: "/recepcion", label: "Recepción CAT", roles: ["OperadorCAT", "AdminCooperativa"] },
+    { to: "/faenamiento", label: "Faenamiento", roles: ["OperadorFaenamiento", "AdminCooperativa"] },
+    { to: "/despacho", label: "Despacho", roles: ["OperadorFaenamiento", "AdminCooperativa"] },
     { to: "/reportes", label: "Reportes", roles: ["AdminCooperativa", "AdminTecnico", "OperadorFaenamiento"] },
     { to: "/vinculaciones", label: "Vinculaciones", roles: ["AdminCooperativa", "AdminTecnico"] },
     { to: "/administracion", label: "Administración", roles: ["AdminCooperativa", "AdminTecnico"] },
