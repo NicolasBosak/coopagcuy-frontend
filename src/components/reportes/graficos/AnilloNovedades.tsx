@@ -2,6 +2,7 @@
 // Los arcos se redibujan con transición cuando cambian los filtros.
 
 import { PALETA, INFORMATIVO, RECHAZADO, GRAVE, NEUTRO, PISTA } from "./paleta";
+import { PESO_MAXIMO_GRAMOS } from "../../../domain/reglasRecepcion";
 
 interface Props {
     conteos: Record<string, number>;
@@ -14,7 +15,7 @@ const TIPOS: Record<string, { nombre: string; color: string }> = {
     SinAyuno: { nombre: "Sin ayuno", color: PALETA[5] },        // cian claro
     // Azul, no naranja: el sobrepeso informa, no señala un problema con el
     // animal. Mismo criterio que el aviso de la pantalla de recepción.
-    SobrePeso: { nombre: "Sobre peso (>1300g)", color: INFORMATIVO },
+    SobrePeso: { nombre: `Sobre peso (>${PESO_MAXIMO_GRAMOS}g)`, color: INFORMATIVO },
     SignosClinicos: { nombre: "Signos clínicos", color: GRAVE },
     Otro: { nombre: "Otro", color: NEUTRO },
 };
