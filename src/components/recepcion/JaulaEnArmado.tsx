@@ -3,13 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../../api/recepcion";
 import { useAuth } from "../../context/useAuth";
 import { CENTROS_ACOPIO, type CentroAcopio } from "../../types/productora";
+import { CAPACIDAD_JAULA } from "../../domain/reglasRecepcion";
 
 interface Props {
     isOnline: boolean;
 }
 
-// Jaula en armado del CAT: muestra el progreso hacia los 20 cuyes,
-// las productoras que la integran y permite cerrarla manualmente.
+// Jaula en armado del CAT: muestra el progreso hacia el cupo de la jaula
+// (CAPACIDAD_JAULA), las productoras que la integran y permite cerrarla
+// manualmente.
 // Un Operador de CAT queda fijado a su centro asignado.
 export function JaulaEnArmado({ isOnline }: Props) {
     const qc = useQueryClient();
@@ -38,7 +40,7 @@ export function JaulaEnArmado({ isOnline }: Props) {
         },
     });
 
-    const progreso = jaula ? (jaula.cantidadAnimales / 20) * 100 : 0;
+    const progreso = jaula ? (jaula.cantidadAnimales / CAPACIDAD_JAULA) * 100 : 0;
 
     return (
         <div className="bg-white rounded-2xl border-2 border-primary-100 p-5 mb-5">
@@ -74,7 +76,7 @@ export function JaulaEnArmado({ isOnline }: Props) {
                         className="h-10 px-4 rounded-xl border-2 border-primary-600
                        text-primary-700 text-xs font-bold hover:bg-primary-50
                        disabled:opacity-50 transition"
-                        title="Cierra la jaula aunque no llegue a 20, dejándola lista para enviar a la planta"
+                        title={`Cierra la jaula aunque no llegue a ${CAPACIDAD_JAULA}, dejándola lista para enviar a la planta`}
                     >
                         {cerrar.isPending ? "Cerrando…" : "Cerrar jaula"}
                     </button>
@@ -101,7 +103,7 @@ export function JaulaEnArmado({ isOnline }: Props) {
                         </span>
                         <span className="text-sm font-extrabold text-gray-900">
                             {jaula.cantidadAnimales}
-                            <span className="text-gray-400 font-medium"> / 20 cuyes</span>
+                            <span className="text-gray-400 font-medium"> / {CAPACIDAD_JAULA} cuyes</span>
                         </span>
                     </div>
 
@@ -109,7 +111,7 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     <div className="h-4 rounded-full bg-gray-100 overflow-hidden mb-3">
                         <div
                             className={`h-full rounded-full transition-[width] duration-700 ease-salida
-                          ${jaula.cantidadAnimales >= 20
+                          ${jaula.cantidadAnimales >= CAPACIDAD_JAULA
                                     ? "bg-primary-600" : "bg-bayo-500"}`}
                             style={{ width: `${progreso}%` }}
                         />

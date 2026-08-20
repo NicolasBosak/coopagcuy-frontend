@@ -74,7 +74,7 @@ export default function Faenamiento() {
             const rechazado = sesiones.every(
                 (s) => s.estadoCanal === "Rechazado");
             // Cuántos animales de la sesión salieron con novedad. Saber que el
-            // lote "tiene novedad" no dice nada útil: 1 de 20 y 18 de 20 se
+            // lote "tiene novedad" no dice nada útil: 1 de 15 y 14 de 15 se
             // leían igual, y son decisiones distintas.
             const animalesConNovedad = sesiones.reduce(
                 (acc, s) => acc + s.cuyes.filter(
@@ -292,8 +292,11 @@ export default function Faenamiento() {
                                                 Salió del CAT: {new Date(m.fechaDespacho)
                                                     .toLocaleString("es-EC")}
                                                 {m.tipoForraje && ` · Forraje: ${m.tipoForraje}`}
-                                                {m.diasRetiroMedicamentos !== null &&
-                                                    ` · Retiro medicamentos: ${m.diasRetiroMedicamentos} días`}
+                                                {m.sinAntibioticos7Dias === true
+                                                    ? " · Sin antibióticos últimos 7 días"
+                                                    : m.diasRetiroMedicamentos !== null
+                                                        ? ` · Retiro medicamentos: ${m.diasRetiroMedicamentos} días`
+                                                        : ""}
                                             </p>
                                             {!pendiente && (
                                                 <p className="text-xs text-primary-700 mt-1">

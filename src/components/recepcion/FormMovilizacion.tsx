@@ -20,6 +20,7 @@ const TIPOS_FORRAJE = [
     "Raygrass",
     "Maíz forrajero",
     "Mezcla de forrajes",
+    "Concentrado sin proteína animal",
     "Otro",
 ];
 
@@ -34,7 +35,7 @@ export function FormMovilizacion({ lote, onClose }: Props) {
         cantidadMovilizada: lote.cantidadAnimales,
         condicionesTransporte: [],
         tipoForraje: "",
-        diasRetiroMedicamentos: undefined,
+        sinAntibioticos7Dias: false,
         responsableDespacho: auth.nombreCompleto ?? "",
         observaciones: "",
     });
@@ -82,7 +83,7 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                         Cancelar
                     </button>
                     <button type="submit" form="form-movilizacion"
-                        disabled={mutation.isPending}
+                        disabled={mutation.isPending || !form.sinAntibioticos7Dias}
                         className="flex-1 h-12 bg-primary-600 hover:bg-primary-700
                        disabled:bg-primary-300 text-white rounded-2xl
                        text-sm font-bold transition">
@@ -201,24 +202,28 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wide
-                              text-gray-500 mb-1">
-                                Días desde el último medicamento (si aplica)
+                        {/* Sustituye a la pregunta por los días de retiro: lo
+                            que importa no es cuántos días pasaron sino que
+                            alguien responda por el periodo de carencia. */}
+                        <div className="rounded-xl border-2 border-teja-200 bg-teja-50 p-3">
+                            <p className="text-sm font-semibold text-teja-800">
+                                <span aria-hidden="true">⚠️</span> Los cuyes registrados
+                                no debieron recibir antibióticos en los últimos 7 días.
+                            </p>
+                            <label className="flex items-start gap-3 mt-3 min-h-[44px] cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={form.sinAntibioticos7Dias ?? false}
+                                    onChange={(e) => setForm({
+                                        ...form, sinAntibioticos7Dias: e.target.checked
+                                    })}
+                                    className="w-5 h-5 mt-0.5 accent-primary-600 shrink-0"
+                                />
+                                <span className="text-sm text-gray-800">
+                                    Confirmo que los cuyes de este lote no recibieron
+                                    antibióticos en los últimos 7 días.
+                                </span>
                             </label>
-                            <input
-                                type="number" min={0}
-                                value={form.diasRetiroMedicamentos ?? ""}
-                                onChange={(e) => setForm({
-                                    ...form,
-                                    diasRetiroMedicamentos: e.target.value
-                                        ? Number(e.target.value) : undefined
-                                })}
-                                placeholder="Dejar vacío si no recibieron"
-                                className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
-                           bg-white text-sm focus:border-primary-500
-                           focus:outline-none"
-                            />
                         </div>
                     </div>
 

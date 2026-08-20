@@ -4,30 +4,29 @@ import { productorasApi } from "../../api/productoras";
 import { recepcionApi } from "../../api/recepcion";
 import { offlineDB } from "../../services/db";
 import { esCedulaValida } from "../../utils/validarCedula";
+import { comprimirImagen } from "../../utils/comprimirImagen";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
 import { useAuth } from "../../context/useAuth";
 import type {
-    RegistrarEntregaRequest, ColorPelaje, CuyRegistro,
+    RegistrarEntregaRequest, CuyRegistro,
     EstadoOreja, TamanoAnimal, EntregaOffline
 } from "../../types/recepcion";
 import type { CentroAcopio } from "../../types/productora";
 import { CENTROS_ACOPIO } from "../../types/productora";
+import {
+    COLORES, MAX_ENTREGA, evaluarCuy, PESO_MAXIMO_GRAMOS, CAPACIDAD_JAULA,
+    MAX_BYTES_EVIDENCIA_ENTREGA
+} from "../../domain/reglasRecepcion";
+
+// Tamaño real en bytes de una foto guardada en base64 (sin prefijo data:).
+const bytesDeFoto = (base64?: string) =>
+    base64 ? Math.ceil((base64.length * 3) / 4) : 0;
 
 interface Props {
     isOnline: boolean;
     onGuardado: () => void;
     onClose: () => void;
 }
-
-// Opciones como tarjetas grandes con pictograma: pensadas para
-// operadoras con poca experiencia digital, en tablet de 7"
-const COLORES: { valor: ColorPelaje; icono: string; nota?: string }[] = [
-    { valor: "Blanco", icono: "⚪" },
-    { valor: "Bayo", icono: "🟡" },
-    { valor: "Plomo", icono: "⚫" },
-    { valor: "Combinado", icono: "🟤" },
-    { valor: "Negro", icono: "⬛", nota: "Va a venta local" },
-];
 
 const OREJAS: { valor: EstadoOreja; titulo: string; nota: string }[] = [
     { valor: "Blanda", titulo: "Blanda", nota: "Tierno (3–4 meses)" },
@@ -51,9 +50,6 @@ const TITULOS: Record<number, { titulo: string; ayuda: string }> = {
     5: { titulo: "Revisa y guarda", ayuda: "Verifica que todo esté bien antes de guardar" },
 };
 
-// Tope de una entrega individual: dos jaulas completas
-const MAX_ENTREGA = 40;
-
 const CUY_INICIAL: CuyRegistro = {
     pesoGramos: 0,
     colorPelaje: "Blanco",
@@ -61,55 +57,6 @@ const CUY_INICIAL: CuyRegistro = {
     tamanoAnimal: "Normal",
     signosClinicos: "",
 };
-
-type NivelCuy = "ok" | "sobrepeso" | "novedad" | "rechazo";
-
-// Evaluación local por animal: espejo de las reglas del backend
-// (SRS Apéndice 5.1 + rango operativo 875–1300 g).
-//
-// "sobrepeso" es su propio nivel y no una novedad más: el animal está sano y
-// se acepta, solo queda fuera del rango comercial. Mezclarlo con el bajo peso
-// bajo el mismo ámbar hacía que la operadora leyera "problema" en los dos.
-// Un nivel posterior solo sube (ok → sobrepeso → novedad → rechazo).
-const ORDEN: NivelCuy[] = ["ok", "sobrepeso", "novedad", "rechazo"];
-const subir = (actual: NivelCuy, nuevo: NivelCuy): NivelCuy =>
-    ORDEN.indexOf(nuevo) > ORDEN.indexOf(actual) ? nuevo : actual;
-
-function evaluarCuy(c: CuyRegistro): {
-    nivel: NivelCuy | null;
-    motivos: string[];
-} {
-    if (c.pesoGramos <= 0) return { nivel: null, motivos: [] };
-
-    const motivos: string[] = [];
-    let nivel: NivelCuy = "ok";
-
-    if (c.pesoGramos < 850) {
-        nivel = subir(nivel, "rechazo");
-        motivos.push("peso bajo el mínimo (850 g)");
-    } else if (c.pesoGramos < 875) {
-        nivel = subir(nivel, "novedad");
-        motivos.push("peso justo (850–874 g)");
-    } else if (c.pesoGramos > 1300) {
-        nivel = subir(nivel, "sobrepeso");
-        motivos.push("peso sobre 1300 g");
-    }
-
-    if (c.colorPelaje === "Negro") {
-        nivel = subir(nivel, "novedad");
-        motivos.push("piel negra");
-    }
-    if (c.estadoOreja === "Dura") {
-        nivel = subir(nivel, "novedad");
-        motivos.push("oreja dura");
-    }
-    if (c.signosClinicos?.trim()) {
-        nivel = subir(nivel, "novedad");
-        motivos.push("signos clínicos");
-    }
-
-    return { nivel, motivos };
-}
 
 function uuid() {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -125,6 +72,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const [busqueda, setBusqueda] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [errorFoto, setErrorFoto] = useState<string | null>(null);
 
     // Datos generales del lote. Un Operador de CAT queda fijado a su centro.
     const catFijo = auth.rol === "OperadorCAT"
@@ -183,7 +131,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
             return [
                 ...prev,
                 ...Array.from({ length: n - prev.length }, () => ({
-                    ...base, pesoGramos: 0, signosClinicos: "",
+                    ...base, pesoGramos: 0, signosClinicos: "", fotoBase64: undefined,
                 })),
             ];
         });
@@ -496,7 +444,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                 <p className="text-sm text-gray-500 bg-white rounded-2xl
                               border border-gray-200 px-4 py-3">
                                     Los cuyes se suman a la <strong>jaula en armado</strong> del
-                                    centro de acopio (máximo 20 por jaula). Si la jaula se llena,
+                                    centro de acopio (máximo {CAPACIDAD_JAULA} por jaula). Si la jaula se llena,
                                     el resto pasa solo a una jaula nueva. En el siguiente paso
                                     vas a pesar y revisar <strong>cada cuy por separado</strong>.
                                 </p>
@@ -518,7 +466,10 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                                 <button
                                                     key={i}
                                                     type="button"
-                                                    onClick={() => setCuyActual(i)}
+                                                    onClick={() => {
+                                                        setErrorFoto(null);
+                                                        setCuyActual(i);
+                                                    }}
                                                     aria-label={`Ir al cuy ${i + 1}`}
                                                     className={`w-6 h-6 rounded-full text-[10px] font-bold
                                       transition
@@ -569,21 +520,18 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-wide
                                   text-gray-500 mb-2">Color del pelaje</p>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    {/* 2x2: son 4 opciones, no 5 -- grid-cols-3 dejaba
+                                        una tarjeta suelta en tablet de 7" */}
+                                    <div className="grid grid-cols-2 gap-2">
                                         {COLORES.map((c) =>
                                             tarjeta(
                                                 cuy.colorPelaje === c.valor,
                                                 () => actualizarCuy({ colorPelaje: c.valor }),
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xl">{c.icono}</span>
-                                                    <div>
-                                                        <p className="font-semibold text-sm text-gray-900">
-                                                            {c.valor}
-                                                        </p>
-                                                        {c.nota && (
-                                                            <p className="text-[10px] text-teja-600">{c.nota}</p>
-                                                        )}
-                                                    </div>
+                                                    <p className="font-semibold text-sm text-gray-900">
+                                                        {c.valor}
+                                                    </p>
                                                 </div>,
                                                 `color-${c.valor}`
                                             ))}
@@ -634,7 +582,10 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                         {tarjeta(!cuy.signosClinicos && !conObservacionSanitaria,
                                             () => {
                                                 setConObservacionSanitaria(false);
-                                                actualizarCuy({ signosClinicos: "" });
+                                                // La foto es evidencia DE la novedad clínica: si
+                                                // ya no hay novedad, la foto tampoco debe seguir
+                                                // viajando (aunque su tarjeta ya no se muestre).
+                                                actualizarCuy({ signosClinicos: "", fotoBase64: undefined });
                                             },
                                             <div className="text-center w-full">
                                                 <p className="text-xl">💚</p>
@@ -656,7 +607,12 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             rows={2}
                                             value={cuy.signosClinicos ?? ""}
                                             onChange={(e) => actualizarCuy({
-                                                signosClinicos: e.target.value
+                                                signosClinicos: e.target.value,
+                                                // Borrar el texto a mano deja el mismo hueco que
+                                                // "Sí, sano": sin novedad descrita, la foto no
+                                                // debe sobrevivir aunque su tarjeta se oculte.
+                                                ...(e.target.value.trim() === ""
+                                                    ? { fotoBase64: undefined } : {}),
                                             })}
                                             placeholder="¿Qué observas? Por ejemplo: mancha en la piel, decaído"
                                             className="mt-2 w-full px-4 py-3 rounded-2xl border-2
@@ -664,6 +620,94 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                  focus:border-bayo-500 focus:outline-none
                                  animate-fade-in"
                                         />
+                                    )}
+                                    {/* La foto solo tiene sentido con una novedad clínica descrita: es la
+                                        evidencia de ESE defecto para reclamar al proveedor, no una foto
+                                        suelta del animal. */}
+                                    {cuy.signosClinicos?.trim() && (
+                                        <div className="mt-3">
+                                            <label className="block text-xs font-bold uppercase tracking-wide
+                                              text-gray-500 mb-1">
+                                                Foto del defecto (opcional)
+                                            </label>
+
+                                            {cuy.fotoBase64 ? (
+                                                <div className="flex items-center gap-3">
+                                                    <img
+                                                        src={`data:image/jpeg;base64,${cuy.fotoBase64}`}
+                                                        alt="Evidencia del defecto"
+                                                        className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => actualizarCuy({ fotoBase64: undefined })}
+                                                        className="min-h-[44px] px-4 rounded-xl border-2 border-gray-200
+                                                   text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                                    >
+                                                        Quitar foto
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className="flex items-center justify-center gap-2 min-h-[56px]
+                                                  rounded-xl border-2 border-dashed border-gray-300
+                                                  text-sm font-semibold text-gray-600 cursor-pointer
+                                                  hover:bg-gray-50 transition">
+                                                    📷 Tomar foto
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        capture="environment"
+                                                        className="hidden"
+                                                        onChange={async (e) => {
+                                                            const archivo = e.target.files?.[0];
+                                                            if (!archivo) return;
+                                                            setErrorFoto(null);
+                                                            try {
+                                                                const base64 = await comprimirImagen(archivo);
+
+                                                                // Tope agregado por entrega, comprobado aquí
+                                                                // (en la captura) y no al sincronizar, cuando
+                                                                // ya es tarde para la operadora. Ver el
+                                                                // comentario de MAX_BYTES_EVIDENCIA_ENTREGA.
+                                                                const bytesDeLasDemas = cuyes.reduce(
+                                                                    (acc, c, i) => i === cuyActual
+                                                                        ? acc
+                                                                        : acc + bytesDeFoto(c.fotoBase64),
+                                                                    0);
+                                                                const bytesTotales = bytesDeLasDemas + bytesDeFoto(base64);
+
+                                                                if (bytesTotales > MAX_BYTES_EVIDENCIA_ENTREGA) {
+                                                                    const mbTope = (MAX_BYTES_EVIDENCIA_ENTREGA
+                                                                        / (1024 * 1024)).toFixed(0);
+                                                                    setErrorFoto(
+                                                                        `Esta entrega ya lleva demasiadas fotos ` +
+                                                                        `(máximo ${mbTope} MB en total). Sincroniza ` +
+                                                                        `esta entrega antes de agregar más, o ` +
+                                                                        `continúa sin foto en este cuy.`);
+                                                                    return;
+                                                                }
+
+                                                                actualizarCuy({ fotoBase64: base64 });
+                                                            } catch {
+                                                                setErrorFoto("No se pudo procesar la foto. Intenta de nuevo.");
+                                                            } finally {
+                                                                // Permite volver a elegir el MISMO archivo: sin
+                                                                // esto el input no dispara change la segunda vez.
+                                                                e.target.value = "";
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            )}
+
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                Se guarda 90 días y luego se borra sola.
+                                            </p>
+
+                                            {errorFoto && (
+                                                <p className="mt-1 text-xs text-teja-700">{errorFoto}</p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
 
@@ -675,6 +719,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             disabled={cuyActual === 0}
                                             onClick={() => {
                                                 setConObservacionSanitaria(false);
+                                                setErrorFoto(null);
                                                 setCuyActual(cuyActual - 1);
                                             }}
                                             className="flex-1 h-12 rounded-2xl border-2 border-gray-300
@@ -688,6 +733,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             disabled={cuyActual === cuyes.length - 1 || cuy.pesoGramos <= 0}
                                             onClick={() => {
                                                 setConObservacionSanitaria(false);
+                                                setErrorFoto(null);
                                                 setCuyActual(cuyActual + 1);
                                             }}
                                             className="flex-1 h-12 rounded-2xl bg-primary-100
@@ -810,8 +856,8 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                         <p className="text-lg font-extrabold">Información</p>
                                         <p className="font-semibold text-sm mt-1">
                                             {conSobrepeso} {conSobrepeso === 1
-                                                ? "cuy supera los 1300 g"
-                                                : "cuyes superan los 1300 g"}. Se
+                                                ? `cuy supera los ${PESO_MAXIMO_GRAMOS} g`
+                                                : `cuyes superan los ${PESO_MAXIMO_GRAMOS} g`}. Se
                                             aceptan; quedan fuera del rango comercial.
                                         </p>
                                         <div className="mt-2 space-y-1">
@@ -891,7 +937,10 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                             type="button"
                             disabled={!puedeAvanzar()}
                             onClick={() => {
-                                if (paso === 2) setCuyActual(0);
+                                if (paso === 2) {
+                                    setErrorFoto(null);
+                                    setCuyActual(0);
+                                }
                                 setPaso(paso + 1);
                             }}
                             className="flex-1 h-14 rounded-2xl bg-primary-600 text-white

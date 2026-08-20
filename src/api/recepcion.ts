@@ -8,7 +8,7 @@ import type {
 } from "../types/recepcion";
 
 export const recepcionApi = {
-    // ── Entregas: la jaula del CAT se arma acumulando hasta 20 ────────
+    // ── Entregas: la jaula del CAT se arma acumulando hasta su cupo ────
 
     registrarEntrega: async (body: RegistrarEntregaRequest) => {
         const { data } = await client.post<EntregaResultado>(
@@ -45,6 +45,16 @@ export const recepcionApi = {
             { responseType: "blob" }
         );
         return data;
+    },
+
+    // responseType blob: el endpoint devuelve image/jpeg, no JSON. Pasa por
+    // `client` y no por fetch directo para que el interceptor adjunte el
+    // Bearer (el token está en memoria, no en una cookie que viaje sola).
+    fotoNovedad: async (novedadId: number): Promise<Blob> => {
+        const res = await client.get<Blob>(
+            `/api/recepcion/novedades/${novedadId}/foto`,
+            { responseType: "blob" });
+        return res.data;
     },
 
     // ── Movilización CAT → planta (eslabón transporte) ────────────────

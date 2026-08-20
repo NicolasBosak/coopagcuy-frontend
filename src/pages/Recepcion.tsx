@@ -12,6 +12,7 @@ import { FormLote } from "../components/recepcion/FormLote";
 import { FormMovilizacion } from "../components/recepcion/FormMovilizacion";
 import { FormPago } from "../components/recepcion/FormPago";
 import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
+import { EvidenciaNovedad } from "../components/recepcion/EvidenciaNovedad";
 import { descargarBlob } from "../utils/download";
 import type { EstadoLote, Lote, EntregaOffline, SyncResult } from "../types/recepcion";
 
@@ -205,6 +206,14 @@ export default function Recepcion() {
                                             {l.novedades.length > 0
                                                 ? l.novedades.map(n => n.tipo).join(", ")
                                                 : "—"}
+                                            {/* Las novedades con evidencia son siempre
+                                                clínicas: es lo que se reclama al
+                                                proveedor, así que se enlaza aquí. */}
+                                            {l.novedades.filter(n => n.tieneFoto).map(n => (
+                                                <span key={n.id} className="block mt-1">
+                                                    <EvidenciaNovedad novedadId={n.id} />
+                                                </span>
+                                            ))}
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap space-x-3">
                                             {l.estado !== "Rechazado" && l.cerrado &&
