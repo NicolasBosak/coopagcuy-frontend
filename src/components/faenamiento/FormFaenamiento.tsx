@@ -4,6 +4,7 @@ import { faenamientoApi } from "../../api/faenamiento";
 import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
+import { EvidenciaNovedad } from "../ui/EvidenciaNovedad";
 import { omitir } from "../../utils/omitir";
 import type {
     CuyFaenamientoRequest, EstadoCanal,
@@ -485,10 +486,19 @@ export function FormFaenamiento({ onClose }: Props) {
                                             </div>
 
                                             {c.recepcion.motivoNovedad && (
-                                                <p className="text-xs font-semibold text-bayo-700
+                                                <div className="text-xs font-semibold text-bayo-700
                                           mt-1.5 bg-bayo-50 rounded-lg px-2 py-1">
-                                                    ⚠ Novedad del CAT: {c.recepcion.motivoNovedad}
-                                                </p>
+                                                    <p>⚠ Novedad del CAT: {c.recepcion.motivoNovedad}</p>
+                                                    {/* La foto que tomó el CAT, junto al animal al
+                                                        que pertenece: es el momento en que el
+                                                        operador lo tiene delante. */}
+                                                    {c.recepcion.novedadFotoId !== null && (
+                                                        <div className="mt-1">
+                                                            <EvidenciaNovedad
+                                                                novedadId={c.recepcion.novedadFotoId} />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
 
                                             {c.incluido && (
