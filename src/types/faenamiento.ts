@@ -35,6 +35,10 @@ export interface CuyDisponible {
     pesoGramos: number;
     estadoRecepcion: string;
     motivoNovedad: string | null;
+    // Id de la novedad clínica de este animal, solo si tiene evidencia
+    // fotográfica vigente. El servidor lo deja nulo cuando la foto ya
+    // caducó, así que no hace falta comprobar fechas aquí.
+    novedadFotoId: number | null;
     nombreProductora: string | null;
     comunidad: string | null;
 }

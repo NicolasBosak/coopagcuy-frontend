@@ -12,7 +12,7 @@ import { FormLote } from "../components/recepcion/FormLote";
 import { FormMovilizacion } from "../components/recepcion/FormMovilizacion";
 import { FormPago } from "../components/recepcion/FormPago";
 import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
-import { EvidenciaNovedad } from "../components/recepcion/EvidenciaNovedad";
+import { EvidenciaNovedad } from "../components/ui/EvidenciaNovedad";
 import { descargarBlob } from "../utils/download";
 import type { EstadoLote, Lote, EntregaOffline, SyncResult } from "../types/recepcion";
 
