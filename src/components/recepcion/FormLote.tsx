@@ -14,8 +14,8 @@ import type {
 import type { CentroAcopio } from "../../types/productora";
 import { CENTROS_ACOPIO } from "../../types/productora";
 import {
-    COLORES, MAX_ENTREGA, evaluarCuy, PESO_MAXIMO_GRAMOS, CAPACIDAD_JAULA,
-    MAX_BYTES_EVIDENCIA_ENTREGA
+    COLORES, MAX_ENTREGA, evaluarCuy, PESO_MINIMO_GRAMOS, PESO_MAXIMO_GRAMOS,
+    CAPACIDAD_JAULA, MAX_BYTES_EVIDENCIA_ENTREGA
 } from "../../domain/reglasRecepcion";
 
 // Tamaño real en bytes de una foto guardada en base64 (sin prefijo data:).
@@ -494,13 +494,17 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                     tracking-wide text-gray-500 mb-2">
                                         Peso de este cuy (en gramos)
                                     </label>
+                                    {/* El ejemplo se deriva del rango vigente: un placeholder
+                                        fijo se queda desfasado cuando cambia la regla, y sugerir
+                                        un peso que el sistema va a rechazar enseña mal a la
+                                        operadora. */}
                                     <input
                                         type="number" min={0} step={10} inputMode="numeric"
                                         value={cuy.pesoGramos || ""}
                                         onChange={(e) => actualizarCuy({
                                             pesoGramos: Number(e.target.value)
                                         })}
-                                        placeholder="Por ejemplo: 950"
+                                        placeholder={`Por ejemplo: ${PESO_MINIMO_GRAMOS + 150}`}
                                         className="w-full h-14 px-4 rounded-2xl border-2
                                border-gray-200 bg-white text-2xl font-bold
                                text-center focus:border-primary-500
