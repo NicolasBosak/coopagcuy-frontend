@@ -486,18 +486,20 @@ export function FormFaenamiento({ onClose }: Props) {
                                             </div>
 
                                             {c.recepcion.motivoNovedad && (
-                                                <div className="text-xs font-semibold text-bayo-700
-                                          mt-1.5 bg-bayo-50 rounded-lg px-2 py-1">
-                                                    <p>⚠ Novedad del CAT: {c.recepcion.motivoNovedad}</p>
+                                                <div className="mt-1.5 bg-bayo-50 rounded-lg
+                                          px-2 py-1.5 flex items-start gap-2">
                                                     {/* La foto que tomó el CAT, junto al animal al
                                                         que pertenece: es el momento en que el
-                                                        operador lo tiene delante. */}
+                                                        operador lo tiene delante. Se carga sola
+                                                        —la lista es corta— para que no dependa de
+                                                        que adivine que hay algo que tocar. */}
                                                     {c.recepcion.novedadFotoId !== null && (
-                                                        <div className="mt-1">
-                                                            <EvidenciaNovedad
-                                                                novedadId={c.recepcion.novedadFotoId} />
-                                                        </div>
+                                                        <EvidenciaNovedad autoCargar
+                                                            novedadId={c.recepcion.novedadFotoId} />
                                                     )}
+                                                    <p className="text-xs font-semibold text-bayo-700">
+                                                        ⚠ Novedad del CAT: {c.recepcion.motivoNovedad}
+                                                    </p>
                                                 </div>
                                             )}
 
