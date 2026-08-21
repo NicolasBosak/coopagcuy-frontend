@@ -30,13 +30,14 @@ export type CentroAcopio = "PAT" | "NIE" | "HUE" | "NAB" | "PEL";
 // La fecha del pago la sella el servidor al registrarlo
 export interface RegistrarPagoRequest {
     productoraId: number;
-    loteId?: number;
+    // Obligatorio: el ticket es por los cuyes de un lote concreto
+    loteId: number;
     montoUsd: number;
-    metodoPago: string;          // "Contado" | "Credito"
-    numeroDias?: number;         // solo crédito
     responsable: string;
     observaciones?: string;
 }
+
+export type EstadoPago = "Pendiente" | "Pagado" | "Recibido";
 
 export interface Pago {
     id: number;
@@ -47,8 +48,13 @@ export interface Pago {
     montoUsd: number;
     fechaPago: string;
     metodoPago: string;
-    numeroDias: number | null;
-    valorPorDia: number | null;
+    estado: EstadoPago;
+    montoPagadoUsd: number | null;
+    fechaPagoEfectivo: string | null;
+    pagadoPor: string | null;
+    tieneComprobante: boolean;
+    fechaVerificacion: string | null;
+    verificadoPor: string | null;
     responsable: string;
     observaciones: string | null;
 }
