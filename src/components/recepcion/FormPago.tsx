@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi } from "../../api/productoras";
 import { pagosApi } from "../../api/pagos";
+import { imprimirTicket } from "../../api/imprimirTicket";
 import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
@@ -39,10 +40,20 @@ export function FormPago({ onClose }: Props) {
 
     const mutation = useMutation({
         mutationFn: () => pagosApi.registrar(form),
-        onSuccess: () => {
+        onSuccess: async (pago) => {
             qc.invalidateQueries({ queryKey: ["pagos"] });
             // El lote recién pagado debe desaparecer del selector
             qc.invalidateQueries({ queryKey: ["lotes_pendientes_pago"] });
+            // La productora está delante esperando su papel: imprimir aquí
+            // ahorra que la operadora tenga que buscar la fila después.
+            // Si falla la impresión el pago YA está registrado, así que no
+            // se propaga el error: se cierra igual y queda el botón de la
+            // lista para reintentar.
+            try {
+                await imprimirTicket(pago.id);
+            } catch {
+                // Sin ruido: el ticket se puede reimprimir desde la lista
+            }
             onClose();
         },
         onError: (e: unknown) => {

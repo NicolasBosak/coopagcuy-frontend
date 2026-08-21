@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../api/recepcion";
-import { pagosApi } from "../api/productoras";
+import { pagosApi } from "../api/pagos";
+import { imprimirTicket } from "../api/imprimirTicket";
 import { offlineDB } from "../services/db";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { MainLayout } from "../components/layout/MainLayout";
@@ -370,7 +371,7 @@ export default function Recepcion() {
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         {["Productora", "Lote", "Monto", "Método",
-                                            "Fecha", "Responsable"].map(h => (
+                                            "Fecha", "Responsable", ""].map(h => (
                                                 <th key={h}
                                                     className="px-4 py-3 text-left text-xs font-bold
                                    text-gray-500 uppercase tracking-wide">
@@ -393,18 +394,26 @@ export default function Recepcion() {
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {p.metodoPago}
-                                                {p.numeroDias && p.valorPorDia && (
-                                                    <span className="block text-xs text-gray-400">
-                                                        {p.numeroDias} días · $
-                                                        {p.valorPorDia.toFixed(2)} c/u
-                                                    </span>
-                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-gray-500 text-xs">
                                                 {new Date(p.fechaPago).toLocaleDateString("es-EC")}
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {p.responsable}
+                                            </td>
+                                            <td className="px-3 py-2 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void imprimirTicket(p.id)}
+                                                    title="Reimprimir el ticket"
+                                                    className="min-h-[44px] px-3 rounded-xl
+                                                        border-2 border-gray-200 bg-white
+                                                        text-xs font-bold text-gray-700
+                                                        hover:bg-gray-50 active:scale-95
+                                                        transition"
+                                                >
+                                                    🧾 Ticket
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
