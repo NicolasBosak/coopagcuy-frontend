@@ -78,6 +78,18 @@ export default function Recepcion() {
         }
     };
 
+    // Reimprimir desde la lista: a diferencia del ticket automático del
+    // registro, aquí un fallo (popup bloqueado, red, sesión expirada) no
+    // tiene un pago recién creado detrás — solo se avisa para que la
+    // operadora reintente.
+    const handleReimprimirTicket = async (pagoId: number) => {
+        try {
+            await imprimirTicket(pagoId);
+        } catch {
+            window.alert("No se pudo imprimir el ticket. Intenta de nuevo.");
+        }
+    };
+
     return (
         <MainLayout>
             {/* Encabezado */}
@@ -401,10 +413,10 @@ export default function Recepcion() {
                                             <td className="px-4 py-3 text-gray-600">
                                                 {p.responsable}
                                             </td>
-                                            <td className="px-3 py-2 text-right">
+                                            <td className="px-4 py-3 text-right">
                                                 <button
                                                     type="button"
-                                                    onClick={() => void imprimirTicket(p.id)}
+                                                    onClick={() => void handleReimprimirTicket(p.id)}
                                                     title="Reimprimir el ticket"
                                                     className="min-h-[44px] px-3 rounded-xl
                                                         border-2 border-gray-200 bg-white

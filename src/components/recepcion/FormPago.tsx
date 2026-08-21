@@ -47,12 +47,17 @@ export function FormPago({ onClose }: Props) {
             // La productora está delante esperando su papel: imprimir aquí
             // ahorra que la operadora tenga que buscar la fila después.
             // Si falla la impresión el pago YA está registrado, así que no
-            // se propaga el error: se cierra igual y queda el botón de la
-            // lista para reintentar.
+            // se propaga el error ni se reintenta el pago: solo se avisa.
+            // El modal se cierra de inmediato después de esto, así que el
+            // aviso no puede depender de un estado que va a desmontarse;
+            // por eso es un alert nativo, que se ve pase lo que pase.
             try {
                 await imprimirTicket(pago.id);
             } catch {
-                // Sin ruido: el ticket se puede reimprimir desde la lista
+                window.alert(
+                    "El pago se registró, pero el ticket no se pudo imprimir.\n" +
+                    "Usa el botón \"🧾 Ticket\" en la lista de pagos para reimprimirlo."
+                );
             }
             onClose();
         },
