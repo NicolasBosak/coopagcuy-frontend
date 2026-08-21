@@ -1,6 +1,7 @@
 import client from "./client";
 import type {
     Pago, RegistrarPagoRequest, LotePendientePago,
+    TicketPorPagar, CuyConNovedad, RegistrarPagoEfectivoRequest,
 } from "../types/productora";
 
 // Pagos a productoras: registro digital que reemplaza el cuaderno manual
@@ -31,6 +32,25 @@ export const pagosApi = {
     descargarTicket: async (pagoId: number): Promise<Blob> => {
         const { data } = await client.get<Blob>(
             `/api/pagos/${pagoId}/ticket`, { responseType: "blob" });
+        return data;
+    },
+
+    // Bandeja de la planta. Distinta de lotesPendientes, que es de la CAT.
+    porPagar: async () => {
+        const { data } = await client.get<TicketPorPagar[]>(
+            "/api/pagos/por-pagar");
+        return data;
+    },
+
+    cuyesConNovedad: async (pagoId: number) => {
+        const { data } = await client.get<CuyConNovedad[]>(
+            `/api/pagos/${pagoId}/cuyes-con-novedad`);
+        return data;
+    },
+
+    pagar: async (pagoId: number, body: RegistrarPagoEfectivoRequest) => {
+        const { data } = await client.post<Pago>(
+            `/api/pagos/${pagoId}/pagar`, body);
         return data;
     },
 };

@@ -70,6 +70,46 @@ export interface LotePendientePago {
     pesoEntregadoGramos: number;
 }
 
+// ── Bandeja de pagos de la planta ──────────────────────────────────────
+
+// Ticket emitido por un CAT y pendiente de pago en la planta
+export interface TicketPorPagar {
+    pagoId: number;
+    productoraId: number;
+    nombreProductora: string;
+    cedula: string;
+    loteId: number;
+    codigoLote: string;
+    centroAcopio: string;
+    fechaRecepcion: string;
+    cuyesEntregados: number;
+    montoUsd: number;
+    fechaEmision: string;
+}
+
+// Cuy con novedad registrada por el CAT, candidato a descuento en la planta
+export interface CuyConNovedad {
+    cuyRegistroId: number;
+    numeroEnLote: number;
+    pesoGramos: number;
+    novedadId: number;
+    tipoNovedad: string;
+    descripcion: string;
+    tieneFoto: boolean;
+}
+
+export interface DescuentoRequest {
+    novedadCatId: number;
+    descripcion: string;
+    montoUsd: number;
+}
+
+export interface RegistrarPagoEfectivoRequest {
+    descuentos: DescuentoRequest[];
+    comprobanteBase64: string;
+    pagadoPor: string;
+}
+
 export const CENTROS_ACOPIO: { value: CentroAcopio; label: string }[] = [
     { value: "PAT", label: "Patococha" },
     { value: "NIE", label: "Las Nieves" },
