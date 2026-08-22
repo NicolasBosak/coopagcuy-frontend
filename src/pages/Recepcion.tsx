@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../api/recepcion";
 import { pagosApi } from "../api/pagos";
@@ -12,6 +12,7 @@ import { SyncStatus } from "../components/ui/SyncStatus";
 import { FormLote } from "../components/recepcion/FormLote";
 import { FormMovilizacion } from "../components/recepcion/FormMovilizacion";
 import { FormPago } from "../components/recepcion/FormPago";
+import { VerificarPago } from "../components/recepcion/VerificarPago";
 import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
 import { EvidenciaNovedad } from "../components/ui/EvidenciaNovedad";
 import { descargarBlob } from "../utils/download";
@@ -49,6 +50,10 @@ export default function Recepcion() {
         queryFn: () => pagosApi.listar(),
         enabled: tabActual === "pagos" && isOnline,
     });
+
+    // Tickets que la planta ya pagó y esta CAT todavía no ha verificado. El
+    // servidor ya acota por centro, así que no hay que filtrar aquí.
+    const porVerificar = pagos.filter((p) => p.estado === "Pagado").length;
 
     const onGuardado = async () => {
         await actualizarConteo();
@@ -140,7 +145,10 @@ export default function Recepcion() {
                         id: "local", label: `Locales${pendientes > 0
                             ? ` (${pendientes})` : ""}`
                     },
-                    { id: "pagos", label: "Pagos" },
+                    {
+                        id: "pagos", label: porVerificar > 0
+                            ? `Pagos (${porVerificar})` : "Pagos"
+                    },
                 ]}
             />
 
@@ -394,40 +402,50 @@ export default function Recepcion() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {pagos.map((p) => (
-                                        <tr key={p.id} className="hover:bg-gray-50 transition">
-                                            <td className="px-4 py-3 font-medium text-gray-800">
-                                                {p.nombreProductora}
-                                            </td>
-                                            <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                                                {p.codigoLote ?? "—"}
-                                            </td>
-                                            <td className="px-4 py-3 font-bold text-primary-700">
-                                                ${p.montoUsd.toFixed(2)}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {p.metodoPago}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-500 text-xs">
-                                                {new Date(p.fechaPago).toLocaleDateString("es-EC")}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {p.responsable}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void handleReimprimirTicket(p.id)}
-                                                    title="Reimprimir el ticket"
-                                                    className="min-h-[44px] px-3 rounded-xl
-                                                        border-2 border-gray-200 bg-white
-                                                        text-xs font-bold text-gray-700
-                                                        hover:bg-gray-50 active:scale-95
-                                                        transition"
-                                                >
-                                                    🧾 Ticket
-                                                </button>
-                                            </td>
-                                        </tr>
+                                        <Fragment key={p.id}>
+                                            <tr className={"hover:bg-gray-50 transition"
+                                                + (p.estado === "Pagado" ? " bg-primary-50/50" : "")}>
+                                                <td className="px-4 py-3 font-medium text-gray-800">
+                                                    {p.nombreProductora}
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-xs text-gray-600">
+                                                    {p.codigoLote ?? "—"}
+                                                </td>
+                                                <td className="px-4 py-3 font-bold text-primary-700">
+                                                    ${p.montoUsd.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {p.metodoPago}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-500 text-xs">
+                                                    {new Date(p.fechaPago).toLocaleDateString("es-EC")}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {p.responsable}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void handleReimprimirTicket(p.id)}
+                                                        title="Reimprimir el ticket"
+                                                        className="min-h-[44px] px-3 rounded-xl
+                                                            border-2 border-gray-200 bg-white
+                                                            text-xs font-bold text-gray-700
+                                                            hover:bg-gray-50 active:scale-95
+                                                            transition"
+                                                    >
+                                                        🧾 Ticket
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {p.estado === "Pagado" && (
+                                                <tr>
+                                                    <td colSpan={7} className="px-3 pb-3">
+                                                        <VerificarPago pago={p} />
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Fragment>
                                     ))}
                                 </tbody>
                             </table>

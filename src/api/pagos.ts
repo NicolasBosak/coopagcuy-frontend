@@ -53,4 +53,17 @@ export const pagosApi = {
             `/api/pagos/${pagoId}/pagar`, body);
         return data;
     },
+
+    // responseType blob: el endpoint devuelve image/jpeg, no JSON
+    comprobante: async (pagoId: number): Promise<Blob> => {
+        const { data } = await client.get<Blob>(
+            `/api/pagos/${pagoId}/comprobante`, { responseType: "blob" });
+        return data;
+    },
+
+    verificar: async (pagoId: number, verificadoPor: string) => {
+        const { data } = await client.post<Pago>(
+            `/api/pagos/${pagoId}/verificar`, { verificadoPor });
+        return data;
+    },
 };
