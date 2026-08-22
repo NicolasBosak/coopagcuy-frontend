@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi } from "../../api/productoras";
 import { catalogosApi } from "../../api/admin";
@@ -24,9 +24,10 @@ export function FormProductora({ productora = null, onClose }: Props) {
     const { auth } = useAuth();
     const editando = productora !== null;
 
-    // El operador de CAT queda fijado a su centro. Solo se le ofrecen las
-    // comunidades de ese centro: el servidor rechaza las demás con 403, así
-    // que mostrarlas solo serviría para que eligiera algo que va a fallar.
+    // El operador de CAT queda fijado a su centro, pero NO a las comunidades
+    // de ese centro: la comunidad es dónde vive la productora y el CAT es
+    // dónde entrega, y en el piloto no siempre coinciden. El servidor dejó de
+    // rechazar las demás en 2026-08.
     const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
 
     const [form, setForm] = useState<CrearProductoraRequest>(
@@ -49,12 +50,6 @@ export function FormProductora({ productora = null, onClose }: Props) {
         queryKey: ["comunidades"],
         queryFn: () => catalogosApi.listarComunidades(),
     });
-
-    const comunidadesVisibles = useMemo(
-        () => catFijo
-            ? comunidades.filter((c) => c.catReferencia === catFijo)
-            : comunidades,
-        [comunidades, catFijo]);
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -96,13 +91,15 @@ export function FormProductora({ productora = null, onClose }: Props) {
 
     const comunidadElegida = comunidades.find((c) => c.id === form.comunidadId);
 
-    // Al elegir comunidad del catálogo se propone su CAT de referencia
+    // Al elegir comunidad se propone su CAT de referencia, PERO nunca por
+    // encima del CAT del token: para un operador de CAT ese campo está
+    // sellado, y el servidor lo va a sobrescribir de todos modos.
     const elegirComunidad = (id: number) => {
-        const c = comunidadesVisibles.find((x) => x.id === id);
+        const c = comunidades.find((x) => x.id === id);
         setForm({
             ...form,
             comunidadId: id,
-            catAsignado: c?.catReferencia ?? form.catAsignado,
+            catAsignado: catFijo ?? c?.catReferencia ?? form.catAsignado,
         });
     };
 
@@ -172,19 +169,16 @@ export function FormProductora({ productora = null, onClose }: Props) {
                        text-base focus:border-primary-500 focus:outline-none"
                         >
                             <option value="">Seleccionar comunidad…</option>
-                            {comunidadesVisibles.map((c) => (
+                            {comunidades.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.nombre} ({c.canton})
                                 </option>
                             ))}
                         </select>
-                        {comunidadesVisibles.length === 0 && (
+                        {comunidades.length === 0 && (
                             <p className="mt-1 text-xs text-teja-700">
-                                {catFijo
-                                    ? "Tu centro de acopio no tiene comunidades en el " +
-                                      "catálogo. Pide a un administrador que registre una."
-                                    : "No hay comunidades en el catálogo. Crea una en " +
-                                      "Administración antes de registrar productoras."}
+                                No hay comunidades en el catálogo. Crea una en
+                                Administración antes de registrar productoras.
                             </p>
                         )}
                     </div>
