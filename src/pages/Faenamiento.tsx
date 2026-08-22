@@ -123,6 +123,17 @@ export default function Faenamiento() {
         },
     });
 
+    // Igual que en Recepción: `imprimirTicket` rechaza cuando el navegador
+    // bloquea la ventana emergente, y sin este catch esa promesa quedaba
+    // rechazada sin manejar mientras el botón no hacía nada visible.
+    const handleImprimirTicket = async (pagoId: number) => {
+        try {
+            await imprimirTicket(pagoId);
+        } catch {
+            window.alert("No se pudo imprimir el ticket. Intenta de nuevo.");
+        }
+    };
+
     return (
         <MainLayout>
             <div className="flex flex-col gap-3 xs:flex-row xs:items-center xs:justify-between mb-6">
@@ -513,7 +524,7 @@ export default function Faenamiento() {
                             <div className="flex flex-col gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => void imprimirTicket(t.pagoId)}
+                                    onClick={() => void handleImprimirTicket(t.pagoId)}
                                     className="min-h-[44px] px-3 rounded-xl border-2
                                         border-gray-200 bg-white text-xs font-bold
                                         text-gray-700 hover:bg-gray-50 transition"
