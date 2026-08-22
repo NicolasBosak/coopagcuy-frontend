@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { productorasApi, pagosApi } from "../../api/productoras";
+import { productorasApi } from "../../api/productoras";
+import { pagosApi } from "../../api/pagos";
+import { imprimirTicket } from "../../api/imprimirTicket";
 import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { SelloDeTiempo } from "../ui/SelloDeTiempo";
@@ -10,31 +12,18 @@ interface Props {
     onClose: () => void;
 }
 
-const METODOS: { value: string; label: string }[] = [
-    { value: "Contado", label: "💵 Efectivo al contado" },
-    { value: "Credito", label: "🧾 Pago a crédito" },
-];
-
 // Registro digital de pago a productora (antes cuaderno manual)
 export function FormPago({ onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
     const [form, setForm] = useState<RegistrarPagoRequest>({
         productoraId: 0,
-        loteId: undefined,
+        loteId: 0,
         montoUsd: 0,
-        metodoPago: "Contado",
-        numeroDias: 2,
         responsable: auth.nombreCompleto ?? "",
         observaciones: "",
     });
     const [error, setError] = useState<string | null>(null);
-
-    const esCredito = form.metodoPago === "Credito";
-    // Valor de cada día: se muestra en vivo; el backend lo recalcula
-    const valorPorDia = esCredito && form.numeroDias && form.montoUsd > 0
-        ? form.montoUsd / form.numeroDias
-        : 0;
 
     const { data: productoras = [] } = useQuery({
         queryKey: ["productoras"],
@@ -50,14 +39,26 @@ export function FormPago({ onClose }: Props) {
     });
 
     const mutation = useMutation({
-        mutationFn: () => pagosApi.registrar({
-            ...form,
-            numeroDias: esCredito ? form.numeroDias : undefined,
-        }),
-        onSuccess: () => {
+        mutationFn: () => pagosApi.registrar(form),
+        onSuccess: async (pago) => {
             qc.invalidateQueries({ queryKey: ["pagos"] });
             // El lote recién pagado debe desaparecer del selector
             qc.invalidateQueries({ queryKey: ["lotes_pendientes_pago"] });
+            // La productora está delante esperando su papel: imprimir aquí
+            // ahorra que la operadora tenga que buscar la fila después.
+            // Si falla la impresión el pago YA está registrado, así que no
+            // se propaga el error ni se reintenta el pago: solo se avisa.
+            // El modal se cierra de inmediato después de esto, así que el
+            // aviso no puede depender de un estado que va a desmontarse;
+            // por eso es un alert nativo, que se ve pase lo que pase.
+            try {
+                await imprimirTicket(pago.id);
+            } catch {
+                window.alert(
+                    "El pago se registró, pero el ticket no se pudo imprimir.\n" +
+                    "Usa el botón \"🧾 Ticket\" en la lista de pagos para reimprimirlo."
+                );
+            }
             onClose();
         },
         onError: (e: unknown) => {
@@ -71,6 +72,10 @@ export function FormPago({ onClose }: Props) {
         setError(null);
         if (form.productoraId === 0) {
             setError("Selecciona la productora que recibe el pago.");
+            return;
+        }
+        if (form.loteId === 0) {
+            setError("Selecciona el lote por el que se paga.");
             return;
         }
         if (form.montoUsd <= 0) {
@@ -113,7 +118,7 @@ export function FormPago({ onClose }: Props) {
                             onChange={(e) => setForm({
                                 ...form,
                                 productoraId: Number(e.target.value),
-                                loteId: undefined,
+                                loteId: 0,
                             })}
                             className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                          text-sm focus:border-primary-500 focus:outline-none"
@@ -130,20 +135,20 @@ export function FormPago({ onClose }: Props) {
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
                             text-gray-500 mb-1">
-                            Lote pendiente de pago (opcional)
+                            Lote por el que se paga
                         </label>
                         <select
-                            value={form.loteId ?? 0}
+                            required
+                            value={form.loteId}
                             onChange={(e) => setForm({
-                                ...form,
-                                loteId: Number(e.target.value) || undefined,
+                                ...form, loteId: Number(e.target.value),
                             })}
                             disabled={form.productoraId === 0}
                             className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                          text-sm focus:border-primary-500 focus:outline-none
                          disabled:bg-gray-50 disabled:text-gray-400"
                         >
-                            <option value={0}>Sin lote específico</option>
+                            <option value={0}>Seleccionar lote…</option>
                             {/* Solo lo que se le debe: el lote ya pagado no
                                 aparece. La cantidad es su aporte a la jaula,
                                 no el total, porque la jaula puede ser de varias. */}
@@ -186,62 +191,19 @@ export function FormPago({ onClose }: Props) {
                     <div>
                         <p className="text-xs font-bold uppercase tracking-wide
                           text-gray-500 mb-2">
-                            ¿Cómo se pagó?
+                            Forma de pago
                         </p>
-                        <div className="grid grid-cols-2 gap-2">
-                            {METODOS.map((m) => (
-                                <button
-                                    key={m.value}
-                                    type="button"
-                                    onClick={() => setForm({ ...form, metodoPago: m.value })}
-                                    className={`h-12 rounded-xl border-2 text-sm font-semibold
-                              transition active:scale-[0.97]
-                              ${form.metodoPago === m.value
-                                            ? "border-primary-600 bg-primary-50 text-primary-800"
-                                            : "border-gray-200 bg-white text-gray-600"}`}
-                                >
-                                    {m.label}
-                                </button>
-                            ))}
+                        {/* Un solo botón, siempre activo: desde el paso a
+                            transferencia única no hay nada que elegir. Se
+                            mantiene visible —y no como texto suelto— para que
+                            la operadora vea con qué se va a registrar. */}
+                        <div className="h-12 rounded-xl border-2 border-primary-600
+                            bg-primary-50 text-primary-800 text-sm font-semibold
+                            flex items-center justify-center gap-2">
+                            <span aria-hidden="true">🏦</span>
+                            Transferencia bancaria
                         </div>
                     </div>
-
-                    {/* Diferido en días: solo para pago a crédito */}
-                    {esCredito && (
-                        <div className="grid grid-cols-2 gap-3 animate-fade-in">
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wide
-                                  text-gray-500 mb-1">
-                                    ¿En cuántos días?
-                                </label>
-                                <select
-                                    value={form.numeroDias ?? 2}
-                                    onChange={(e) => setForm({
-                                        ...form, numeroDias: Number(e.target.value),
-                                    })}
-                                    className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
-                               text-sm focus:border-primary-500 focus:outline-none"
-                                >
-                                    {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => (
-                                        <option key={n} value={n}>{n} días</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wide
-                                  text-gray-500 mb-1">
-                                    Valor por día
-                                </label>
-                                <div className="h-11 px-3 rounded-xl border-2 border-primary-100
-                                    bg-primary-50 flex items-center text-base font-bold
-                                    text-primary-800">
-                                    {valorPorDia > 0
-                                        ? `$${valorPorDia.toFixed(2)}`
-                                        : "—"}
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide

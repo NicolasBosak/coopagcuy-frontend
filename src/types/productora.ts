@@ -30,13 +30,14 @@ export type CentroAcopio = "PAT" | "NIE" | "HUE" | "NAB" | "PEL";
 // La fecha del pago la sella el servidor al registrarlo
 export interface RegistrarPagoRequest {
     productoraId: number;
-    loteId?: number;
+    // Obligatorio: el ticket es por los cuyes de un lote concreto
+    loteId: number;
     montoUsd: number;
-    metodoPago: string;          // "Contado" | "Credito"
-    numeroDias?: number;         // solo crédito
     responsable: string;
     observaciones?: string;
 }
+
+export type EstadoPago = "Pendiente" | "Pagado" | "Recibido";
 
 export interface Pago {
     id: number;
@@ -47,8 +48,13 @@ export interface Pago {
     montoUsd: number;
     fechaPago: string;
     metodoPago: string;
-    numeroDias: number | null;
-    valorPorDia: number | null;
+    estado: EstadoPago;
+    montoPagadoUsd: number | null;
+    fechaPagoEfectivo: string | null;
+    pagadoPor: string | null;
+    tieneComprobante: boolean;
+    fechaVerificacion: string | null;
+    verificadoPor: string | null;
     responsable: string;
     observaciones: string | null;
 }
@@ -62,6 +68,46 @@ export interface LotePendientePago {
     fechaRecepcion: string;
     cuyesEntregados: number;
     pesoEntregadoGramos: number;
+}
+
+// ── Bandeja de pagos de la planta ──────────────────────────────────────
+
+// Ticket emitido por un CAT y pendiente de pago en la planta
+export interface TicketPorPagar {
+    pagoId: number;
+    productoraId: number;
+    nombreProductora: string;
+    cedula: string;
+    loteId: number;
+    codigoLote: string;
+    centroAcopio: string;
+    fechaRecepcion: string;
+    cuyesEntregados: number;
+    montoUsd: number;
+    fechaEmision: string;
+}
+
+// Cuy con novedad registrada por el CAT, candidato a descuento en la planta
+export interface CuyConNovedad {
+    cuyRegistroId: number;
+    numeroEnLote: number;
+    pesoGramos: number;
+    novedadId: number;
+    tipoNovedad: string;
+    descripcion: string;
+    tieneFoto: boolean;
+}
+
+export interface DescuentoRequest {
+    novedadCatId: number;
+    descripcion: string;
+    montoUsd: number;
+}
+
+export interface RegistrarPagoEfectivoRequest {
+    descuentos: DescuentoRequest[];
+    comprobanteBase64: string;
+    pagadoPor: string;
 }
 
 export const CENTROS_ACOPIO: { value: CentroAcopio; label: string }[] = [

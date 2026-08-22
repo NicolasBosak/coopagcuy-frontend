@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../api/recepcion";
-import { pagosApi } from "../api/productoras";
+import { pagosApi } from "../api/pagos";
+import { imprimirTicket } from "../api/imprimirTicket";
 import { offlineDB } from "../services/db";
 import { useOfflineSync } from "../hooks/useOfflineSync";
 import { MainLayout } from "../components/layout/MainLayout";
@@ -11,15 +12,25 @@ import { SyncStatus } from "../components/ui/SyncStatus";
 import { FormLote } from "../components/recepcion/FormLote";
 import { FormMovilizacion } from "../components/recepcion/FormMovilizacion";
 import { FormPago } from "../components/recepcion/FormPago";
+import { VerificarPago } from "../components/recepcion/VerificarPago";
 import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
 import { EvidenciaNovedad } from "../components/ui/EvidenciaNovedad";
 import { descargarBlob } from "../utils/download";
 import type { EstadoLote, Lote, EntregaOffline, SyncResult } from "../types/recepcion";
+import type { EstadoPago } from "../types/productora";
 
 const estadoBadge = (e: EstadoLote) => {
     if (e === "Aceptado") return <Badge label="Aceptado" variant="success" />;
     if (e === "ConNovedad") return <Badge label="Con novedad" variant="warning" />;
     return <Badge label="Rechazado" variant="danger" />;
+};
+
+// Estado del pago tal como lo necesita esta lista: no solo "hubo pago", sino
+// si a esta CAT le toca verificarlo todavía.
+const estadoPagoBadge = (e: EstadoPago) => {
+    if (e === "Pendiente") return <Badge label="Pendiente" variant="neutral" />;
+    if (e === "Pagado") return <Badge label="Por verificar" variant="warning" />;
+    return <Badge label="Recibido" variant="success" />;
 };
 
 export default function Recepcion() {
@@ -49,6 +60,10 @@ export default function Recepcion() {
         enabled: tabActual === "pagos" && isOnline,
     });
 
+    // Tickets que la planta ya pagó y esta CAT todavía no ha verificado. El
+    // servidor ya acota por centro, así que no hay que filtrar aquí.
+    const porVerificar = pagos.filter((p) => p.estado === "Pagado").length;
+
     const onGuardado = async () => {
         await actualizarConteo();
         if (isOnline) {
@@ -74,6 +89,18 @@ export default function Recepcion() {
             descargarBlob(blob, `Guia-${codigoLote}.pdf`);
         } finally {
             setDescargandoGuia(null);
+        }
+    };
+
+    // Reimprimir desde la lista: a diferencia del ticket automático del
+    // registro, aquí un fallo (popup bloqueado, red, sesión expirada) no
+    // tiene un pago recién creado detrás — solo se avisa para que la
+    // operadora reintente.
+    const handleReimprimirTicket = async (pagoId: number) => {
+        try {
+            await imprimirTicket(pagoId);
+        } catch {
+            window.alert("No se pudo imprimir el ticket. Intenta de nuevo.");
         }
     };
 
@@ -127,7 +154,10 @@ export default function Recepcion() {
                         id: "local", label: `Locales${pendientes > 0
                             ? ` (${pendientes})` : ""}`
                     },
-                    { id: "pagos", label: "Pagos" },
+                    {
+                        id: "pagos", label: porVerificar > 0
+                            ? `Pagos (${porVerificar})` : "Pagos"
+                    },
                 ]}
             />
 
@@ -369,8 +399,8 @@ export default function Recepcion() {
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        {["Productora", "Lote", "Monto", "Método",
-                                            "Fecha", "Responsable"].map(h => (
+                                        {["Productora", "Lote", "Monto", "Estado",
+                                            "Fecha", "Responsable", ""].map(h => (
                                                 <th key={h}
                                                     className="px-4 py-3 text-left text-xs font-bold
                                    text-gray-500 uppercase tracking-wide">
@@ -381,32 +411,60 @@ export default function Recepcion() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {pagos.map((p) => (
-                                        <tr key={p.id} className="hover:bg-gray-50 transition">
-                                            <td className="px-4 py-3 font-medium text-gray-800">
-                                                {p.nombreProductora}
-                                            </td>
-                                            <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                                                {p.codigoLote ?? "—"}
-                                            </td>
-                                            <td className="px-4 py-3 font-bold text-primary-700">
-                                                ${p.montoUsd.toFixed(2)}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {p.metodoPago}
-                                                {p.numeroDias && p.valorPorDia && (
-                                                    <span className="block text-xs text-gray-400">
-                                                        {p.numeroDias} días · $
-                                                        {p.valorPorDia.toFixed(2)} c/u
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-500 text-xs">
-                                                {new Date(p.fechaPago).toLocaleDateString("es-EC")}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-600">
-                                                {p.responsable}
-                                            </td>
-                                        </tr>
+                                        <Fragment key={p.id}>
+                                            <tr className={"hover:bg-gray-50 transition"
+                                                + (p.estado === "Pagado" ? " bg-primary-50/50" : "")}>
+                                                <td className="px-4 py-3 font-medium text-gray-800">
+                                                    {p.nombreProductora}
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-xs text-gray-600">
+                                                    {p.codigoLote ?? "—"}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-bold text-primary-700">
+                                                        ${p.montoUsd.toFixed(2)}
+                                                    </div>
+                                                    {/* Solo se muestra cuando difiere del ticket: es la
+                                                        prueba de que hubo descuento, no un dato repetido. */}
+                                                    {p.montoPagadoUsd !== null
+                                                        && p.montoPagadoUsd !== p.montoUsd && (
+                                                            <div className="text-xs text-bayo-700 font-semibold">
+                                                                Pagado: ${p.montoPagadoUsd.toFixed(2)}
+                                                            </div>
+                                                        )}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {estadoPagoBadge(p.estado)}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-500 text-xs">
+                                                    {new Date(p.fechaPago).toLocaleDateString("es-EC")}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600">
+                                                    {p.responsable}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => void handleReimprimirTicket(p.id)}
+                                                        title="Reimprimir el ticket"
+                                                        className="min-h-[44px] px-3 rounded-xl
+                                                            border-2 border-gray-200 bg-white
+                                                            text-xs font-bold text-gray-700
+                                                            hover:bg-gray-50 active:scale-95
+                                                            transition"
+                                                    >
+                                                        🧾 Ticket
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {p.estado === "Pagado" && (
+                                                <tr>
+                                                    <td colSpan={7} className="px-3 pb-3">
+                                                        <VerificarPago pago={p} />
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Fragment>
                                     ))}
                                 </tbody>
                             </table>

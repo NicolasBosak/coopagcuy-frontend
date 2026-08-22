@@ -2,15 +2,19 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { faenamientoApi } from "../api/faenamiento";
 import { recepcionApi } from "../api/recepcion";
+import { pagosApi } from "../api/pagos";
+import { imprimirTicket } from "../api/imprimirTicket";
 import { useAuth } from "../context/useAuth";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
 import { Segmentado } from "../components/ui/Segmentado";
 import { FormFaenamiento } from "../components/faenamiento/FormFaenamiento";
 import { FormDevolucion } from "../components/faenamiento/FormDevolucion";
+import { FormPagoProductora } from "../components/faenamiento/FormPagoProductora";
 import { PanelQR } from "../components/faenamiento/PanelQR";
 import type { EstadoCanal } from "../types/faenamiento";
 import type { Movilizacion } from "../types/recepcion";
+import type { TicketPorPagar } from "../types/productora";
 
 const canalBadge = (e: EstadoCanal) => {
     if (e === "Apto") return <Badge label="Apto" variant="success" />;
@@ -18,7 +22,7 @@ const canalBadge = (e: EstadoCanal) => {
     return <Badge label="Rechazado" variant="danger" />;
 };
 
-type Tab = "faenamientos" | "llegadas" | "devoluciones";
+type Tab = "faenamientos" | "llegadas" | "devoluciones" | "pagos";
 
 export default function Faenamiento() {
     const qc = useQueryClient();
@@ -29,6 +33,7 @@ export default function Faenamiento() {
     const [loteSelecto, setLoteSelecto] = useState<string | null>(null);
     const [confirmando, setConfirmando] = useState<Movilizacion | null>(null);
     const [condicionLlegada, setCondicionLlegada] = useState("");
+    const [ticketAbierto, setTicketAbierto] = useState<TicketPorPagar | null>(null);
 
     const { data: faenamientos = [], isLoading } = useQuery({
         queryKey: ["faenamientos"],
@@ -52,6 +57,12 @@ export default function Faenamiento() {
         queryKey: ["movilizaciones"],
         queryFn: () => recepcionApi.listarMovilizaciones(),
         enabled: tab === "llegadas",
+    });
+
+    const { data: ticketsPorPagar = [] } = useQuery({
+        queryKey: ["tickets_por_pagar"],
+        queryFn: () => pagosApi.porPagar(),
+        enabled: tab === "pagos",
     });
 
     // Un lote faenado (FAE-…) puede reunir varias jaulas: la vista muestra
@@ -112,6 +123,17 @@ export default function Faenamiento() {
         },
     });
 
+    // Igual que en Recepción: `imprimirTicket` rechaza cuando el navegador
+    // bloquea la ventana emergente, y sin este catch esa promesa quedaba
+    // rechazada sin manejar mientras el botón no hacía nada visible.
+    const handleImprimirTicket = async (pagoId: number) => {
+        try {
+            await imprimirTicket(pagoId);
+        } catch {
+            window.alert("No se pudo imprimir el ticket. Intenta de nuevo.");
+        }
+    };
+
     return (
         <MainLayout>
             <div className="flex flex-col gap-3 xs:flex-row xs:items-center xs:justify-between mb-6">
@@ -123,7 +145,7 @@ export default function Faenamiento() {
                         Planta Sulupali Chico — Santa Isabel
                     </p>
                 </div>
-                {tab !== "llegadas" && (
+                {tab !== "llegadas" && tab !== "pagos" && (
                     <button
                         onClick={() => tab === "faenamientos"
                             ? setShowForm(true)
@@ -146,6 +168,7 @@ export default function Faenamiento() {
                     { id: "faenamientos", label: "Faenamientos" },
                     { id: "llegadas", label: "Llegadas de CAT" },
                     { id: "devoluciones", label: "Devoluciones" },
+                    { id: "pagos", label: "Pagos" },
                 ]}
             />
 
@@ -471,6 +494,63 @@ export default function Faenamiento() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* ── Tab pagos: tickets emitidos por los CAT ── */}
+            {tab === "pagos" && (
+                <div className="space-y-3">
+                    {ticketsPorPagar.length === 0 && (
+                        <p className="text-sm text-gray-400">
+                            No hay tickets pendientes de pago.
+                        </p>
+                    )}
+
+                    {ticketsPorPagar.map((t) => (
+                        <div key={t.pagoId}
+                            className="bg-white rounded-2xl border-2 border-gray-100
+                                p-4 flex items-center justify-between gap-3">
+                            <div>
+                                <p className="font-bold text-gray-900">
+                                    {t.nombreProductora}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {t.codigoLote} · {t.centroAcopio} ·
+                                    {" "}{t.cuyesEntregados} cuyes
+                                </p>
+                                <p className="text-lg font-extrabold text-gray-900">
+                                    ${t.montoUsd.toFixed(2)}
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => void handleImprimirTicket(t.pagoId)}
+                                    className="min-h-[44px] px-3 rounded-xl border-2
+                                        border-gray-200 bg-white text-xs font-bold
+                                        text-gray-700 hover:bg-gray-50 transition"
+                                >
+                                    🧾 Ver ticket
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTicketAbierto(t)}
+                                    className="min-h-[44px] px-3 rounded-xl
+                                        bg-primary-600 hover:bg-primary-700
+                                        text-white text-xs font-bold transition"
+                                >
+                                    Registrar pago
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {ticketAbierto && (
+                <FormPagoProductora
+                    ticket={ticketAbierto}
+                    onClose={() => setTicketAbierto(null)}
+                />
             )}
 
             {showForm && <FormFaenamiento onClose={() => setShowForm(false)} />}

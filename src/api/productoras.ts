@@ -1,8 +1,5 @@
 import client from "./client";
-import type {
-    Productora, CrearProductoraRequest,
-    Pago, RegistrarPagoRequest, LotePendientePago,
-} from "../types/productora";
+import type { Productora, CrearProductoraRequest } from "../types/productora";
 import type { ProductoraCambio } from "../types/admin";
 
 export const productorasApi = {
@@ -36,30 +33,6 @@ export const productorasApi = {
     historial: async (id: number) => {
         const { data } = await client.get<ProductoraCambio[]>(
             `/api/productoras/${id}/historial`
-        );
-        return data;
-    },
-};
-
-// Pagos a productoras: registro digital que reemplaza el cuaderno manual
-export const pagosApi = {
-    registrar: async (body: RegistrarPagoRequest) => {
-        const { data } = await client.post<Pago>("/api/pagos", body);
-        return data;
-    },
-
-    listar: async (params?: {
-        productoraId?: number; desde?: string; hasta?: string;
-    }) => {
-        const { data } = await client.get<Pago[]>("/api/pagos", { params });
-        return data;
-    },
-
-    // Lotes por los que aún se le debe a la productora: el servidor ya excluye
-    // los que ella tiene pagados, así que un lote pagado no vuelve a ofrecerse
-    lotesPendientes: async (productoraId: number) => {
-        const { data } = await client.get<LotePendientePago[]>(
-            `/api/pagos/lotes-pendientes/${productoraId}`
         );
         return data;
     },
