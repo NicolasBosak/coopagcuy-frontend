@@ -91,16 +91,15 @@ export function FormProductora({ productora = null, onClose }: Props) {
 
     const comunidadElegida = comunidades.find((c) => c.id === form.comunidadId);
 
-    // Al elegir comunidad se propone su CAT de referencia, PERO nunca por
-    // encima del CAT del token: para un operador de CAT ese campo está
-    // sellado, y el servidor lo va a sobrescribir de todos modos.
+    // Elegir comunidad ya NO toca catAsignado. La comunidad es dónde vive la
+    // productora y el CAT es dónde entrega, y en el piloto no siempre
+    // coinciden: CatReferencia es un dato informativo, no una restricción.
+    // Derivarlo aquí sobrescribía el centro que un administrador ya tenía
+    // elegido (el operador de CAT no se ve afectado: su campo está sellado
+    // a catFijo y no pasa por este selector). El centro solo cambia cuando
+    // alguien lo elige a mano en su propio selector.
     const elegirComunidad = (id: number) => {
-        const c = comunidades.find((x) => x.id === id);
-        setForm({
-            ...form,
-            comunidadId: id,
-            catAsignado: catFijo ?? c?.catReferencia ?? form.catAsignado,
-        });
+        setForm({ ...form, comunidadId: id });
     };
 
     const field = (
