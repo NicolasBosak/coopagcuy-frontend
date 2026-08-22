@@ -208,16 +208,6 @@ export interface PaginaPublica {
     destinoComercial: string | null;
     tipoMercado: string | null;
     ubicacionMercado: string | null;
-    // Novedades registradas en planta sobre los animales faenados
-    observacionesProceso: string[];
     // Comunidades que aportaron animales, con su cantidad
     comunidadesAporte: { comunidad: string; cantidad: number }[];
-    // Estado individual de cada animal faenado
-    detalleCuyes: {
-        comunidad: string;
-        codigoJaula: string;
-        numeroEnLote: number;
-        pesoCanalGramos: number | null;
-        estado: string;
-    }[];
 }

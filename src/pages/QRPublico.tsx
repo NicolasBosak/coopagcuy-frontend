@@ -298,40 +298,6 @@ export default function QRPublico() {
                     </ul>
                 </Tarjeta>
 
-                {data.detalleCuyes.length > 0 && (
-                    <Tarjeta titulo="Detalle de los animales">
-                        <ul className="space-y-1.5">
-                            {data.detalleCuyes.map((c, i) => (
-                                <li key={i}
-                                    className="flex items-center justify-between gap-2
-                               text-sm border-b border-gray-100 pb-1.5
-                               last:border-0 last:pb-0">
-                                    <span className="text-gray-600 min-w-0 truncate">
-                                        #{c.numeroEnLote} · {c.comunidad}
-                                        {c.pesoCanalGramos != null &&
-                                            ` · ${Math.round(c.pesoCanalGramos)} g`}
-                                    </span>
-                                    <span className={`text-xs font-bold shrink-0
-                                      ${c.estado === "Apto"
-                                            ? "text-primary-700"
-                                            : "text-bayo-700"}`}>
-                                        {c.estado}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </Tarjeta>
-                )}
-
-                {data.observacionesProceso.length > 0 && (
-                    <Tarjeta titulo="Observaciones del proceso">
-                        <ul className="space-y-1.5">
-                            {data.observacionesProceso.map((o, i) => (
-                                <li key={i} className="text-sm text-gray-700">• {o}</li>
-                            ))}
-                        </ul>
-                    </Tarjeta>
-                )}
             </div>
 
             {/* ── Quiénes sostienen el proyecto ──────────────────────────
