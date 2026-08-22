@@ -17,11 +17,20 @@ import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
 import { EvidenciaNovedad } from "../components/ui/EvidenciaNovedad";
 import { descargarBlob } from "../utils/download";
 import type { EstadoLote, Lote, EntregaOffline, SyncResult } from "../types/recepcion";
+import type { EstadoPago } from "../types/productora";
 
 const estadoBadge = (e: EstadoLote) => {
     if (e === "Aceptado") return <Badge label="Aceptado" variant="success" />;
     if (e === "ConNovedad") return <Badge label="Con novedad" variant="warning" />;
     return <Badge label="Rechazado" variant="danger" />;
+};
+
+// Estado del pago tal como lo necesita esta lista: no solo "hubo pago", sino
+// si a esta CAT le toca verificarlo todavía.
+const estadoPagoBadge = (e: EstadoPago) => {
+    if (e === "Pendiente") return <Badge label="Pendiente" variant="neutral" />;
+    if (e === "Pagado") return <Badge label="Por verificar" variant="warning" />;
+    return <Badge label="Recibido" variant="success" />;
 };
 
 export default function Recepcion() {
@@ -390,7 +399,7 @@ export default function Recepcion() {
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
-                                        {["Productora", "Lote", "Monto", "Método",
+                                        {["Productora", "Lote", "Monto", "Estado",
                                             "Fecha", "Responsable", ""].map(h => (
                                                 <th key={h}
                                                     className="px-4 py-3 text-left text-xs font-bold
@@ -411,11 +420,21 @@ export default function Recepcion() {
                                                 <td className="px-4 py-3 font-mono text-xs text-gray-600">
                                                     {p.codigoLote ?? "—"}
                                                 </td>
-                                                <td className="px-4 py-3 font-bold text-primary-700">
-                                                    ${p.montoUsd.toFixed(2)}
+                                                <td className="px-4 py-3">
+                                                    <div className="font-bold text-primary-700">
+                                                        ${p.montoUsd.toFixed(2)}
+                                                    </div>
+                                                    {/* Solo se muestra cuando difiere del ticket: es la
+                                                        prueba de que hubo descuento, no un dato repetido. */}
+                                                    {p.montoPagadoUsd !== null
+                                                        && p.montoPagadoUsd !== p.montoUsd && (
+                                                            <div className="text-xs text-bayo-700 font-semibold">
+                                                                Pagado: ${p.montoPagadoUsd.toFixed(2)}
+                                                            </div>
+                                                        )}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-600">
-                                                    {p.metodoPago}
+                                                <td className="px-4 py-3">
+                                                    {estadoPagoBadge(p.estado)}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-500 text-xs">
                                                     {new Date(p.fechaPago).toLocaleDateString("es-EC")}
