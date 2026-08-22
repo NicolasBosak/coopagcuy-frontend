@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pagosApi } from "../../api/pagos";
 import { useAuth } from "../../context/useAuth";
 import { ImagenProtegida } from "../ui/ImagenProtegida";
@@ -21,6 +21,24 @@ export function VerificarPago({ pago }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
     const [error, setError] = useState<string | null>(null);
+
+    // No es una descarga propia: es el mismo `claveCache` que usa
+    // `ImagenProtegida` de abajo, así que esto solo observa el resultado de
+    // *su* descarga en la caché compartida de React Query (`enabled: false`
+    // impide que este hook dispare una petición por su cuenta). Es la forma
+    // de enterarse del 404 sin levantar el estado con un efecto —lo que
+    // dispararía react-hooks/set-state-in-effect.
+    const comprobante = useQuery({
+        queryKey: ["comprobante-pago", pago.id],
+        queryFn: () => pagosApi.comprobante(pago.id),
+        enabled: false,
+        retry: false,
+        staleTime: Infinity,
+    });
+    const estadoComprobante = (comprobante.error as
+        { response?: { status?: number } } | null)?.response?.status;
+    const comprobanteCaducado = pago.tieneComprobante
+        && comprobante.isError && estadoComprobante === 404;
 
     const mutation = useMutation({
         mutationFn: () => pagosApi.verificar(pago.id, auth.nombreCompleto ?? ""),
@@ -44,7 +62,7 @@ export function VerificarPago({ pago }: Props) {
                     claveCache={["comprobante-pago", pago.id]}
                     descargar={() => pagosApi.comprobante(pago.id)}
                     textoBoton="Ver comprobante"
-                    textoCaducada="El comprobante ya no está disponible (se borra a los 5 días de verificarlo)."
+                    textoCaducada="El comprobante ya no está disponible (Azure lo borra a los 30 días de subido)."
                     textoAlternativo="Captura de la transferencia"
                 />
             )}
@@ -63,6 +81,17 @@ export function VerificarPago({ pago }: Props) {
                 <p className="text-xs text-gray-500">
                     Registrado por {pago.pagadoPor}
                 </p>
+
+                {/* Sin esto, confirmar un pago sin evidencia visible pasaba
+                    en silencio: ni comprobante ni advertencia. No se bloquea
+                    porque el pago puede ser legítimo y la evidencia haberse
+                    borrado sola con el tiempo. */}
+                {(!pago.tieneComprobante || comprobanteCaducado) && (
+                    <p className="mt-1 text-xs text-teja-700 font-semibold">
+                        ⚠ Sin comprobante disponible. Vas a confirmar este pago
+                        sin ver la captura de la transferencia.
+                    </p>
+                )}
 
                 <button
                     type="button"
