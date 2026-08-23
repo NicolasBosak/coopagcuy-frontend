@@ -18,7 +18,7 @@ import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
 import { EvidenciaNovedad } from "../components/ui/EvidenciaNovedad";
 import { descargarBlob } from "../utils/download";
 import type { EstadoLote, Lote, EntregaOffline, SyncResult } from "../types/recepcion";
-import type { EstadoPago } from "../types/productora";
+import type { Pago } from "../types/productora";
 
 const estadoBadge = (e: EstadoLote) => {
     if (e === "Aceptado") return <Badge label="Aceptado" variant="success" />;
@@ -27,10 +27,13 @@ const estadoBadge = (e: EstadoLote) => {
 };
 
 // Estado del pago tal como lo necesita esta lista: no solo "hubo pago", sino
-// si a esta CAT le toca verificarlo todavía.
-const estadoPagoBadge = (e: EstadoPago) => {
-    if (e === "Pendiente") return <Badge label="Pendiente" variant="neutral" />;
-    if (e === "Pagado") return <Badge label="Por verificar" variant="warning" />;
+// si a esta CAT le toca verificarlo todavía. Una venta local nace
+// "Recibido" sin pasar por la bandeja de la planta — no es un pago de
+// planta ya verificado y no debe leerse igual en esta tabla.
+const estadoPagoBadge = (p: Pago) => {
+    if (p.estado === "Pendiente") return <Badge label="Pendiente" variant="neutral" />;
+    if (p.estado === "Pagado") return <Badge label="Por verificar" variant="warning" />;
+    if (p.esVentaLocal) return <Badge label="Venta local" variant="info" />;
     return <Badge label="Recibido" variant="success" />;
 };
 
@@ -478,7 +481,7 @@ export default function Recepcion() {
                                                         )}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {estadoPagoBadge(p.estado)}
+                                                    {estadoPagoBadge(p)}
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-500 text-xs">
                                                     {new Date(p.fechaPago).toLocaleDateString("es-EC")}
