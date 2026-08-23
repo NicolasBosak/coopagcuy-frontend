@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pagosApi } from "../../api/pagos";
 import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
+import { Badge } from "../ui/Badge";
 import type { Lote } from "../../types/recepcion";
 import type { MetodoVentaLocal } from "../../types/productora";
 
@@ -16,6 +17,18 @@ const METODOS: { value: MetodoVentaLocal; label: string; icono: string }[] = [
     { value: "Transferencia", label: "Transferencia", icono: "🏦" },
     { value: "Cuotas", label: "Cuotas", icono: "📆" },
 ];
+
+// Mismo criterio que ya usa la lista de recepción para este mismo estado
+// (ver estadoBadge en pages/Recepcion.tsx): Rechazado y ConNovedad son
+// decisiones distintas para quien vende — un cuy Rechazado es el que la
+// planta no va a aceptar, así que es justo el candidato natural a la venta
+// local, y debe leerse de un vistazo, no deducirse del texto libre.
+const estadoBadge = (estado: string) => {
+    if (estado === "Aceptado") return <Badge label="Aceptado" variant="success" />;
+    if (estado === "ConNovedad") return <Badge label="Con novedad" variant="warning" />;
+    if (estado === "Rechazado") return <Badge label="Rechazado" variant="danger" />;
+    return <Badge label={estado} variant="neutral" />;
+};
 
 // Venta directa en la comunidad: la CAT marca qué cuyes concretos vende, no
 // cuántos — la guía de movilización necesita después decir exactamente
@@ -191,35 +204,45 @@ export function FormVentaLocal({ lote, onClose }: Props) {
                     <div className="space-y-2">
                         {cuyes.map((c) => {
                             const marcado = seleccionados.has(c.cuyRegistroId);
-                            // Con novedad y todo se puede vender: la casilla nunca se
-                            // deshabilita, solo se distingue visualmente.
-                            const conNovedad = c.motivoNovedad !== null;
+                            // Con novedad, y hasta rechazado, se puede vender igual: la
+                            // casilla nunca se deshabilita, solo se distingue
+                            // visualmente. Rechazado pinta con teja (el mismo tono que
+                            // ya usa el resto del sistema para "no pasó el control") y
+                            // ConNovedad con bayo, para que se lean distinto de un
+                            // vistazo y no solo por el texto de motivoNovedad.
+                            const borde = marcado
+                                ? "border-primary-500 bg-primary-50"
+                                : c.estado === "Rechazado"
+                                    ? "border-teja-200 bg-teja-50"
+                                    : c.estado === "ConNovedad"
+                                        ? "border-bayo-200 bg-bayo-50"
+                                        : "border-gray-200 bg-white hover:bg-gray-50";
                             return (
                                 <label key={c.cuyRegistroId}
-                                    className={`flex items-center gap-3 min-h-[48px] px-3 py-2
-                                       rounded-xl border-2 cursor-pointer transition
-                                       ${marcado
-                                            ? "border-primary-500 bg-primary-50"
-                                            : conNovedad
-                                                ? "border-bayo-200 bg-bayo-50"
-                                                : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                                    className={`flex flex-col gap-1 min-h-[44px] px-3 py-2
+                                       rounded-xl border-2 cursor-pointer transition ${borde}`}
                                 >
-                                    <input
-                                        type="checkbox"
-                                        checked={marcado}
-                                        onChange={() => alternarCuy(c.cuyRegistroId)}
-                                        className="w-5 h-5 accent-primary-600 shrink-0"
-                                    />
-                                    <span className="w-7 h-7 shrink-0 rounded-full bg-gray-100
-                                 flex items-center justify-center text-xs
-                                 font-bold text-gray-600">
-                                        {c.numeroEnLote}
-                                    </span>
-                                    <span className="text-sm font-semibold text-gray-800 shrink-0">
-                                        {Math.round(c.pesoGramos)} g
-                                    </span>
-                                    {conNovedad && (
-                                        <span className="text-xs font-semibold text-bayo-700 min-w-0">
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={marcado}
+                                            onChange={() => alternarCuy(c.cuyRegistroId)}
+                                            className="w-5 h-5 accent-primary-600 shrink-0"
+                                        />
+                                        <span className="w-7 h-7 shrink-0 rounded-full bg-gray-100
+                                     flex items-center justify-center text-xs
+                                     font-bold text-gray-600">
+                                            {c.numeroEnLote}
+                                        </span>
+                                        <span className="text-sm font-semibold text-gray-800 shrink-0">
+                                            {Math.round(c.pesoGramos)} g
+                                        </span>
+                                        {estadoBadge(c.estado)}
+                                    </div>
+                                    {c.motivoNovedad !== null && (
+                                        <span className={`text-xs font-semibold pl-8
+                                     ${c.estado === "Rechazado"
+                                                ? "text-teja-700" : "text-bayo-700"}`}>
                                             ⚠ {c.motivoNovedad}
                                         </span>
                                     )}
