@@ -248,9 +248,19 @@ export default function Recepcion() {
                                             ))}
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap space-x-3">
+                                            {/* Contra cantidadAnimales, NO contra cuyes.length: una
+                                                jaula histórica cargada sin detalle por animal tiene
+                                                Cuyes vacío, así que cuyesVendidosLocal < cuyes.length
+                                                sería 0 < 0 (false) y el botón desaparecería de un lote
+                                                que el backend sí deja enviar. cantidadAnimales es el
+                                                dato autoritativo del lote (lo usa el resto de esta
+                                                pantalla, p. ej. disponibles < cantidadAnimales) y es
+                                                el mismo criterio que ya protege este caso en
+                                                MovilizacionService (resta en vez de contar) y en
+                                                PagoService.ListarLotesPendientesAsync. */}
                                             {l.estado !== "Rechazado" && l.cerrado &&
                                                 !l.tieneMovilizacion &&
-                                                l.cuyesVendidosLocal < l.cuyes.length && (
+                                                l.cuyesVendidosLocal < l.cantidadAnimales && (
                                                     <button
                                                         onClick={() => setLoteMovilizar(l)}
                                                         title="Registrar salida hacia la planta"
@@ -260,6 +270,9 @@ export default function Recepcion() {
                                                         A planta
                                                     </button>
                                                 )}
+                                            {/* Aquí sí compara contra cuyes.length: vender exige
+                                                registro por animal (FormVentaLocal consulta esa
+                                                lista aparte) y si está vacía no hay nada que ofrecer. */}
                                             {l.estado !== "Rechazado" && l.cerrado &&
                                                 !l.tieneMovilizacion &&
                                                 l.cuyesVendidosLocal < l.cuyes.length && (
@@ -281,7 +294,12 @@ export default function Recepcion() {
                                             {/* Vendido entero: no queda nada que
                                                 enviar ni que vender. La guía sigue
                                                 disponible, y ahora además lista lo
-                                                que se quedó en la comunidad. */}
+                                                que se quedó en la comunidad. Compara
+                                                contra cuyes.length (no cantidadAnimales)
+                                                a propósito: en una jaula histórica sin
+                                                detalle por animal cuyesVendidosLocal
+                                                también es 0, así que "> 0" ya la
+                                                descarta antes de llegar al 0 === 0. */}
                                             {l.cuyesVendidosLocal > 0 &&
                                                 l.cuyesVendidosLocal === l.cuyes.length && (
                                                     <span className="text-xs font-bold text-primary-700"
