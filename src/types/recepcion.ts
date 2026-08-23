@@ -193,4 +193,7 @@ export interface Movilizacion {
     fechaRecepcionPlanta: string | null;
     recibidoPor: string | null;
     condicionLlegada: string | null;
+    condicionesClaves: string | null;
+    llegaronEnBuenEstado: boolean | null;
+    condicionesLlegadaClaves: string | null;
 }

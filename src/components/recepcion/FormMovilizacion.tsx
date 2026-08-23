@@ -177,6 +177,13 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                                 {form.condicionesTransporte.length} de {condiciones.length} verificadas
                             </p>
                         )}
+                        {form.condicionesTransporte.length < condiciones.length && (
+                            <p className="mt-2 text-xs font-semibold text-bayo-700">
+                                Las condiciones sin marcar quedarán registradas en
+                                la guía, y la planta tendrá que responder cómo
+                                llegaron los animales.
+                            </p>
+                        )}
                     </div>
 
                     {/* Declaración de tratamientos (guía de movilización) */}
