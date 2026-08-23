@@ -57,6 +57,9 @@ export interface Pago {
     verificadoPor: string | null;
     responsable: string;
     observaciones: string | null;
+    // Distingue el pago normal (planta) de la venta directa en la comunidad,
+    // que no pasa por la bandeja de la planta
+    esVentaLocal: boolean;
 }
 
 // Lote por el que aún se le debe pagar a una productora. Cantidad y peso son
@@ -108,6 +111,36 @@ export interface RegistrarPagoEfectivoRequest {
     descuentos: DescuentoRequest[];
     comprobanteBase64: string;
     pagadoPor: string;
+}
+
+// ── Venta local (venta directa en la comunidad) ────────────────────────
+
+// Cuy de un lote que la CAT todavía puede vender en la comunidad: el
+// servidor ya excluye los que se vendieron o movilizaron. Un cuy con
+// novedad (motivoNovedad no nulo) se puede vender igual — la planta lo
+// rechazaría, pero es justo el candidato natural a venta local.
+export interface CuyDisponible {
+    cuyRegistroId: number;
+    numeroEnLote: number;
+    pesoGramos: number;
+    estado: string;
+    motivoNovedad: string | null;
+}
+
+export type MetodoVentaLocal = "Efectivo" | "Transferencia" | "Cuotas";
+
+export interface RegistrarVentaLocalRequest {
+    productoraId: number;
+    loteId: number;
+    cuyRegistroIds: number[];
+    montoUsd: number;
+    metodoPago: MetodoVentaLocal;
+    // Solo cuando metodoPago es "Cuotas": el servidor devuelve 400 si falta
+    // el acuerdo
+    numeroDias?: number;
+    valorPorDia?: number;
+    responsable: string;
+    observaciones?: string;
 }
 
 export const CENTROS_ACOPIO: { value: CentroAcopio; label: string }[] = [

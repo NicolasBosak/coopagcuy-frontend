@@ -2,6 +2,7 @@ import client from "./client";
 import type {
     Pago, RegistrarPagoRequest, LotePendientePago,
     TicketPorPagar, CuyConNovedad, RegistrarPagoEfectivoRequest,
+    CuyDisponible, RegistrarVentaLocalRequest,
 } from "../types/productora";
 
 // Pagos a productoras: registro digital que reemplaza el cuaderno manual
@@ -64,6 +65,19 @@ export const pagosApi = {
     verificar: async (pagoId: number, verificadoPor: string) => {
         const { data } = await client.post<Pago>(
             `/api/pagos/${pagoId}/verificar`, { verificadoPor });
+        return data;
+    },
+
+    // Cuyes de esa productora en ese lote que todavía pueden venderse: el
+    // servidor ya excluye los vendidos, así que no hace falta filtrar aquí
+    cuyesDisponibles: async (loteId: number, productoraId: number) => {
+        const { data } = await client.get<CuyDisponible[]>(
+            `/api/pagos/cuyes-disponibles/${loteId}/${productoraId}`);
+        return data;
+    },
+
+    registrarVentaLocal: async (body: RegistrarVentaLocalRequest) => {
+        const { data } = await client.post<Pago>("/api/pagos/venta-local", body);
         return data;
     },
 };
