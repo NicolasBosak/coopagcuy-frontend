@@ -71,6 +71,8 @@ export interface Lote {
     disponibles: number;
     // Ya tiene registro de movilización hacia la planta
     tieneMovilizacion: boolean;
+    // Animales del lote ya vendidos en la comunidad (venta local pagada)
+    cuyesVendidosLocal: number;
     productoras: ProductoraEnLote[];
     novedades: Novedad[];
     cuyes: CuyRegistroResponse[];

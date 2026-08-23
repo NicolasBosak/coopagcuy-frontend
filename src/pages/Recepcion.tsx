@@ -11,6 +11,7 @@ import { Segmentado } from "../components/ui/Segmentado";
 import { SyncStatus } from "../components/ui/SyncStatus";
 import { FormLote } from "../components/recepcion/FormLote";
 import { FormMovilizacion } from "../components/recepcion/FormMovilizacion";
+import { FormVentaLocal } from "../components/recepcion/FormVentaLocal";
 import { FormPago } from "../components/recepcion/FormPago";
 import { VerificarPago } from "../components/recepcion/VerificarPago";
 import { JaulaEnArmado } from "../components/recepcion/JaulaEnArmado";
@@ -41,6 +42,7 @@ export default function Recepcion() {
     const [showForm, setShowForm] = useState(false);
     const [showFormPago, setShowFormPago] = useState(false);
     const [loteMovilizar, setLoteMovilizar] = useState<Lote | null>(null);
+    const [loteVentaLocal, setLoteVentaLocal] = useState<Lote | null>(null);
     const [tabActual, setTabActual] = useState<"server" | "local" | "pagos">("server");
 
     const { data: lotes = [], isLoading } = useQuery({
@@ -151,7 +153,7 @@ export default function Recepcion() {
                 opciones={[
                     { id: "server", label: "Sincronizados" },
                     {
-                        id: "local", label: `Locales${pendientes > 0
+                        id: "local", label: `Sin sincronizar${pendientes > 0
                             ? ` (${pendientes})` : ""}`
                     },
                     {
@@ -166,7 +168,7 @@ export default function Recepcion() {
                 <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
                     {!isOnline ? (
                         <div className="p-8 text-center text-sm text-gray-400">
-                            Sin conexión. Cambia a la pestaña "Locales" para ver
+                            Sin conexión. Cambia a la pestaña "Sin sincronizar" para ver
                             los lotes guardados.
                         </div>
                     ) : isLoading ? (
@@ -247,7 +249,8 @@ export default function Recepcion() {
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap space-x-3">
                                             {l.estado !== "Rechazado" && l.cerrado &&
-                                                !l.tieneMovilizacion && (
+                                                !l.tieneMovilizacion &&
+                                                l.cuyesVendidosLocal < l.cuyes.length && (
                                                     <button
                                                         onClick={() => setLoteMovilizar(l)}
                                                         title="Registrar salida hacia la planta"
@@ -257,12 +260,35 @@ export default function Recepcion() {
                                                         A planta
                                                     </button>
                                                 )}
+                                            {l.estado !== "Rechazado" && l.cerrado &&
+                                                !l.tieneMovilizacion &&
+                                                l.cuyesVendidosLocal < l.cuyes.length && (
+                                                    <button
+                                                        onClick={() => setLoteVentaLocal(l)}
+                                                        title="Registrar una venta en la comunidad"
+                                                        className="text-xs font-semibold text-primary-700
+                                     hover:text-primary-600"
+                                                    >
+                                                        Vender local
+                                                    </button>
+                                                )}
                                             {l.tieneMovilizacion && (
                                                 <span className="text-xs text-gray-400"
                                                     title="El lote ya fue enviado a la planta">
                                                     Enviado ✓
                                                 </span>
                                             )}
+                                            {/* Vendido entero: no queda nada que
+                                                enviar ni que vender. La guía sigue
+                                                disponible, y ahora además lista lo
+                                                que se quedó en la comunidad. */}
+                                            {l.cuyesVendidosLocal > 0 &&
+                                                l.cuyesVendidosLocal === l.cuyes.length && (
+                                                    <span className="text-xs font-bold text-primary-700"
+                                                        title="Todo el lote se vendió en la comunidad">
+                                                        Venta local
+                                                    </span>
+                                                )}
                                             <button
                                                 onClick={() => handleGuia(l.codigoLote)}
                                                 disabled={descargandoGuia === l.codigoLote}
@@ -485,6 +511,12 @@ export default function Recepcion() {
                 <FormMovilizacion
                     lote={loteMovilizar}
                     onClose={() => setLoteMovilizar(null)}
+                />
+            )}
+            {loteVentaLocal && (
+                <FormVentaLocal
+                    lote={loteVentaLocal}
+                    onClose={() => setLoteVentaLocal(null)}
                 />
             )}
             {showFormPago && (
