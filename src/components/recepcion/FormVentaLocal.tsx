@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pagosApi } from "../../api/pagos";
+import { imprimirTicket } from "../../api/imprimirTicket";
 import { useAuth } from "../../context/useAuth";
 import { ModalShell } from "../ui/ModalShell";
 import { Badge } from "../ui/Badge";
@@ -78,11 +79,29 @@ export function FormVentaLocal({ lote, onClose }: Props) {
             responsable,
             observaciones: observaciones.trim() || undefined,
         }),
-        onSuccess: () => {
+        onSuccess: async (venta) => {
             qc.invalidateQueries({ queryKey: ["pagos"] });
             // El cuy recién vendido ya no debe ofrecerse en otra venta local
             qc.invalidateQueries({ queryKey: ["cuyes_disponibles"] });
             qc.invalidateQueries({ queryKey: ["lotes_pendientes_pago"] });
+            // La fila de la tabla de lotes (botones "A planta"/"Vender local"
+            // y la etiqueta "Venta local") sale de esta misma consulta.
+            qc.invalidateQueries({ queryKey: ["lotes"] });
+            // La productora está delante esperando su papel: imprimir aquí
+            // ahorra que la operadora tenga que ir a buscar la fila en la
+            // pestaña "Pagos". Mismo patrón que FormPago: si falla la
+            // impresión la venta YA está registrada, así que no se propaga
+            // el error. El modal se cierra justo después, así que el aviso
+            // no puede depender de un estado que va a desmontarse; por eso
+            // es un alert nativo, que se ve pase lo que pase.
+            try {
+                await imprimirTicket(venta.id);
+            } catch {
+                window.alert(
+                    "La venta se registró, pero el ticket no se pudo imprimir.\n" +
+                    "Usa el botón \"🧾 Ticket\" en la lista de pagos para reimprimirlo."
+                );
+            }
             onClose();
         },
         onError: (e: unknown) => {

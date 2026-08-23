@@ -30,9 +30,14 @@ export function FormMovilizacion({ lote, onClose }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
 
+    // Lo que puede viajar a la planta es lo que queda tras descontar lo que
+    // ya se vendió en la comunidad, no el tamaño original del lote — si no,
+    // el valor propuesto supera lo disponible y el servidor responde 409.
+    const disponibles = lote.cantidadAnimales - lote.cuyesVendidosLocal;
+
     const [form, setForm] = useState<RegistrarMovilizacionRequest>({
         conductor: "",
-        cantidadMovilizada: lote.cantidadAnimales,
+        cantidadMovilizada: disponibles,
         condicionesTransporte: [],
         tipoForraje: "",
         sinAntibioticos7Dias: false,
@@ -105,7 +110,7 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                                 Cuyes que viajan
                             </label>
                             <input
-                                type="number" min={1} max={lote.cantidadAnimales} required
+                                type="number" min={1} max={disponibles} required
                                 value={form.cantidadMovilizada}
                                 onChange={(e) => setForm({
                                     ...form, cantidadMovilizada: Number(e.target.value)
@@ -114,7 +119,10 @@ export function FormMovilizacion({ lote, onClose }: Props) {
                            text-sm focus:border-primary-500 focus:outline-none"
                             />
                             <p className="text-xs text-gray-400 mt-0.5">
-                                El lote tiene {lote.cantidadAnimales}
+                                {lote.cuyesVendidosLocal > 0
+                                    ? `${disponibles} disponibles de ${lote.cantidadAnimales}; `
+                                    + `${lote.cuyesVendidosLocal} se vendieron en la comunidad`
+                                    : `El lote tiene ${lote.cantidadAnimales}`}
                             </p>
                         </div>
                     </div>
