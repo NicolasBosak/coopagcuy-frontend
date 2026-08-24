@@ -175,6 +175,12 @@ export interface RegistrarMovilizacionRequest {
 export interface ConfirmarRecepcionPlantaRequest {
     recibidoPor: string;
     condicionLlegada?: string;
+    // Obligatorio cuando el checklist de transporte quedó incompleto: el
+    // servidor responde 409 si falta y el checklist no cubrió las 7 claves.
+    llegaronEnBuenEstado?: boolean;
+    // Claves del catálogo cerrado de condiciones de llegada. Solo aplican
+    // (y el servidor las exige) cuando llegaronEnBuenEstado es false.
+    condicionesLlegada?: string[];
 }
 
 export interface Movilizacion {
@@ -195,4 +201,7 @@ export interface Movilizacion {
     fechaRecepcionPlanta: string | null;
     recibidoPor: string | null;
     condicionLlegada: string | null;
+    condicionesClaves: string | null;
+    llegaronEnBuenEstado: boolean | null;
+    condicionesLlegadaClaves: string | null;
 }

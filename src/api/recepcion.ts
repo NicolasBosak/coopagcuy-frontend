@@ -66,6 +66,8 @@ export const recepcionApi = {
         return data;
     },
 
+    // El cuerpo lleva también llegaronEnBuenEstado y condicionesLlegada
+    // cuando el checklist de transporte salió incompleto (ver Faenamiento.tsx)
     confirmarRecepcionPlanta: async (
         id: number, body: ConfirmarRecepcionPlantaRequest) => {
         const { data } = await client.patch<Movilizacion>(
