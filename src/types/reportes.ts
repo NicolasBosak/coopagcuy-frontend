@@ -124,3 +124,55 @@ export interface ReporteSalida {
     unidades: number;
     responsable: string;
 }
+
+// ── Reporte de ganancias y margen ──────────────────────────────────────
+//
+// Dos cifras que NUNCA se suman: lo que cobraron las productoras (estos
+// tres DTOs) y el margen de la reventa (el siguiente). Un pago a una
+// productora es ingreso para ella y costo para la cooperativa — la misma
+// fila leída desde dos lados.
+//
+// Dentro de "lo que cobraron las productoras" hay otra separación que
+// tampoco se suma: cobrado es dinero que la CAT ya tiene en la mano,
+// pactado es un compromiso a cuotas que todavía no ha llegado, y lo
+// pagado por la planta es la otra vía de cobro.
+
+export interface GananciaProductoraDto {
+    productoraId: number;
+    nombreProductora: string;
+    comunidad: string;
+    centroAcopio: string;
+    cobradoLocal: number;
+    pactadoCuotas: number;
+    pagadoPlanta: number;
+    totalPagos: number; // conteo de pagos, no dinero
+}
+
+export interface GananciaCatDto {
+    centroAcopio: string;
+    cobradoLocal: number;
+    pactadoCuotas: number;
+    pagadoPlanta: number;
+    totalPagos: number; // conteo de pagos, no dinero
+}
+
+export interface GananciaMesDto {
+    anio: number;
+    mes: number;
+    cobradoLocal: number;
+    pactadoCuotas: number;
+    pagadoPlanta: number;
+    totalPagos: number; // conteo de pagos, no dinero
+}
+
+// Margen de la reventa. despachosSinPrecio y animalesSinCosto se muestran
+// junto a la cifra en vez de contarse como cero: un despacho sin precio no
+// se vendió gratis, y un animal cuya productora no ha cobrado no costó cero.
+export interface MargenDto {
+    agrupacion: string;
+    ingreso: number;
+    costoAtribuido: number;
+    margen: number;
+    despachosSinPrecio: number;
+    animalesSinCosto: number;
+}

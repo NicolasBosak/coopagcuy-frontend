@@ -14,7 +14,7 @@ import { useAuth } from "../context/useAuth";
 import { fechaLocal } from "../utils/fechaLocal";
 
 type Tab = "entrada" | "transito" | "salida"
-    | "productoras" | "cat" | "novedades" | "devoluciones";
+    | "productoras" | "cat" | "novedades" | "devoluciones" | "ganancias";
 
 // El flujo físico del producto (entrada → tránsito → salida) es operación. El
 // admin técnico conserva los reportes de gestión y calidad, no esos tres: la
@@ -28,14 +28,58 @@ const TABS: { id: Tab; label: string }[] = [
     { id: "cat", label: "Por CAT" },
     { id: "novedades", label: "Novedades" },
     { id: "devoluciones", label: "Devoluciones" },
+    { id: "ganancias", label: "Ganancias" },
 ];
 
 const TABS_FLUJO: Tab[] = ["entrada", "transito", "salida"];
 
+// El OperadorCAT no tiene ninguno de los seis endpoints de ganancias/margen
+// (403 en todos): mostrarle la pestaña solo produciría un error de carga sin
+// explicación, igual que con el admin técnico y el flujo físico.
 function tabsVisibles(rol: string | null) {
-    return rol === "AdminTecnico"
-        ? TABS.filter((t) => !TABS_FLUJO.includes(t.id))
-        : TABS;
+    let visibles = TABS;
+    if (rol === "AdminTecnico")
+        visibles = visibles.filter((t) => !TABS_FLUJO.includes(t.id));
+    if (rol === "OperadorCAT")
+        visibles = visibles.filter((t) => t.id !== "ganancias");
+    return visibles;
+}
+
+type GananciaVista = "productora" | "cat" | "mes";
+type MargenVista = "mes" | "cliente";
+
+const GANANCIA_VISTAS: { id: GananciaVista; label: string }[] = [
+    { id: "productora", label: "Por productora" },
+    { id: "cat", label: "Por CAT" },
+    { id: "mes", label: "Por mes" },
+];
+
+const MARGEN_VISTAS: { id: MargenVista; label: string }[] = [
+    { id: "mes", label: "Por mes" },
+    { id: "cliente", label: "Por cliente" },
+];
+
+const MESES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+function nombreMes(anio: number, mes: number) {
+    return `${MESES[mes - 1] ?? mes} ${anio}`;
+}
+
+// "yyyy-MM" tal como lo agrupa el servidor (mes local del piloto)
+function nombreMesAgrupacion(agrupacion: string) {
+    const [anio, mes] = agrupacion.split("-").map(Number);
+    return Number.isFinite(anio) && Number.isFinite(mes)
+        ? nombreMes(anio, mes)
+        : agrupacion;
+}
+
+// El margen puede ser negativo (pérdida); "$-12.50" lee raro, así que el
+// signo va antes del símbolo de moneda.
+function usd(v: number) {
+    return v < 0 ? `-$${Math.abs(v).toFixed(2)}` : `$${v.toFixed(2)}`;
 }
 
 function inicioMes() {
@@ -113,8 +157,12 @@ export default function Reportes() {
     const [cat, setCat] = useState<CentroAcopio | "">("");
     const [exportando, setExportando] = useState(false);
     const [exportandoGeneral, setExportandoGeneral] = useState(false);
+    const [gananciaVista, setGananciaVista] = useState<GananciaVista>("productora");
+    const [margenVista, setMargenVista] = useState<MargenVista>("mes");
 
     const filtro = { desde, hasta, cat: cat || undefined };
+    // El margen nunca acepta `cat` — ver la nota en src/api/reportes.ts.
+    const filtroSinCat = { desde, hasta };
 
     const { data: prodData = [], isLoading: loadingProd, isError: errorProd } = useQuery({
         queryKey: ["reporte_productoras", desde, hasta, cat],
@@ -156,6 +204,50 @@ export default function Reportes() {
         queryKey: ["reporte_salida", desde, hasta, cat],
         queryFn: () => reportesApi.salida(filtro),
         enabled: tab === "salida",
+    });
+
+    // ── Ganancias de productoras: lo que cobraron, sí filtra por CAT ────
+
+    const {
+        data: gananciaProdData = [], isLoading: loadingGananciaProd, isError: errorGananciaProd,
+    } = useQuery({
+        queryKey: ["ganancia_productoras", desde, hasta, cat],
+        queryFn: () => reportesApi.gananciasPorProductora(filtro),
+        enabled: tab === "ganancias" && gananciaVista === "productora",
+    });
+
+    const {
+        data: gananciaCatData = [], isLoading: loadingGananciaCat, isError: errorGananciaCat,
+    } = useQuery({
+        queryKey: ["ganancia_cat", desde, hasta, cat],
+        queryFn: () => reportesApi.gananciasPorCat(filtro),
+        enabled: tab === "ganancias" && gananciaVista === "cat",
+    });
+
+    const {
+        data: gananciaMesData = [], isLoading: loadingGananciaMes, isError: errorGananciaMes,
+    } = useQuery({
+        queryKey: ["ganancia_mes", desde, hasta, cat],
+        queryFn: () => reportesApi.gananciasPorMes(filtro),
+        enabled: tab === "ganancias" && gananciaVista === "mes",
+    });
+
+    // ── Margen de la reventa: siempre toda la cooperativa, nunca por CAT ─
+
+    const {
+        data: margenMesData = [], isLoading: loadingMargenMes, isError: errorMargenMes,
+    } = useQuery({
+        queryKey: ["margen_mes", desde, hasta],
+        queryFn: () => reportesApi.margenPorMes(filtroSinCat),
+        enabled: tab === "ganancias" && margenVista === "mes",
+    });
+
+    const {
+        data: margenClienteData = [], isLoading: loadingMargenCliente, isError: errorMargenCliente,
+    } = useQuery({
+        queryKey: ["margen_cliente", desde, hasta],
+        queryFn: () => reportesApi.margenPorCliente(filtroSinCat),
+        enabled: tab === "ganancias" && margenVista === "cliente",
     });
 
     // ── Datos de los gráficos: se recalculan con cada cambio de filtro ──
@@ -211,6 +303,9 @@ export default function Reportes() {
             } else if (tab === "salida") {
                 const blob = await reportesApi.exportarExcelSalida(filtro);
                 descargarBlob(blob, `Reporte-Salida-${desde}-${hasta}.xlsx`);
+            } else if (tab === "ganancias") {
+                const blob = await reportesApi.exportarExcelGanancias(filtro);
+                descargarBlob(blob, `Reporte-Ganancias-${desde}-${hasta}.xlsx`);
             }
         } finally {
             setExportando(false);
@@ -820,6 +915,326 @@ export default function Reportes() {
                             </tbody>
                         </table>
                     </PanelEstado>
+                </div>
+            )}
+
+            {/* Tab: Ganancias — dos cifras que NUNCA se suman: lo que
+                cobraron las productoras (ingreso suyo, egreso de la
+                cooperativa) y el margen de la reventa (lo que le queda a la
+                cooperativa). Van en bloques separados a propósito: juntarlas
+                en una tabla invitaría a restarlas mal. */}
+            {tab === "ganancias" && (
+                <div className="space-y-8 animate-fade-in-up">
+                    {/* Bloque 1: lo que cobraron las productoras */}
+                    <section>
+                        <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-800">
+                                    Lo que cobraron las productoras
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5 max-w-md">
+                                    Su ingreso — y el egreso de la cooperativa. No se suma
+                                    con el margen de abajo.
+                                </p>
+                            </div>
+                            <Segmentado
+                                activo={gananciaVista}
+                                onCambio={setGananciaVista}
+                                opciones={GANANCIA_VISTAS}
+                            />
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                            {gananciaVista === "productora" && (
+                                <PanelEstado
+                                    cargando={loadingGananciaProd}
+                                    error={errorGananciaProd}
+                                    vacio={gananciaProdData.length === 0}
+                                    mensajeVacio="No hay pagos a productoras en el período."
+                                >
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                {["Productora", "Comunidad", "CAT", "Cobrado local",
+                                                    "Pactado a cuotas", "Pagado por planta",
+                                                    "N.º de pagos"].map(h => (
+                                                        <th key={h} className="px-3 py-3 text-left text-xs
+                                             font-medium text-gray-500 uppercase tracking-wide
+                                             whitespace-nowrap">{h}</th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {gananciaProdData.map((r) => (
+                                                <tr key={r.productoraId} className="hover:bg-gray-50">
+                                                    <td className="px-3 py-2.5 font-medium text-gray-800">
+                                                        {r.nombreProductora}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-gray-600">{r.comunidad}</td>
+                                                    <td className="px-3 py-2.5">
+                                                        <Badge label={r.centroAcopio} variant="neutral" />
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.cobradoLocal)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.pactadoCuotas)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.pagadoPlanta)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center text-gray-500">
+                                                        {r.totalPagos}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </PanelEstado>
+                            )}
+
+                            {gananciaVista === "cat" && (
+                                <PanelEstado
+                                    cargando={loadingGananciaCat}
+                                    error={errorGananciaCat}
+                                    vacio={gananciaCatData.length === 0}
+                                    mensajeVacio="No hay pagos a productoras en el período."
+                                >
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                {["CAT", "Cobrado local", "Pactado a cuotas",
+                                                    "Pagado por planta", "N.º de pagos"].map(h => (
+                                                        <th key={h} className="px-3 py-3 text-left text-xs
+                                             font-medium text-gray-500 uppercase tracking-wide
+                                             whitespace-nowrap">{h}</th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {gananciaCatData.map((r) => (
+                                                <tr key={r.centroAcopio} className="hover:bg-gray-50">
+                                                    <td className="px-3 py-2.5">
+                                                        <Badge label={r.centroAcopio} variant="neutral" />
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.cobradoLocal)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.pactadoCuotas)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.pagadoPlanta)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center text-gray-500">
+                                                        {r.totalPagos}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </PanelEstado>
+                            )}
+
+                            {gananciaVista === "mes" && (
+                                <PanelEstado
+                                    cargando={loadingGananciaMes}
+                                    error={errorGananciaMes}
+                                    vacio={gananciaMesData.length === 0}
+                                    mensajeVacio="No hay pagos a productoras en el período."
+                                >
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                {["Mes", "Cobrado local", "Pactado a cuotas",
+                                                    "Pagado por planta", "N.º de pagos"].map(h => (
+                                                        <th key={h} className="px-3 py-3 text-left text-xs
+                                             font-medium text-gray-500 uppercase tracking-wide
+                                             whitespace-nowrap">{h}</th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {gananciaMesData.map((r) => (
+                                                <tr key={`${r.anio}-${r.mes}`} className="hover:bg-gray-50">
+                                                    <td className="px-3 py-2.5 font-medium text-gray-800
+                                       capitalize">
+                                                        {nombreMes(r.anio, r.mes)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.cobradoLocal)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.pactadoCuotas)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.pagadoPlanta)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center text-gray-500">
+                                                        {r.totalPagos}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </PanelEstado>
+                            )}
+                        </div>
+                    </section>
+
+                    {/* Bloque 2: margen de la reventa */}
+                    <section>
+                        <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-800">
+                                    Margen de la reventa
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5 max-w-md">
+                                    Lo que le queda a la cooperativa. No se suma con lo de
+                                    arriba, y siempre es de toda la cooperativa: este bloque
+                                    no se filtra por centro de acopio.
+                                </p>
+                            </div>
+                            <Segmentado
+                                activo={margenVista}
+                                onCambio={setMargenVista}
+                                opciones={MARGEN_VISTAS}
+                            />
+                        </div>
+
+                        {/* La asimetría del filtro por CAT: el bloque de arriba se filtró,
+                            este no puede. Se avisa en el momento en que importa, no solo
+                            en la descripción fija de arriba. */}
+                        {cat && (
+                            <div className="mb-3 rounded-lg border border-bayo-200 bg-bayo-50
+                              px-4 py-2.5 text-xs text-bayo-800">
+                                Filtraste <strong>{cat}</strong> arriba, pero el margen de
+                                aquí abajo es de <strong>toda la cooperativa</strong>: un
+                                despacho reúne animales de varias jaulas, y por tanto de
+                                varias CAT, así que este reporte no acepta filtrarse por
+                                centro de acopio.
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                            {margenVista === "mes" && (
+                                <PanelEstado
+                                    cargando={loadingMargenMes}
+                                    error={errorMargenMes}
+                                    vacio={margenMesData.length === 0}
+                                    mensajeVacio="No hay despachos con margen calculable en el período."
+                                >
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                {["Mes", "Ingreso", "Costo atribuido", "Margen",
+                                                    "Despachos sin precio", "Animales sin costo"].map(h => (
+                                                        <th key={h} className="px-3 py-3 text-left text-xs
+                                             font-medium text-gray-500 uppercase tracking-wide
+                                             whitespace-nowrap">{h}</th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {margenMesData.map((r) => (
+                                                <tr key={r.agrupacion} className="hover:bg-gray-50">
+                                                    <td className="px-3 py-2.5 font-medium text-gray-800
+                                       capitalize">
+                                                        {nombreMesAgrupacion(r.agrupacion)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.ingreso)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.costoAtribuido)}
+                                                    </td>
+                                                    <td className={`px-3 py-2.5 text-right font-bold
+                                       ${r.margen < 0 ? "text-teja-700" : "text-primary-700"}`}>
+                                                        {usd(r.margen)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center">
+                                                        {r.despachosSinPrecio > 0
+                                                            ? <Badge
+                                                                label={`${r.despachosSinPrecio} sin precio`}
+                                                                variant="warning" />
+                                                            : <span className="text-gray-400">0</span>}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center">
+                                                        {r.animalesSinCosto > 0
+                                                            ? <Badge
+                                                                label={`${r.animalesSinCosto} sin costo`}
+                                                                variant="warning" />
+                                                            : <span className="text-gray-400">0</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </PanelEstado>
+                            )}
+
+                            {margenVista === "cliente" && (
+                                <PanelEstado
+                                    cargando={loadingMargenCliente}
+                                    error={errorMargenCliente}
+                                    vacio={margenClienteData.length === 0}
+                                    mensajeVacio="No hay despachos con margen calculable en el período."
+                                >
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                {["Cliente", "Ingreso", "Costo atribuido", "Margen",
+                                                    "Despachos sin precio", "Animales sin costo"].map(h => (
+                                                        <th key={h} className="px-3 py-3 text-left text-xs
+                                             font-medium text-gray-500 uppercase tracking-wide
+                                             whitespace-nowrap">{h}</th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {margenClienteData.map((r) => (
+                                                <tr key={r.agrupacion} className="hover:bg-gray-50">
+                                                    <td className="px-3 py-2.5 font-medium text-gray-800">
+                                                        {r.agrupacion || "(sin cliente registrado)"}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.ingreso)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right text-gray-700">
+                                                        {usd(r.costoAtribuido)}
+                                                    </td>
+                                                    <td className={`px-3 py-2.5 text-right font-bold
+                                       ${r.margen < 0 ? "text-teja-700" : "text-primary-700"}`}>
+                                                        {usd(r.margen)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center">
+                                                        {r.despachosSinPrecio > 0
+                                                            ? <Badge
+                                                                label={`${r.despachosSinPrecio} sin precio`}
+                                                                variant="warning" />
+                                                            : <span className="text-gray-400">0</span>}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-center">
+                                                        {r.animalesSinCosto > 0
+                                                            ? <Badge
+                                                                label={`${r.animalesSinCosto} sin costo`}
+                                                                variant="warning" />
+                                                            : <span className="text-gray-400">0</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </PanelEstado>
+                            )}
+                        </div>
+
+                        <p className="mt-2 text-xs text-gray-400 max-w-2xl">
+                            El margen es sobre el costo de los animales: no incluye
+                            transporte, faenamiento ni empaque, así que no es un resultado
+                            contable de la cooperativa.
+                        </p>
+                    </section>
                 </div>
             )}
         </MainLayout>

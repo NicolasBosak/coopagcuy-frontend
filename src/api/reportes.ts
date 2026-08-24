@@ -2,12 +2,22 @@ import client from "./client";
 import type {
     Dashboard, ReporteProductora, ReporteCAT, ReporteNovedad,
     ReporteDevoluciones, ReporteEntrada, ReporteTransito, ReporteSalida,
+    GananciaProductoraDto, GananciaCatDto, GananciaMesDto, MargenDto,
 } from "../types/reportes";
 
 interface FiltroPeriodo {
     desde: string;
     hasta: string;
     cat?: string;
+}
+
+// El margen de la reventa no acepta `cat`: un despacho reúne animales de
+// varias jaulas y por tanto de varias CAT, así que filtrarlo por CAT
+// duplicaría ingreso o marcaría "sin costo" a quien sí cobró. Por eso este
+// tipo omite el campo en vez de aceptarlo y descartarlo en silencio.
+interface FiltroSinCat {
+    desde: string;
+    hasta: string;
 }
 
 export const reportesApi = {
@@ -127,6 +137,44 @@ export const reportesApi = {
     exportarExcelGeneral: async (filtro: FiltroPeriodo) => {
         const { data } = await client.get<Blob>(
             "/api/reportes/exportar/excel/general",
+            { params: filtro, responseType: "blob" });
+        return data;
+    },
+
+    // ── Ganancias de productoras: lo que cobraron ──────────────────────
+    // Las tres sí aceptan `cat`.
+    gananciasPorProductora: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<GananciaProductoraDto[]>(
+            "/api/reportes/ganancias/productoras", { params: filtro });
+        return data;
+    },
+    gananciasPorCat: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<GananciaCatDto[]>(
+            "/api/reportes/ganancias/cat", { params: filtro });
+        return data;
+    },
+    gananciasPorMes: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<GananciaMesDto[]>(
+            "/api/reportes/ganancias/mes", { params: filtro });
+        return data;
+    },
+
+    // ── Margen de la reventa ────────────────────────────────────────────
+    // Ninguna de las dos acepta `cat`: ver FiltroSinCat.
+    margenPorMes: async (filtro: FiltroSinCat) => {
+        const { data } = await client.get<MargenDto[]>(
+            "/api/reportes/margen/mes", { params: filtro });
+        return data;
+    },
+    margenPorCliente: async (filtro: FiltroSinCat) => {
+        const { data } = await client.get<MargenDto[]>(
+            "/api/reportes/margen/cliente", { params: filtro });
+        return data;
+    },
+
+    exportarExcelGanancias: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<Blob>(
+            "/api/reportes/exportar/excel/ganancias",
             { params: filtro, responseType: "blob" });
         return data;
     },
