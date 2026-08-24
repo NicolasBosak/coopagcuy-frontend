@@ -35,6 +35,7 @@ export function FormDespacho({ onClose }: Props) {
     const [ciudad, setCiudad] = useState("");
     const [pais, setPais] = useState("");
     const [observaciones, setObservaciones] = useState("");
+    const [precioUnitario, setPrecioUnitario] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
     const { data: despachables = [], isLoading } = useQuery({
@@ -65,6 +66,7 @@ export function FormDespacho({ onClose }: Props) {
             ciudad: ciudad || undefined,
             pais: pais || undefined,
             observaciones: observaciones || undefined,
+            precioUnitarioUsd: precioUnitario,
         }),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["despachos"] });
@@ -89,6 +91,10 @@ export function FormDespacho({ onClose }: Props) {
             setError("Selecciona al menos un animal para despachar.");
             return;
         }
+        if (!(precioUnitario > 0)) {
+            setError("Ingresa el precio unitario de venta, mayor a cero.");
+            return;
+        }
         mutation.mutate();
     };
 
@@ -105,7 +111,8 @@ export function FormDespacho({ onClose }: Props) {
                         Cancelar
                     </button>
                     <button type="submit" form="form-despacho"
-                        disabled={mutation.isPending || seleccionados.length === 0}
+                        disabled={mutation.isPending || seleccionados.length === 0
+                            || !(precioUnitario > 0)}
                         className="flex-1 h-12 bg-primary-600 hover:bg-primary-700
                        disabled:bg-primary-300 text-white rounded-2xl
                        text-sm font-bold transition">
@@ -218,6 +225,27 @@ export function FormDespacho({ onClose }: Props) {
                         className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
                          text-sm focus:border-primary-500 focus:outline-none"
                     />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide
+                            text-gray-500 mb-1">
+                        Precio unitario de venta (USD)
+                    </label>
+                    <input
+                        type="number" min={0.01} step={0.01} required
+                        inputMode="decimal"
+                        value={precioUnitario || ""}
+                        onChange={(e) => setPrecioUnitario(Number(e.target.value))}
+                        placeholder="0.00"
+                        className="w-full h-11 px-3 rounded-xl border-2 border-gray-200
+                         text-sm focus:border-primary-500 focus:outline-none"
+                    />
+                    {precioUnitario > 0 && (
+                        <p className="mt-1 text-sm font-bold text-primary-700">
+                            Total: USD {(precioUnitario * seleccionados.length).toFixed(2)}
+                        </p>
+                    )}
                 </div>
 
                 <div>

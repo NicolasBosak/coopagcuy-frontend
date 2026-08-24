@@ -98,6 +98,8 @@ export interface RegistrarDespachoRequest {
     ciudad?: string;
     pais?: string;
     observaciones?: string;
+    // Obligatorio y > 0: el servidor rechaza con 400 si falta o no lo es
+    precioUnitarioUsd: number;
 }
 
 // Lote faenado con saldo despachable y sus animales disponibles
@@ -165,6 +167,9 @@ export interface Despacho {
     pais: string | null;
     observaciones: string | null;
     cuyes: { codigoJaula: string; numeroEnLote: number }[];
+    precioUnitarioUsd: number | null;
+    // Derivado de precio × cantidadUnidades; nunca se almacena
+    totalVentaUsd: number | null;
 }
 
 export interface InkJetCodigo {
