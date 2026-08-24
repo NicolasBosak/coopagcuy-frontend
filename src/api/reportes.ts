@@ -13,11 +13,19 @@ interface FiltroPeriodo {
 
 // El margen de la reventa no acepta `cat`: un despacho reúne animales de
 // varias jaulas y por tanto de varias CAT, así que filtrarlo por CAT
-// duplicaría ingreso o marcaría "sin costo" a quien sí cobró. Por eso este
-// tipo omite el campo en vez de aceptarlo y descartarlo en silencio.
+// duplicaría ingreso o marcaría "sin costo" a quien sí cobró.
+//
+// `cat?: never` no es decoración: omitir el campo sin más no basta, porque
+// TypeScript solo revisa propiedades excedentes en literales frescos, no en
+// variables — un FiltroPeriodo con `cat` pasaría igual por referencia. Al
+// declarar `cat` como `never`, cualquier valor con `cat?: string` dentro
+// (literal o variable) deja de ser asignable a este tipo, así que pasar el
+// filtro equivocado a `margenPorMes`/`margenPorCliente` es un error de
+// compilación, no una convención que alguien pueda romper sin que tsc avise.
 interface FiltroSinCat {
     desde: string;
     hasta: string;
+    cat?: never;
 }
 
 export const reportesApi = {

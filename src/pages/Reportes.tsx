@@ -10,6 +10,7 @@ import { BarrasCalidad, type FilaBarras } from "../components/reportes/graficos/
 import { AnilloNovedades } from "../components/reportes/graficos/AnilloNovedades";
 import { AnilloConteos } from "../components/reportes/graficos/AnilloConteos";
 import type { CentroAcopio } from "../types/productora";
+import type { MargenDto } from "../types/reportes";
 import { useAuth } from "../context/useAuth";
 import { fechaLocal } from "../utils/fechaLocal";
 
@@ -80,6 +81,72 @@ function nombreMesAgrupacion(agrupacion: string) {
 // signo va antes del símbolo de moneda.
 function usd(v: number) {
     return v < 0 ? `-$${Math.abs(v).toFixed(2)}` : `$${v.toFixed(2)}`;
+}
+
+// Cabecera compartida por las tablas de ganancias y margen: mismas clases,
+// solo cambian los rótulos de columna.
+function EncabezadoTabla({ columnas }: { columnas: string[] }) {
+    return (
+        <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+                {columnas.map(h => (
+                    <th key={h} className="px-3 py-3 text-left text-xs
+                             font-medium text-gray-500 uppercase tracking-wide
+                             whitespace-nowrap">
+                        {h}
+                    </th>
+                ))}
+            </tr>
+        </thead>
+    );
+}
+
+// Las tres vistas de "lo que cobraron las productoras" comparten estas
+// cuatro columnas de dinero/conteo; solo cambian las celdas identificadoras
+// de la izquierda (productora+comunidad+CAT, o CAT solo, o mes).
+type FilaDineroGanancia = {
+    cobradoLocal: number;
+    pactadoCuotas: number;
+    pagadoPlanta: number;
+    totalPagos: number; // conteo de pagos, no dinero
+};
+
+function FilaGanancia({ celdas, r }: { celdas: React.ReactNode; r: FilaDineroGanancia }) {
+    return (
+        <tr className="hover:bg-gray-50">
+            {celdas}
+            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.cobradoLocal)}</td>
+            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.pactadoCuotas)}</td>
+            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.pagadoPlanta)}</td>
+            <td className="px-3 py-2.5 text-center text-gray-500">{r.totalPagos}</td>
+        </tr>
+    );
+}
+
+// Las dos vistas de margen comparten estas cinco columnas; solo cambia la
+// celda de agrupación de la izquierda (mes, o cliente).
+function FilaMargen({ primeraCelda, r }: { primeraCelda: React.ReactNode; r: MargenDto }) {
+    return (
+        <tr className="hover:bg-gray-50">
+            {primeraCelda}
+            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.ingreso)}</td>
+            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.costoAtribuido)}</td>
+            <td className={`px-3 py-2.5 text-right font-bold
+                       ${r.margen < 0 ? "text-teja-700" : "text-primary-700"}`}>
+                {usd(r.margen)}
+            </td>
+            <td className="px-3 py-2.5 text-center">
+                {r.despachosSinPrecio > 0
+                    ? <Badge label={`${r.despachosSinPrecio} sin precio`} variant="warning" />
+                    : <span className="text-gray-400">0</span>}
+            </td>
+            <td className="px-3 py-2.5 text-center">
+                {r.animalesSinCosto > 0
+                    ? <Badge label={`${r.animalesSinCosto} sin costo`} variant="warning" />
+                    : <span className="text-gray-400">0</span>}
+            </td>
+        </tr>
+    );
 }
 
 function inicioMes() {
@@ -953,40 +1020,26 @@ export default function Reportes() {
                                     mensajeVacio="No hay pagos a productoras en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b border-gray-200">
-                                            <tr>
-                                                {["Productora", "Comunidad", "CAT", "Cobrado local",
-                                                    "Pactado a cuotas", "Pagado por planta",
-                                                    "N.º de pagos"].map(h => (
-                                                        <th key={h} className="px-3 py-3 text-left text-xs
-                                             font-medium text-gray-500 uppercase tracking-wide
-                                             whitespace-nowrap">{h}</th>
-                                                    ))}
-                                            </tr>
-                                        </thead>
+                                        <EncabezadoTabla columnas={["Productora", "Comunidad", "CAT",
+                                            "Cobrado local", "Pactado a cuotas", "Pagado por planta",
+                                            "N.º de pagos"]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {gananciaProdData.map((r) => (
-                                                <tr key={r.productoraId} className="hover:bg-gray-50">
-                                                    <td className="px-3 py-2.5 font-medium text-gray-800">
-                                                        {r.nombreProductora}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-gray-600">{r.comunidad}</td>
-                                                    <td className="px-3 py-2.5">
-                                                        <Badge label={r.centroAcopio} variant="neutral" />
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.cobradoLocal)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.pactadoCuotas)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.pagadoPlanta)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center text-gray-500">
-                                                        {r.totalPagos}
-                                                    </td>
-                                                </tr>
+                                                <FilaGanancia
+                                                    key={r.productoraId}
+                                                    r={r}
+                                                    celdas={<>
+                                                        <td className="px-3 py-2.5 font-medium text-gray-800">
+                                                            {r.nombreProductora}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-gray-600">
+                                                            {r.comunidad}
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <Badge label={r.centroAcopio} variant="neutral" />
+                                                        </td>
+                                                    </>}
+                                                />
                                             ))}
                                         </tbody>
                                     </table>
@@ -1001,35 +1054,19 @@ export default function Reportes() {
                                     mensajeVacio="No hay pagos a productoras en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b border-gray-200">
-                                            <tr>
-                                                {["CAT", "Cobrado local", "Pactado a cuotas",
-                                                    "Pagado por planta", "N.º de pagos"].map(h => (
-                                                        <th key={h} className="px-3 py-3 text-left text-xs
-                                             font-medium text-gray-500 uppercase tracking-wide
-                                             whitespace-nowrap">{h}</th>
-                                                    ))}
-                                            </tr>
-                                        </thead>
+                                        <EncabezadoTabla columnas={["CAT", "Cobrado local",
+                                            "Pactado a cuotas", "Pagado por planta", "N.º de pagos"]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {gananciaCatData.map((r) => (
-                                                <tr key={r.centroAcopio} className="hover:bg-gray-50">
-                                                    <td className="px-3 py-2.5">
-                                                        <Badge label={r.centroAcopio} variant="neutral" />
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.cobradoLocal)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.pactadoCuotas)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.pagadoPlanta)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center text-gray-500">
-                                                        {r.totalPagos}
-                                                    </td>
-                                                </tr>
+                                                <FilaGanancia
+                                                    key={r.centroAcopio}
+                                                    r={r}
+                                                    celdas={
+                                                        <td className="px-3 py-2.5">
+                                                            <Badge label={r.centroAcopio} variant="neutral" />
+                                                        </td>
+                                                    }
+                                                />
                                             ))}
                                         </tbody>
                                     </table>
@@ -1044,36 +1081,20 @@ export default function Reportes() {
                                     mensajeVacio="No hay pagos a productoras en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b border-gray-200">
-                                            <tr>
-                                                {["Mes", "Cobrado local", "Pactado a cuotas",
-                                                    "Pagado por planta", "N.º de pagos"].map(h => (
-                                                        <th key={h} className="px-3 py-3 text-left text-xs
-                                             font-medium text-gray-500 uppercase tracking-wide
-                                             whitespace-nowrap">{h}</th>
-                                                    ))}
-                                            </tr>
-                                        </thead>
+                                        <EncabezadoTabla columnas={["Mes", "Cobrado local",
+                                            "Pactado a cuotas", "Pagado por planta", "N.º de pagos"]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {gananciaMesData.map((r) => (
-                                                <tr key={`${r.anio}-${r.mes}`} className="hover:bg-gray-50">
-                                                    <td className="px-3 py-2.5 font-medium text-gray-800
+                                                <FilaGanancia
+                                                    key={`${r.anio}-${r.mes}`}
+                                                    r={r}
+                                                    celdas={
+                                                        <td className="px-3 py-2.5 font-medium text-gray-800
                                        capitalize">
-                                                        {nombreMes(r.anio, r.mes)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.cobradoLocal)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.pactadoCuotas)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.pagadoPlanta)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center text-gray-500">
-                                                        {r.totalPagos}
-                                                    </td>
-                                                </tr>
+                                                            {nombreMes(r.anio, r.mes)}
+                                                        </td>
+                                                    }
+                                                />
                                             ))}
                                         </tbody>
                                     </table>
@@ -1125,48 +1146,20 @@ export default function Reportes() {
                                     mensajeVacio="No hay despachos con margen calculable en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b border-gray-200">
-                                            <tr>
-                                                {["Mes", "Ingreso", "Costo atribuido", "Margen",
-                                                    "Despachos sin precio", "Animales sin costo"].map(h => (
-                                                        <th key={h} className="px-3 py-3 text-left text-xs
-                                             font-medium text-gray-500 uppercase tracking-wide
-                                             whitespace-nowrap">{h}</th>
-                                                    ))}
-                                            </tr>
-                                        </thead>
+                                        <EncabezadoTabla columnas={["Mes", "Ingreso", "Costo atribuido",
+                                            "Margen", "Despachos sin precio", "Animales sin costo"]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {margenMesData.map((r) => (
-                                                <tr key={r.agrupacion} className="hover:bg-gray-50">
-                                                    <td className="px-3 py-2.5 font-medium text-gray-800
+                                                <FilaMargen
+                                                    key={r.agrupacion}
+                                                    r={r}
+                                                    primeraCelda={
+                                                        <td className="px-3 py-2.5 font-medium text-gray-800
                                        capitalize">
-                                                        {nombreMesAgrupacion(r.agrupacion)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.ingreso)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.costoAtribuido)}
-                                                    </td>
-                                                    <td className={`px-3 py-2.5 text-right font-bold
-                                       ${r.margen < 0 ? "text-teja-700" : "text-primary-700"}`}>
-                                                        {usd(r.margen)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center">
-                                                        {r.despachosSinPrecio > 0
-                                                            ? <Badge
-                                                                label={`${r.despachosSinPrecio} sin precio`}
-                                                                variant="warning" />
-                                                            : <span className="text-gray-400">0</span>}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center">
-                                                        {r.animalesSinCosto > 0
-                                                            ? <Badge
-                                                                label={`${r.animalesSinCosto} sin costo`}
-                                                                variant="warning" />
-                                                            : <span className="text-gray-400">0</span>}
-                                                    </td>
-                                                </tr>
+                                                            {nombreMesAgrupacion(r.agrupacion)}
+                                                        </td>
+                                                    }
+                                                />
                                             ))}
                                         </tbody>
                                     </table>
@@ -1181,47 +1174,22 @@ export default function Reportes() {
                                     mensajeVacio="No hay despachos con margen calculable en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <thead className="bg-gray-50 border-b border-gray-200">
-                                            <tr>
-                                                {["Cliente", "Ingreso", "Costo atribuido", "Margen",
-                                                    "Despachos sin precio", "Animales sin costo"].map(h => (
-                                                        <th key={h} className="px-3 py-3 text-left text-xs
-                                             font-medium text-gray-500 uppercase tracking-wide
-                                             whitespace-nowrap">{h}</th>
-                                                    ))}
-                                            </tr>
-                                        </thead>
+                                        <EncabezadoTabla columnas={["Cliente", "Ingreso", "Costo atribuido",
+                                            "Margen", "Despachos sin precio", "Animales sin costo"]} />
                                         <tbody className="divide-y divide-gray-100">
-                                            {margenClienteData.map((r) => (
-                                                <tr key={r.agrupacion} className="hover:bg-gray-50">
-                                                    <td className="px-3 py-2.5 font-medium text-gray-800">
-                                                        {r.agrupacion || "(sin cliente registrado)"}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.ingreso)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-right text-gray-700">
-                                                        {usd(r.costoAtribuido)}
-                                                    </td>
-                                                    <td className={`px-3 py-2.5 text-right font-bold
-                                       ${r.margen < 0 ? "text-teja-700" : "text-primary-700"}`}>
-                                                        {usd(r.margen)}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center">
-                                                        {r.despachosSinPrecio > 0
-                                                            ? <Badge
-                                                                label={`${r.despachosSinPrecio} sin precio`}
-                                                                variant="warning" />
-                                                            : <span className="text-gray-400">0</span>}
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center">
-                                                        {r.animalesSinCosto > 0
-                                                            ? <Badge
-                                                                label={`${r.animalesSinCosto} sin costo`}
-                                                                variant="warning" />
-                                                            : <span className="text-gray-400">0</span>}
-                                                    </td>
-                                                </tr>
+                                            {/* `agrupacion` puede repetirse (varios despachos sin
+                                                cliente registrado agrupan todos a ""), así que la
+                                                key lleva también el índice. */}
+                                            {margenClienteData.map((r, i) => (
+                                                <FilaMargen
+                                                    key={`${r.agrupacion}-${i}`}
+                                                    r={r}
+                                                    primeraCelda={
+                                                        <td className="px-3 py-2.5 font-medium text-gray-800">
+                                                            {r.agrupacion || "(sin cliente registrado)"}
+                                                        </td>
+                                                    }
+                                                />
                                             ))}
                                         </tbody>
                                     </table>
