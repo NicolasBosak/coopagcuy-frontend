@@ -56,6 +56,7 @@ export default function Faenamiento() {
     // de transporte salió incompleto (ver checklistIncompleto más abajo).
     const [llegaronEnBuenEstado, setLlegaronEnBuenEstado] = useState<boolean | null>(null);
     const [condicionesLlegadaMarcadas, setCondicionesLlegadaMarcadas] = useState<string[]>([]);
+    const [errorConfirmacion, setErrorConfirmacion] = useState<string | null>(null);
     const [ticketAbierto, setTicketAbierto] = useState<TicketPorPagar | null>(null);
 
     const { data: faenamientos = [], isLoading } = useQuery({
@@ -92,7 +93,7 @@ export default function Faenamiento() {
     // Se carga aquí para comparar contra `condicionesClaves` de la
     // movilización y saber si el checklist salió incompleto. Mismo queryKey
     // que FormMovilizacion: si ya se cargó en esta sesión, no vuelve a pedirlo.
-    const { data: condicionesTransporte = [], isLoading: cargandoCondicionesTransporte } = useQuery({
+    const { data: condicionesTransporte = [] } = useQuery({
         queryKey: ["condiciones_transporte"],
         queryFn: () => catalogosApi.listarCondicionesTransporte(),
         enabled: !!confirmando,
@@ -145,9 +146,13 @@ export default function Faenamiento() {
     }, [faenamientos]);
 
     // Claves que el CAT sí verificó al despachar, o null si esta movilización
-    // es anterior a la feature (CondicionesClaves nulo): ahí no se sabe qué
-    // se marcó, así que no se le puede exigir nada al operador de planta.
-    const clavesVerificadas = confirmando && confirmando.condicionesClaves !== null
+    // es anterior a la feature (CondicionesClaves nulo o ausente): ahí no se
+    // sabe qué se marcó, así que no se le puede exigir nada al operador de
+    // planta. `!=` (doble igual) a propósito, no `!==`: cubre tanto null
+    // como undefined si el API responde sin el campo. No usar `!== undefined
+    // && !== null` tampoco: sería lo mismo pero más largo para el mismo
+    // resultado.
+    const clavesVerificadas = confirmando && confirmando.condicionesClaves != null
         ? confirmando.condicionesClaves.split(SEPARADOR_CLAVES)
             .map((c) => c.trim()).filter((c) => c.length > 0)
         : null;
@@ -161,9 +166,12 @@ export default function Faenamiento() {
         && condicionesNoVerificadas.length > 0;
 
     const puedeConfirmar =
-        // El catálogo de transporte todavía no cargó y hace falta para saber
-        // si la pregunta es obligatoria: mejor esperar que dejar pasar algo.
-        !(clavesVerificadas !== null && cargandoCondicionesTransporte)
+        // El catálogo de transporte todavía no cargó (o la consulta falló:
+        // en react-query v5 isLoading es false en ese caso) y hace falta
+        // para saber si la pregunta es obligatoria. Con el catálogo vacío
+        // no se puede saber si el checklist estaba completo, así que mejor
+        // no dejar confirmar como si lo estuviera.
+        !(clavesVerificadas !== null && condicionesTransporte.length === 0)
         && !(checklistIncompleto && llegaronEnBuenEstado === null)
         && !(llegaronEnBuenEstado === false && condicionesLlegadaMarcadas.length === 0);
 
@@ -181,6 +189,7 @@ export default function Faenamiento() {
         setCondicionLlegada("");
         setLlegaronEnBuenEstado(null);
         setCondicionesLlegadaMarcadas([]);
+        setErrorConfirmacion(null);
     };
 
     const confirmarLlegada = useMutation({
@@ -196,6 +205,11 @@ export default function Faenamiento() {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["movilizaciones"] });
             cerrarModalConfirmacion();
+        },
+        onError: (e: unknown) => {
+            const err = e as { response?: { data?: { mensaje?: string } } };
+            setErrorConfirmacion(err.response?.data?.mensaje
+                ?? "No se pudo confirmar la llegada.");
         },
     });
 
@@ -649,6 +663,19 @@ export default function Faenamiento() {
                             actual y tu nombre como receptor.
                         </p>
 
+                        {/* Arriba del todo, antes del checklist: el modal tiene
+                            scroll y un error pintado al fondo puede quedar
+                            fuera de la vista justo cuando el operador más lo
+                            necesita ver. */}
+                        {errorConfirmacion && (
+                            <div className="rounded-xl border-2 border-teja-200 bg-teja-50
+                                p-3 mb-4">
+                                <p className="text-sm font-semibold text-teja-800">
+                                    {errorConfirmacion}
+                                </p>
+                            </div>
+                        )}
+
                         {checklistIncompleto && (
                             <div className="rounded-xl border-2 border-teja-200 bg-teja-50
                                 p-3 mb-4">
@@ -756,7 +783,10 @@ export default function Faenamiento() {
                                 Cancelar
                             </button>
                             <button
-                                onClick={() => confirmarLlegada.mutate(confirmando)}
+                                onClick={() => {
+                                    setErrorConfirmacion(null);
+                                    confirmarLlegada.mutate(confirmando);
+                                }}
                                 disabled={confirmarLlegada.isPending || !puedeConfirmar}
                                 className="flex-1 h-11 bg-primary-600 hover:bg-primary-700
                            disabled:bg-primary-300 text-white rounded-xl
