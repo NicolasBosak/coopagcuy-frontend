@@ -168,6 +168,9 @@ export interface GananciaMesDto {
 // Margen de la reventa. despachosSinPrecio y animalesSinCosto se muestran
 // junto a la cifra en vez de contarse como cero: un despacho sin precio no
 // se vendió gratis, y un animal cuya productora no ha cobrado no costó cero.
+// ingreso ya es neto de devoluciones (S1); unidadesDevueltas se muestra por
+// el mismo motivo que los otros dos contadores: un despacho enteramente
+// devuelto aporta $0 sin dejar rastro si esta columna no existiera.
 export interface MargenDto {
     agrupacion: string;
     ingreso: number;
@@ -175,4 +178,5 @@ export interface MargenDto {
     margen: number;
     despachosSinPrecio: number;
     animalesSinCosto: number;
+    unidadesDevueltas: number;
 }

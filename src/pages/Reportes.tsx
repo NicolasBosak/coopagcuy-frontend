@@ -123,7 +123,7 @@ function FilaGanancia({ celdas, r }: { celdas: React.ReactNode; r: FilaDineroGan
     );
 }
 
-// Las dos vistas de margen comparten estas cinco columnas; solo cambia la
+// Las dos vistas de margen comparten estas seis columnas; solo cambia la
 // celda de agrupación de la izquierda (mes, o cliente).
 function FilaMargen({ primeraCelda, r }: { primeraCelda: React.ReactNode; r: MargenDto }) {
     return (
@@ -143,6 +143,11 @@ function FilaMargen({ primeraCelda, r }: { primeraCelda: React.ReactNode; r: Mar
             <td className="px-3 py-2.5 text-center">
                 {r.animalesSinCosto > 0
                     ? <Badge label={`${r.animalesSinCosto} sin costo`} variant="warning" />
+                    : <span className="text-gray-400">0</span>}
+            </td>
+            <td className="px-3 py-2.5 text-center">
+                {r.unidadesDevueltas > 0
+                    ? <Badge label={`${r.unidadesDevueltas} devueltas`} variant="warning" />
                     : <span className="text-gray-400">0</span>}
             </td>
         </tr>
@@ -1153,8 +1158,9 @@ export default function Reportes() {
                                     mensajeVacio="No hay despachos con margen calculable en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["Mes", "Ingreso", "Costo atribuido",
-                                            "Margen", "Despachos sin precio", "Animales sin costo"]} />
+                                        <EncabezadoTabla columnas={["Mes", "Ingreso (neto de devoluciones)",
+                                            "Costo atribuido", "Margen", "Despachos sin precio",
+                                            "Animales sin costo", "Unidades devueltas"]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {margenMesData.map((r) => (
                                                 <FilaMargen
@@ -1181,8 +1187,9 @@ export default function Reportes() {
                                     mensajeVacio="No hay despachos con margen calculable en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["Cliente", "Ingreso", "Costo atribuido",
-                                            "Margen", "Despachos sin precio", "Animales sin costo"]} />
+                                        <EncabezadoTabla columnas={["Cliente", "Ingreso (neto de devoluciones)",
+                                            "Costo atribuido", "Margen", "Despachos sin precio",
+                                            "Animales sin costo", "Unidades devueltas"]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {/* `agrupacion` puede repetirse (varios despachos sin
                                                 cliente registrado agrupan todos a ""), así que la
