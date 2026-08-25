@@ -372,7 +372,14 @@ export default function Reportes() {
                 descargarBlob(blob, `Reporte-Salida-${desde}-${hasta}.xlsx`);
             } else if (tab === "ganancias") {
                 const blob = await reportesApi.exportarExcelGanancias(filtro);
-                descargarBlob(blob, `Reporte-Ganancias-${desde}-${hasta}.xlsx`);
+                // El nombre es el único lugar donde el alcance por CAT
+                // sobrevive fuera del archivo: sin el sufijo, exportar por
+                // PAT y luego por NIE del mismo período produce dos
+                // descargas indistinguibles por nombre.
+                descargarBlob(
+                    blob,
+                    `Reporte-Ganancias-${desde}-${hasta}${cat ? `-${cat}` : ""}.xlsx`
+                );
             }
         } finally {
             setExportando(false);
