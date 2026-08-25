@@ -24,15 +24,17 @@ export default function Administracion() {
                 </p>
             </div>
 
-            <Segmentado
-                activo={tab}
-                onCambio={setTab}
-                opciones={[
-                    { id: "usuarios", label: "Usuarios" },
-                    { id: "comunidades", label: "Comunidades" },
-                    { id: "contrasenas", label: "Contraseñas" },
-                ]}
-            />
+            <div className="mb-5">
+                <Segmentado
+                    activo={tab}
+                    onCambio={setTab}
+                    opciones={[
+                        { id: "usuarios", label: "Usuarios" },
+                        { id: "comunidades", label: "Comunidades" },
+                        { id: "contrasenas", label: "Contraseñas" },
+                    ]}
+                />
+            </div>
 
             {tab === "usuarios" && <TablaUsuarios />}
             {tab === "comunidades" && <TablaComunidades />}

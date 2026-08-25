@@ -19,10 +19,17 @@ interface Props<T extends string> {
  * Envuelve en vez de scrollear: una opción que no se ve es una opción que no
  * existe, y estas pantallas las usan operadoras con poca experiencia digital.
  * Desde sm vuelve a la píldora compacta, donde apunta un ratón.
+ *
+ * NO lleva margen exterior. Lo llevaba (`mb-5`) y eso lo desalineaba en
+ * Reportes: en los encabezados de Ganancias el control va junto al título
+ * dentro de un `flex items-end`, que alinea los bordes inferiores de las
+ * cajas — y la caja incluía sus 20 px de margen, así que los botones
+ * quedaban visiblemente altos respecto del título de al lado. El espacio que
+ * rodea a un componente lo decide quien lo coloca, no el componente.
  */
 export function Segmentado<T extends string>({ opciones, activo, onCambio }: Props<T>) {
     return (
-        <div className="flex flex-wrap gap-1 bg-gray-100 rounded-xl p-1 mb-5 sm:w-fit">
+        <div className="flex flex-wrap gap-1 bg-gray-100 rounded-xl p-1 sm:w-fit">
             {opciones.map(({ id, label }) => (
                 <button
                     key={id}

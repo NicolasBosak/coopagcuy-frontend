@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faenamientoApi } from "../api/faenamiento";
+import { MapaOrigen } from "../components/publico/MapaOrigen";
 
 const fecha = (v: string) => new Date(v).toLocaleDateString("es-EC", {
     day: "2-digit", month: "long", year: "numeric",
@@ -244,6 +245,24 @@ export default function QRPublico() {
                     </p>
                 </section>
 
+                {/* ── El origen ─────────────────────────────────────────────
+                    Va antes de la cadena a propósito: el mapa contesta DÓNDE y
+                    la cadena contesta CUÁNDO. Quien escanea el QR en el puesto
+                    de venta pregunta primero de dónde viene lo que tiene en la
+                    mano.
+
+                    `comunidadesAporte` puede venir vacío (un lote de una sola
+                    productora), así que el mapa cae a la comunidad de origen,
+                    que siempre está en el DTO. El mapa se dibuja siempre. */}
+                <MapaOrigen
+                    aportes={data.comunidadesAporte.length > 0
+                        ? data.comunidadesAporte
+                        : [{
+                            comunidad: data.comunidadOrigen,
+                            cantidad: data.cantidadAnimales,
+                        }]}
+                />
+
                 {/* ── La cadena ─────────────────────────────────────────────
                     Un espinazo con nodos porque esto sí es una secuencia: el
                     orden es el recorrido real del animal y el lector necesita
@@ -270,25 +289,13 @@ export default function QRPublico() {
 
                 {/* ── Lo que no es secuencia ────────────────────────────────
                     Atributos del lote: no tienen orden temporal, así que van
-                    en tarjetas y no en la cadena. */}
-                {data.comunidadesAporte.length > 0 && (
-                    <Tarjeta titulo="Comunidades que aportaron">
-                        <div className="flex flex-wrap gap-2">
-                            {data.comunidadesAporte.map((c) => (
-                                <span key={c.comunidad}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5
-                             rounded-full bg-primary-50 text-primary-800
-                             text-sm font-semibold">
-                                    {c.comunidad}
-                                    <span className="bg-primary-600 text-blanco rounded-full
-                                   px-1.5 text-xs font-bold tabular-nums">
-                                        {c.cantidad}
-                                    </span>
-                                </span>
-                            ))}
-                        </div>
-                    </Tarjeta>
-                )}
+                    en tarjetas y no en la cadena.
+
+                    La tarjeta "Comunidades que aportaron" vivía aquí y se
+                    quitó: el mapa de arriba muestra el mismo dato con la misma
+                    cantidad y además dónde queda cada una. Dejar las dos era
+                    repetir la misma lista dos veces en una pantalla de
+                    teléfono. */}
 
                 <Tarjeta titulo="Controles de calidad aprobados">
                     <ul className="space-y-1.5">

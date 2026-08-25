@@ -150,21 +150,23 @@ export default function Recepcion() {
             {/* Jaula en armado del CAT */}
             <JaulaEnArmado isOnline={isOnline} />
 
-            <Segmentado
-                activo={tabActual}
-                onCambio={setTabActual}
-                opciones={[
-                    { id: "server", label: "Sincronizados" },
-                    {
-                        id: "local", label: `Sin sincronizar${pendientes > 0
-                            ? ` (${pendientes})` : ""}`
-                    },
-                    {
-                        id: "pagos", label: porVerificar > 0
-                            ? `Pagos (${porVerificar})` : "Pagos"
-                    },
-                ]}
-            />
+            <div className="mb-5">
+                <Segmentado
+                    activo={tabActual}
+                    onCambio={setTabActual}
+                    opciones={[
+                        { id: "server", label: "Sincronizados" },
+                        {
+                            id: "local", label: `Sin sincronizar${pendientes > 0
+                                ? ` (${pendientes})` : ""}`
+                        },
+                        {
+                            id: "pagos", label: porVerificar > 0
+                                ? `Pagos (${porVerificar})` : "Pagos"
+                        },
+                    ]}
+                />
+            </div>
 
             {/* Tab: lotes del servidor */}
             {tabActual === "server" && (

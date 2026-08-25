@@ -251,16 +251,18 @@ export default function Faenamiento() {
                 )}
             </div>
 
-            <Segmentado
-                activo={tab}
-                onCambio={setTab}
-                opciones={[
-                    { id: "faenamientos", label: "Faenamientos" },
-                    { id: "llegadas", label: "Llegadas de CAT" },
-                    { id: "devoluciones", label: "Devoluciones" },
-                    { id: "pagos", label: "Pagos" },
-                ]}
-            />
+            <div className="mb-5">
+                <Segmentado
+                    activo={tab}
+                    onCambio={setTab}
+                    opciones={[
+                        { id: "faenamientos", label: "Faenamientos" },
+                        { id: "llegadas", label: "Llegadas de CAT" },
+                        { id: "devoluciones", label: "Devoluciones" },
+                        { id: "pagos", label: "Pagos" },
+                    ]}
+                />
+            </div>
 
             {/* ── Tab faenamientos ── */}
             {tab === "faenamientos" && (

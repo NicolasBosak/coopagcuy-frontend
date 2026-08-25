@@ -9,6 +9,13 @@ import { FiltrosPeriodo } from "../components/reportes/FiltrosPeriodo";
 import { BarrasCalidad, type FilaBarras } from "../components/reportes/graficos/BarrasCalidad";
 import { AnilloNovedades } from "../components/reportes/graficos/AnilloNovedades";
 import { AnilloConteos } from "../components/reportes/graficos/AnilloConteos";
+import {
+    BarrasAgrupadas, type FilaAgrupada, type SerieBarras,
+} from "../components/reportes/graficos/BarrasAgrupadas";
+import {
+    BarrasDivergentes, type FilaDivergente,
+} from "../components/reportes/graficos/BarrasDivergentes";
+import { StatCard } from "../components/ui/StatCard";
 import type { CentroAcopio } from "../types/productora";
 import type { MargenDto } from "../types/reportes";
 import { useAuth } from "../context/useAuth";
@@ -83,17 +90,85 @@ function usd(v: number) {
     return v < 0 ? `-$${Math.abs(v).toFixed(2)}` : `$${v.toFixed(2)}`;
 }
 
+/**
+ * Una columna declara su rótulo y su alineación JUNTOS.
+ *
+ * Antes no era así y por eso la tabla se leía torcida: `EncabezadoTabla`
+ * ponía `text-left` en todas las columnas mientras `FilaGanancia` y
+ * `FilaMargen` alineaban el dinero a la derecha y los conteos al centro. El
+ * rótulo "Cobrado local" quedaba pegado al borde izquierdo de su columna y
+ * $4 820.00 al derecho.
+ *
+ * Poner `text-right` a mano en cada `<th>` habría tapado el síntoma dejando
+ * viva la causa: la alineación del encabezado y la de la celda vivían en dos
+ * componentes distintos y nada obligaba a que coincidieran, así que la
+ * siguiente columna que alguien agregara volvería a desalinearse. Ahora el
+ * encabezado y la celda salen del MISMO objeto y no pueden discrepar.
+ */
+type Alineacion = "izq" | "der" | "centro";
+
+interface Col {
+    label: string;
+    align: Alineacion;
+    /** Color del texto de la celda. El encabezado tiene el suyo propio. */
+    tono?: string;
+}
+
+const ALINEACION: Record<Alineacion, string> = {
+    izq: "text-left",
+    der: "text-right",
+    centro: "text-center",
+};
+
+// ── Columnas de las tablas de ganancias y margen ────────────────────
+//
+// Las tres vistas de ganancia comparten las mismas cuatro columnas de
+// dinero/conteo; solo cambian las columnas identificadoras de la izquierda.
+
+const COLS_ID_PRODUCTORA: Col[] = [
+    { label: "Productora", align: "izq" },
+    { label: "Comunidad", align: "izq" },
+    { label: "CAT", align: "izq" },
+];
+const COLS_ID_CAT: Col[] = [{ label: "CAT", align: "izq" }];
+const COLS_ID_MES: Col[] = [{ label: "Mes", align: "izq" }];
+const COLS_ID_CLIENTE: Col[] = [{ label: "Cliente", align: "izq" }];
+
+const COLS_DINERO_GANANCIA: Col[] = [
+    { label: "Cobrado local", align: "der", tono: "text-gray-700" },
+    { label: "Pactado a cuotas", align: "der", tono: "text-gray-700" },
+    { label: "Pagado por planta", align: "der", tono: "text-gray-700" },
+    { label: "N.º de pagos", align: "centro", tono: "text-gray-500" },
+];
+
+const COLS_DINERO_MARGEN: Col[] = [
+    { label: "Ingreso (neto de devoluciones)", align: "der", tono: "text-gray-700" },
+    { label: "Costo atribuido", align: "der", tono: "text-gray-700" },
+    { label: "Margen", align: "der" },
+    { label: "Despachos sin precio", align: "centro" },
+    { label: "Animales sin costo", align: "centro" },
+    { label: "Unidades devueltas", align: "centro" },
+];
+
+// Las tres series del gráfico de ganancias. Mismo orden y mismo significado
+// que las columnas de la tabla, para que el ojo no tenga que reaprenderlas.
+const SERIES_GANANCIA: SerieBarras[] = [
+    { key: "cobradoLocal", nombre: "Cobrado local", color: "bg-primary-600" },
+    { key: "pactadoCuotas", nombre: "Pactado a cuotas", color: "bg-info-500" },
+    { key: "pagadoPlanta", nombre: "Pagado por planta", color: "bg-primary-300" },
+];
+
 // Cabecera compartida por las tablas de ganancias y margen: mismas clases,
-// solo cambian los rótulos de columna.
-function EncabezadoTabla({ columnas }: { columnas: string[] }) {
+// solo cambian los rótulos y la alineación, que vienen en la propia columna.
+function EncabezadoTabla({ columnas }: { columnas: Col[] }) {
     return (
         <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-                {columnas.map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-xs
+                {columnas.map(c => (
+                    <th key={c.label} className={`px-3 py-3 text-xs
                              font-medium text-gray-500 uppercase tracking-wide
-                             whitespace-nowrap">
-                        {h}
+                             whitespace-nowrap ${ALINEACION[c.align]}`}>
+                        {c.label}
                     </th>
                 ))}
             </tr>
@@ -111,16 +186,47 @@ type FilaDineroGanancia = {
     totalPagos: number; // conteo de pagos, no dinero
 };
 
+// Une cada valor con SU columna: la alineación de la celda sale del mismo
+// objeto que rotula el encabezado.
+function Celdas({ columnas, valores }: {
+    columnas: Col[];
+    valores: { contenido: React.ReactNode; clase?: string }[];
+}) {
+    return (
+        <>
+            {columnas.map((c, i) => (
+                <td key={c.label}
+                    className={`px-3 py-2.5 ${ALINEACION[c.align]} ${valores[i].clase ?? c.tono ?? ""
+                        }`}>
+                    {valores[i].contenido}
+                </td>
+            ))}
+        </>
+    );
+}
+
 function FilaGanancia({ celdas, r }: { celdas: React.ReactNode; r: FilaDineroGanancia }) {
     return (
         <tr className="hover:bg-gray-50">
             {celdas}
-            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.cobradoLocal)}</td>
-            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.pactadoCuotas)}</td>
-            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.pagadoPlanta)}</td>
-            <td className="px-3 py-2.5 text-center text-gray-500">{r.totalPagos}</td>
+            <Celdas columnas={COLS_DINERO_GANANCIA} valores={[
+                { contenido: usd(r.cobradoLocal) },
+                { contenido: usd(r.pactadoCuotas) },
+                { contenido: usd(r.pagadoPlanta) },
+                { contenido: r.totalPagos },
+            ]} />
         </tr>
     );
+}
+
+// Los tres contadores de calidad de dato del margen se pintan igual: una
+// insignia si hay algo que avisar, un cero gris si no. Un despacho sin precio
+// no se vendió gratis y un animal cuya productora no ha cobrado no costó
+// cero, así que nunca se cuentan como parte de la cifra.
+function contador(n: number, texto: string) {
+    return n > 0
+        ? <Badge label={`${n} ${texto}`} variant="warning" />
+        : <span className="text-gray-400">0</span>;
 }
 
 // Las dos vistas de margen comparten estas seis columnas; solo cambia la
@@ -129,27 +235,20 @@ function FilaMargen({ primeraCelda, r }: { primeraCelda: React.ReactNode; r: Mar
     return (
         <tr className="hover:bg-gray-50">
             {primeraCelda}
-            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.ingreso)}</td>
-            <td className="px-3 py-2.5 text-right text-gray-700">{usd(r.costoAtribuido)}</td>
-            <td className={`px-3 py-2.5 text-right font-bold
-                       ${r.margen < 0 ? "text-teja-700" : "text-primary-700"}`}>
-                {usd(r.margen)}
-            </td>
-            <td className="px-3 py-2.5 text-center">
-                {r.despachosSinPrecio > 0
-                    ? <Badge label={`${r.despachosSinPrecio} sin precio`} variant="warning" />
-                    : <span className="text-gray-400">0</span>}
-            </td>
-            <td className="px-3 py-2.5 text-center">
-                {r.animalesSinCosto > 0
-                    ? <Badge label={`${r.animalesSinCosto} sin costo`} variant="warning" />
-                    : <span className="text-gray-400">0</span>}
-            </td>
-            <td className="px-3 py-2.5 text-center">
-                {r.unidadesDevueltas > 0
-                    ? <Badge label={`${r.unidadesDevueltas} devueltas`} variant="warning" />
-                    : <span className="text-gray-400">0</span>}
-            </td>
+            <Celdas columnas={COLS_DINERO_MARGEN} valores={[
+                { contenido: usd(r.ingreso) },
+                { contenido: usd(r.costoAtribuido) },
+                {
+                    contenido: usd(r.margen),
+                    // El margen puede ser pérdida: mismo rojo que el resto
+                    // del sistema usa para "no salió bien".
+                    clase: `font-bold ${r.margen < 0
+                        ? "text-teja-700" : "text-primary-700"}`,
+                },
+                { contenido: contador(r.despachosSinPrecio, "sin precio") },
+                { contenido: contador(r.animalesSinCosto, "sin costo") },
+                { contenido: contador(r.unidadesDevueltas, "devueltas") },
+            ]} />
         </tr>
     );
 }
@@ -351,6 +450,101 @@ export default function Reportes() {
         return acc;
     }, [novData]);
 
+    // ── Agregados de ganancias y margen ────────────────────────────────
+    //
+    // REGLA: cada tarjeta y cada barra se calcula sobre EL MISMO arreglo que
+    // pinta la tabla de abajo, nunca con una consulta aparte. Así el gráfico
+    // y la tabla no pueden contradecirse en pantalla aunque el servidor
+    // cambie de criterio. Es el patrón que ya usan barrasProductoras y
+    // conteoNovedades.
+
+    // Cuál de las tres vistas está cargada. Las tres parten exactamente el
+    // mismo conjunto de pagos con el mismo criterio (SumarPorCanal en el
+    // API), así que los totales NO cambian al cambiar de vista: por eso las
+    // tarjetas van encima del selector y no dentro de cada vista.
+    const gananciaFilas: FilaDineroGanancia[] =
+        gananciaVista === "productora" ? gananciaProdData
+            : gananciaVista === "cat" ? gananciaCatData
+                : gananciaMesData;
+
+    const totalGanancia = useMemo(() => gananciaFilas.reduce((acc, r) => ({
+        cobradoLocal: acc.cobradoLocal + r.cobradoLocal,
+        pactadoCuotas: acc.pactadoCuotas + r.pactadoCuotas,
+        pagadoPlanta: acc.pagadoPlanta + r.pagadoPlanta,
+        totalPagos: acc.totalPagos + r.totalPagos,
+    }), { cobradoLocal: 0, pactadoCuotas: 0, pagadoPlanta: 0, totalPagos: 0 }),
+        [gananciaFilas]);
+
+    // Las filas del gráfico, ordenadas por el canal que más pesa en la vista.
+    // No se ordenan por la suma de los tres: esa suma no existe en ninguna
+    // celda de este reporte, y usarla aquí la haría existir de contrabando.
+    const barrasGanancia: FilaAgrupada[] = useMemo(() => {
+        // Las claves son las de SERIES_GANANCIA; se escriben una sola vez
+        // aquí en vez de colar el DTO entero con un cast.
+        const canales = (r: FilaDineroGanancia) => ({
+            cobradoLocal: r.cobradoLocal,
+            pactadoCuotas: r.pactadoCuotas,
+            pagadoPlanta: r.pagadoPlanta,
+        });
+
+        const filas: FilaAgrupada[] = gananciaVista === "productora"
+            ? gananciaProdData.map((r) => ({
+                etiqueta: r.nombreProductora,
+                sublabel: `${r.comunidad} · ${r.centroAcopio}`,
+                valores: canales(r),
+            }))
+            : gananciaVista === "cat"
+                ? gananciaCatData.map((r) => ({
+                    etiqueta: r.centroAcopio,
+                    valores: canales(r),
+                }))
+                : gananciaMesData.map((r) => ({
+                    etiqueta: nombreMes(r.anio, r.mes),
+                    valores: canales(r),
+                }));
+
+        // El mes conserva su orden cronológico; las otras dos vistas se
+        // ordenan por lo cobrado, igual que las ordena el servidor.
+        return gananciaVista === "mes"
+            ? filas
+            : [...filas].sort((a, b) =>
+                b.valores.cobradoLocal - a.valores.cobradoLocal);
+    }, [gananciaVista, gananciaProdData, gananciaCatData, gananciaMesData]);
+
+    const margenFilas: MargenDto[] =
+        margenVista === "mes" ? margenMesData : margenClienteData;
+
+    const totalMargen = useMemo(() => margenFilas.reduce((acc, r) => ({
+        ingreso: acc.ingreso + r.ingreso,
+        costoAtribuido: acc.costoAtribuido + r.costoAtribuido,
+        margen: acc.margen + r.margen,
+        despachosSinPrecio: acc.despachosSinPrecio + r.despachosSinPrecio,
+        animalesSinCosto: acc.animalesSinCosto + r.animalesSinCosto,
+        unidadesDevueltas: acc.unidadesDevueltas + r.unidadesDevueltas,
+    }), {
+        ingreso: 0, costoAtribuido: 0, margen: 0,
+        despachosSinPrecio: 0, animalesSinCosto: 0, unidadesDevueltas: 0,
+    }), [margenFilas]);
+
+    const barrasMargen: FilaDivergente[] = useMemo(() =>
+        margenFilas.map((r) => ({
+            etiqueta: margenVista === "mes"
+                ? nombreMesAgrupacion(r.agrupacion)
+                : (r.agrupacion || "(sin cliente)"),
+            valor: r.margen,
+        })), [margenFilas, margenVista]);
+
+    // Los tres contadores de calidad de dato, en una sola frase. Un gráfico
+    // que los ignore muestra el margen con más confianza de la que merece.
+    const avisosMargen = [
+        totalMargen.despachosSinPrecio > 0
+        && `${totalMargen.despachosSinPrecio} despachos sin precio`,
+        totalMargen.animalesSinCosto > 0
+        && `${totalMargen.animalesSinCosto} animales sin costo`,
+        totalMargen.unidadesDevueltas > 0
+        && `${totalMargen.unidadesDevueltas} unidades devueltas`,
+    ].filter(Boolean) as string[];
+
     const handleExportar = async () => {
         setExportando(true);
         try {
@@ -470,11 +664,13 @@ export default function Reportes() {
                 />
             </div>
 
-            <Segmentado
-                activo={tab}
-                onCambio={setTab}
-                opciones={visibles}
-            />
+            <div className="mb-5">
+                <Segmentado
+                    activo={tab}
+                    onCambio={setTab}
+                    opciones={visibles}
+                />
+            </div>
 
             {/* Tab: Entrada — cuyes en espera de faenamiento */}
             {tab === "entrada" && (
@@ -1016,10 +1212,55 @@ export default function Reportes() {
                                     con el margen de abajo.
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Las tres cifras del período, cada una en su tarjeta y
+                            SIN un total: cobrado, pactado y pagado por planta nunca
+                            se suman entre sí. Van encima del selector porque no
+                            cambian al cambiar de vista — las tres vistas parten el
+                            mismo conjunto de pagos. */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+                            <StatCard
+                                label="Cobrado local"
+                                value={usd(totalGanancia.cobradoLocal)}
+                                sublabel="ya está en manos de la productora"
+                                color="green" delay={0}
+                            />
+                            <StatCard
+                                label="Pactado a cuotas"
+                                value={usd(totalGanancia.pactadoCuotas)}
+                                sublabel="comprometido, todavía no llega"
+                                color="blue" delay={60}
+                            />
+                            <StatCard
+                                label="Pagado por planta"
+                                value={usd(totalGanancia.pagadoPlanta)}
+                                sublabel="la otra vía de cobro"
+                                color="gray" delay={120}
+                            />
+                            <StatCard
+                                label="Pagos registrados"
+                                value={totalGanancia.totalPagos}
+                                sublabel="operaciones en el período"
+                                color="gray" delay={180}
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                             <Segmentado
                                 activo={gananciaVista}
                                 onCambio={setGananciaVista}
                                 opciones={GANANCIA_VISTAS}
+                            />
+                        </div>
+
+                        <div className="mb-5">
+                            <BarrasAgrupadas
+                                titulo={`Comparación por canal · ${GANANCIA_VISTAS
+                                    .find((v) => v.id === gananciaVista)?.label}`}
+                                series={SERIES_GANANCIA}
+                                filas={barrasGanancia}
+                                formato={usd}
                             />
                         </div>
 
@@ -1032,9 +1273,9 @@ export default function Reportes() {
                                     mensajeVacio="No hay pagos a productoras en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["Productora", "Comunidad", "CAT",
-                                            "Cobrado local", "Pactado a cuotas", "Pagado por planta",
-                                            "N.º de pagos"]} />
+                                        <EncabezadoTabla
+                                            columnas={[...COLS_ID_PRODUCTORA,
+                                            ...COLS_DINERO_GANANCIA]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {gananciaProdData.map((r) => (
                                                 <FilaGanancia
@@ -1066,8 +1307,8 @@ export default function Reportes() {
                                     mensajeVacio="No hay pagos a productoras en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["CAT", "Cobrado local",
-                                            "Pactado a cuotas", "Pagado por planta", "N.º de pagos"]} />
+                                        <EncabezadoTabla
+                                            columnas={[...COLS_ID_CAT, ...COLS_DINERO_GANANCIA]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {gananciaCatData.map((r) => (
                                                 <FilaGanancia
@@ -1093,8 +1334,8 @@ export default function Reportes() {
                                     mensajeVacio="No hay pagos a productoras en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["Mes", "Cobrado local",
-                                            "Pactado a cuotas", "Pagado por planta", "N.º de pagos"]} />
+                                        <EncabezadoTabla
+                                            columnas={[...COLS_ID_MES, ...COLS_DINERO_GANANCIA]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {gananciaMesData.map((r) => (
                                                 <FilaGanancia
@@ -1128,6 +1369,47 @@ export default function Reportes() {
                                     no se filtra por centro de acopio.
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Aquí sumar SÍ es la definición del dato:
+                            ingreso − costo = margen. */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+                            <StatCard
+                                label="Ingreso"
+                                value={usd(totalMargen.ingreso)}
+                                sublabel="neto de devoluciones"
+                                color="gray" delay={0}
+                            />
+                            <StatCard
+                                label="Costo atribuido"
+                                value={usd(totalMargen.costoAtribuido)}
+                                sublabel="lo pagado por esos animales"
+                                color="gray" delay={60}
+                            />
+                            <StatCard
+                                label="Margen"
+                                value={usd(totalMargen.margen)}
+                                sublabel="ingreso menos costo"
+                                color={totalMargen.margen < 0 ? "red" : "green"}
+                                delay={120}
+                            />
+                        </div>
+
+                        {/* Lo que el margen NO alcanzó a mirar. Sin esta línea, la
+                            cifra de arriba se lee con más confianza de la que
+                            merece: un despacho sin precio no se vendió gratis. */}
+                        {avisosMargen.length > 0 && (
+                            <p className="mb-5 text-xs text-bayo-700">
+                                <strong className="font-semibold">
+                                    {avisosMargen.join(" · ")}
+                                </strong>
+                                <span className="text-gray-500">
+                                    {" "}— el margen del período se calculó sin esos datos.
+                                </span>
+                            </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                             <Segmentado
                                 activo={margenVista}
                                 onCambio={setMargenVista}
@@ -1149,6 +1431,17 @@ export default function Reportes() {
                             </div>
                         )}
 
+                        <div className="mb-5">
+                            <BarrasDivergentes
+                                titulo={`Margen ${margenVista === "mes"
+                                    ? "por mes" : "por cliente"}`}
+                                filas={barrasMargen}
+                                formato={usd}
+                                nota="El margen es sobre el costo de los animales: no
+                                      incluye transporte, faenamiento ni empaque."
+                            />
+                        </div>
+
                         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
                             {margenVista === "mes" && (
                                 <PanelEstado
@@ -1158,9 +1451,8 @@ export default function Reportes() {
                                     mensajeVacio="No hay despachos con margen calculable en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["Mes", "Ingreso (neto de devoluciones)",
-                                            "Costo atribuido", "Margen", "Despachos sin precio",
-                                            "Animales sin costo", "Unidades devueltas"]} />
+                                        <EncabezadoTabla
+                                            columnas={[...COLS_ID_MES, ...COLS_DINERO_MARGEN]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {margenMesData.map((r) => (
                                                 <FilaMargen
@@ -1187,9 +1479,8 @@ export default function Reportes() {
                                     mensajeVacio="No hay despachos con margen calculable en el período."
                                 >
                                     <table className="w-full text-sm">
-                                        <EncabezadoTabla columnas={["Cliente", "Ingreso (neto de devoluciones)",
-                                            "Costo atribuido", "Margen", "Despachos sin precio",
-                                            "Animales sin costo", "Unidades devueltas"]} />
+                                        <EncabezadoTabla
+                                            columnas={[...COLS_ID_CLIENTE, ...COLS_DINERO_MARGEN]} />
                                         <tbody className="divide-y divide-gray-100">
                                             {/* `agrupacion` puede repetirse (varios despachos sin
                                                 cliente registrado agrupan todos a ""), así que la
