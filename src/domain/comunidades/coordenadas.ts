@@ -24,6 +24,15 @@ export interface Ubicacion extends Coordenada {
     /** Nombre para mostrar. No siempre es el que trae la base. */
     nombre: string;
     canton: string;
+    /**
+     * Altitud en metros sobre el nivel del mar, de la malla SRTM 30 m.
+     *
+     * No es un adorno: es el dato que explica el viaje. Vista desde arriba
+     * y en plano, una comunidad a 23 km de la planta parece estar al lado.
+     * Con la altitud se ve lo que de verdad pasa — los cuyes bajan del
+     * paramo, entre 2663 y 3274 m, al valle del Jubones a 1089 m.
+     */
+    msnm: number;
 }
 
 /**
@@ -40,6 +49,7 @@ export const PLANTA: Ubicacion = {
     canton: "Santa Isabel",
     lat: -3.298639,   // 3°17'55.1"S
     lon: -79.274833,  // 79°16'29.4"W
+    msnm: 1089,       // fondo del valle del Jubones
 };
 
 /**
@@ -77,6 +87,7 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
             nombre: "Las Nieves", canton: "Nabón",
             lat: -3.083667,   // 3°05'01.2"S
             lon: -79.451222,  // 79°27'04.4"W
+            msnm: 3274,
         },
     },
     {
@@ -85,6 +96,7 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
             nombre: "Huertas", canton: "Santa Isabel",
             lat: -3.135528,   // 3°08'07.9"S
             lon: -79.395972,  // 79°23'45.5"W
+            msnm: 2908,
         },
     },
     {
@@ -93,6 +105,7 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
             nombre: "Patococha", canton: "Pucará",
             lat: -3.225944,   // 3°13'33.4"S
             lon: -79.504472,  // 79°30'16.1"W
+            msnm: 3142,
         },
     },
     {
@@ -101,6 +114,7 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
             nombre: "Nabón / El Progreso", canton: "Nabón",
             lat: -3.340833,   // 3°20'27.0"S
             lon: -79.204806,  // 79°12'17.3"W
+            msnm: 2663,
         },
     },
     // Falta Pelincay (cantón Pucará, CAT PEL). Es la quinta comunidad
@@ -145,6 +159,18 @@ export function distanciaKm(a: Coordenada, b: Coordenada): number {
 /** Kilómetros en línea recta de una comunidad a la planta, redondeados. */
 export function kmAPlanta(u: Coordenada): number {
     return Math.round(distanciaKm(u, PLANTA));
+}
+
+/**
+ * Metros que se BAJAN desde una comunidad hasta la planta.
+ *
+ * Es la cifra que hace entender el viaje. Los 23 km de Huertas a la planta
+ * suenan a nada hasta que se dice que en esos 23 km se bajan 1819 metros por
+ * carretera de montaña. Positivo siempre en el piloto: la planta está en el
+ * fondo del valle y todas las comunidades por encima.
+ */
+export function desnivelAPlanta(u: Ubicacion): number {
+    return u.msnm - PLANTA.msnm;
 }
 
 // ── Proyección al lienzo del mapa ────────────────────────────────────

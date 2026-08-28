@@ -7,7 +7,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
+      // El relieve del mapa de origen entra al precacheo a propósito: la
+      // ficha pública se escanea en el puesto de venta con datos flojos, y
+      // sin precachear el terreno sería lo único de esa pantalla que se
+      // queda en blanco sin señal. Son 19 KB y se generan una sola vez
+      // (ver scripts/relieve).
+      includeAssets: [
+        "icons/icon-192.png",
+        "icons/icon-512.png",
+        "mapa/relieve-azuay.png",
+      ],
       manifest: {
         name: "Cuy Azuayito — Trazabilidad COOPAGCUY",
         short_name: "Cuy Azuayito",
