@@ -43,6 +43,10 @@ export function FormPagoProductora({ ticket, onClose }: Props) {
     const [descuentos, setDescuentos] = useState<
         Record<number, { descripcion: string; montoUsd: number }>>({});
     const [comprobante, setComprobante] = useState<string | null>(null);
+    // El nombre visible del archivo elegido. Va aparte porque `comprobante`
+    // guarda solo el base64, y el selector propio tiene que mostrar qué se
+    // adjuntó: el control nativo que dibujaba ese texto ya no está.
+    const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     // Respuesta del servidor tras guardar. No se cierra el modal en cuanto
     // llega: primero se confirma el monto realmente registrado, porque el
@@ -86,6 +90,12 @@ export function FormPagoProductora({ ticket, onClose }: Props) {
 
     const leerComprobante = (e: React.ChangeEvent<HTMLInputElement>) => {
         const archivo = e.target.files?.[0];
+
+        // Permite volver a elegir el MISMO archivo: sin esto el input no
+        // dispara change la segunda vez. El File ya quedó capturado arriba,
+        // así que limpiar el value no lo invalida.
+        e.target.value = "";
+
         if (!archivo) return;
 
         if (archivo.size > MAX_BYTES_COMPROBANTE) {
@@ -100,6 +110,7 @@ export function FormPagoProductora({ ticket, onClose }: Props) {
             // solo la parte de después de la coma.
             const resultado = String(lector.result);
             setComprobante(resultado.slice(resultado.indexOf(",") + 1));
+            setNombreArchivo(archivo.name);
             setError(null);
         };
         // Sin esto, un archivo que el navegador no puede leer deja
@@ -318,18 +329,49 @@ export function FormPagoProductora({ ticket, onClose }: Props) {
                 )}
 
                 <div>
-                    <label className="block text-xs font-bold uppercase
+                    {/* Deja de ser <label>: no apuntaba a ningún control, y
+                        el label de verdad es ahora el botón de abajo. Dos
+                        <label> anidados serían marcado inválido. */}
+                    <span className="block text-xs font-bold uppercase
                         tracking-wide text-gray-500 mb-1">
                         Captura de la transferencia
-                    </label>
-                    <input
-                        type="file" accept="image/*" capture="environment"
-                        onChange={leerComprobante}
-                        className="w-full text-xs file:min-h-[44px] file:px-3
-                            file:rounded-xl file:border-2 file:border-primary-200
-                            file:bg-primary-50 file:text-primary-800
-                            file:font-bold file:text-xs"
-                    />
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                        {/* sr-only y no hidden: display:none saca el control
+                            del orden de tabulación y deja el selector
+                            inalcanzable con teclado. Va ANTES del label
+                            porque peer-* solo alcanza hermanos posteriores.
+
+                            Sin capture: el comprobante de una transferencia
+                            es una captura de pantalla que ya está en la
+                            galería, y capture abre la cámara directo en
+                            Android. accept="image/*" igual ofrece la cámara
+                            dentro del selector. */}
+                        <input
+                            id="comprobante"
+                            type="file" accept="image/*"
+                            onChange={leerComprobante}
+                            className="sr-only peer"
+                        />
+                        <label
+                            htmlFor="comprobante"
+                            className="inline-flex items-center justify-center
+                                min-h-[44px] px-3 rounded-xl border-2
+                                border-primary-200 bg-primary-50 text-primary-800
+                                font-bold text-xs cursor-pointer shrink-0
+                                hover:bg-primary-100 transition-colors duration-150
+                                peer-focus-visible:ring-2
+                                peer-focus-visible:ring-primary-500
+                                peer-focus-visible:ring-offset-1"
+                        >
+                            📎 Adjuntar captura
+                        </label>
+                        <span className="text-xs text-gray-500 truncate">
+                            {nombreArchivo ?? "Ningún archivo seleccionado"}
+                        </span>
+                    </div>
+
                     {comprobante && (
                         <p className="mt-1 text-xs text-primary-700 font-semibold">
                             ✓ Captura lista para subir
