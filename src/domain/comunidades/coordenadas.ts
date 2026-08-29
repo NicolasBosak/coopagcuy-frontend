@@ -25,31 +25,54 @@ export interface Ubicacion extends Coordenada {
     nombre: string;
     canton: string;
     /**
-     * Altitud en metros sobre el nivel del mar, de la malla SRTM 30 m.
+     * Altitud en metros sobre el nivel del mar, SEGÚN LA COOPERATIVA.
      *
-     * No es un adorno: es el dato que explica el viaje. Vista desde arriba
-     * y en plano, una comunidad a 23 km de la planta parece estar al lado.
-     * Con la altitud se ve lo que de verdad pasa — los cuyes bajan del
-     * paramo, entre 2663 y 3274 m, al valle del Jubones a 1089 m.
+     * Es un rango y no un punto porque una comunidad ocupa una ladera, no
+     * una coordenada: Huertas va de 2600 a 2900 m. Cuando la cooperativa da
+     * una sola cifra, min y max coinciden.
+     *
+     * La fuente es su documento de descripción de comunidades, no la malla
+     * SRTM que dibuja el terreno. Las dos concuerdan dentro de unos 50 m
+     * —SRTM mide 2908 en el punto de Huertas, 3274 en Las Nieves, 1089 en la
+     * planta—, pero en pantalla manda la cifra de quien responde por ella.
+     *
+     * No es un adorno: es el dato que explica el viaje. Vista desde arriba y
+     * en plano, una comunidad a 23 km de la planta parece estar al lado.
      */
-    msnm: number;
+    msnm: { min: number; max: number };
+    /**
+     * Ajuste manual de la etiqueta sobre el mapa.
+     *
+     * La regla automática —el rótulo va a la derecha del pin, salvo en el
+     * tercio derecho del lienzo, donde va a la izquierda— resuelve bien casi
+     * todo. Pero los puntos del piloto son cinco y fijos, y al ensanchar el
+     * encuadre dos quedaron demasiado juntos: El Progreso pisaba la altitud
+     * de la planta. Con una geometría que no cambia, colocar esas etiquetas a
+     * mano es lo que haría un cartógrafo, y es más fiable que un algoritmo de
+     * anticolisión que nadie va a poder depurar.
+     *
+     * Si se añade una comunidad y no se le pone nada, cae en la regla
+     * automática.
+     */
+    etiqueta?: { lado?: "izq" | "der"; dy?: number };
 }
 
 /**
- * Centro de Faenamiento de Cuyes. Es el destino de todas las comunidades y
- * el punto donde converge el mapa.
+ * El centro de faenamiento. Es el destino de todas las comunidades y el
+ * punto donde converge el mapa.
  *
- * PENDIENTE: QRPublico.tsx rotula hoy la planta como "Sulupali Chico,
- * Santa Isabel" en el eslabón de faenamiento. Falta confirmar con la
- * cooperativa si es el mismo sitio que esta coordenada; mientras tanto los
- * dos textos conviven y este es el que manda en el mapa.
+ * RESUELTO: la planta está en Sulupali Chico. El documento de comunidades de
+ * la cooperativa lo confirma —"en esta comunidad se encuentra localizada la
+ * planta o centro de faenamiento"—, así que el rótulo "Sulupali Chico,
+ * Santa Isabel" que ya usaba QRPublico.tsx y esta coordenada son el mismo
+ * sitio. Se unifica el nombre aquí para que no vuelvan a divergir.
  */
 export const PLANTA: Ubicacion = {
-    nombre: "Centro de Faenamiento de Cuyes",
+    nombre: "Sulupali Chico",
     canton: "Santa Isabel",
     lat: -3.298639,   // 3°17'55.1"S
     lon: -79.274833,  // 79°16'29.4"W
-    msnm: 1089,       // fondo del valle del Jubones
+    msnm: { min: 1141, max: 1141 },   // orillas del río Rircay, valle de Yunguilla
 };
 
 /**
@@ -84,10 +107,17 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
     {
         alias: ["las nieves", "nieves"],
         ubicacion: {
-            nombre: "Las Nieves", canton: "Nabón",
+            // OJO: el catálogo del API la siembra en cantón "Nabón"
+            // (AppDbContext.cs), pero el documento de la cooperativa la sitúa
+            // en PUCARÁ. Manda el documento: es de quien conoce el
+            // territorio. La semilla del API queda por corregir.
+            nombre: "Las Nieves", canton: "Pucará",
+            // Sube 4 px: deja respirar el hueco con la etiqueta de Huertas,
+            // que queda justo debajo.
+            etiqueta: { dy: -4 },
             lat: -3.083667,   // 3°05'01.2"S
             lon: -79.451222,  // 79°27'04.4"W
-            msnm: 3274,
+            msnm: { min: 3200, max: 3370 },
         },
     },
     {
@@ -96,7 +126,7 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
             nombre: "Huertas", canton: "Santa Isabel",
             lat: -3.135528,   // 3°08'07.9"S
             lon: -79.395972,  // 79°23'45.5"W
-            msnm: 2908,
+            msnm: { min: 2600, max: 2900 },
         },
     },
     {
@@ -105,16 +135,23 @@ const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
             nombre: "Patococha", canton: "Pucará",
             lat: -3.225944,   // 3°13'33.4"S
             lon: -79.504472,  // 79°30'16.1"W
-            msnm: 3142,
+            msnm: { min: 3190, max: 3190 },
         },
     },
     {
         alias: ["nabon / el progreso", "nabon/el progreso", "el progreso"],
         ubicacion: {
-            nombre: "Nabón / El Progreso", canton: "Nabón",
+            // La cooperativa la llama "El Progreso" a secas; el catálogo del
+            // API la guarda como "Nabón / El Progreso", que es la referencia
+            // del centro de acopio. En la ficha pública va el nombre corto:
+            // es como se nombra a sí misma, y cabe en la etiqueta del mapa.
+            nombre: "El Progreso", canton: "Nabón",
+            // Baja 14 px: sin esto se monta sobre la altitud de la planta,
+            // que le queda a 25 px en el encuadre ancho.
+            etiqueta: { dy: 14 },
             lat: -3.340833,   // 3°20'27.0"S
             lon: -79.204806,  // 79°12'17.3"W
-            msnm: 2663,
+            msnm: { min: 2600, max: 2800 },
         },
     },
     // Falta Pelincay (cantón Pucará, CAT PEL). Es la quinta comunidad
@@ -161,16 +198,33 @@ export function kmAPlanta(u: Coordenada): number {
     return Math.round(distanciaKm(u, PLANTA));
 }
 
+/** Punto medio del rango de altitud, para las cuentas que piden una cifra. */
+export function msnmMedio(u: Ubicacion): number {
+    return Math.round((u.msnm.min + u.msnm.max) / 2);
+}
+
 /**
  * Metros que se BAJAN desde una comunidad hasta la planta.
  *
  * Es la cifra que hace entender el viaje. Los 23 km de Huertas a la planta
- * suenan a nada hasta que se dice que en esos 23 km se bajan 1819 metros por
- * carretera de montaña. Positivo siempre en el piloto: la planta está en el
- * fondo del valle y todas las comunidades por encima.
+ * suenan a nada hasta que se dice que en esos 23 km se bajan unos 1600 metros
+ * por carretera de montaña. Positivo siempre en el piloto: la planta está en
+ * el fondo del valle y todas las comunidades por encima.
+ *
+ * Se calcula sobre el punto medio del rango, y por eso la pantalla lo dice
+ * con un "unos": la comunidad ocupa una ladera y no un punto, así que dar la
+ * cifra al metro seria fingir una precision que no existe.
  */
 export function desnivelAPlanta(u: Ubicacion): number {
-    return u.msnm - PLANTA.msnm;
+    return msnmMedio(u) - msnmMedio(PLANTA);
+}
+
+/** "2.600–2.900 m" o "3.190 m" segun la cooperativa dé rango o una cifra. */
+export function altitudTexto(u: Ubicacion): string {
+    const f = (n: number) => n.toLocaleString("es-EC");
+    return u.msnm.min === u.msnm.max
+        ? `${f(u.msnm.min)} m`
+        : `${f(u.msnm.min)}–${f(u.msnm.max)} m`;
 }
 
 // ── Proyección al lienzo del mapa ────────────────────────────────────
@@ -181,8 +235,23 @@ export function desnivelAPlanta(u: Ubicacion): number {
 // la longitud, y proporcional a la latitud invertida— no introduce distorsión
 // perceptible. No hace falta ninguna librería de proyección.
 
-/** Margen alrededor de los puntos, para que ninguno toque el borde. */
-const HOLGURA = 0.08;
+/**
+ * Cuánto territorio se ve alrededor de las comunidades, como fracción de la
+ * distancia que las separa.
+ *
+ * Empezó en 0.08 —lo justo para que ningún pin tocara el borde— y el mapa
+ * salía recortado contra los propios puntos: se veía dónde están las
+ * comunidades, no en qué territorio están. A 0.40 se ve casi tres veces más
+ * superficie y aparece lo que da sentido al viaje: la cordillera occidental
+ * al oeste, el valle del Jubones bajando hacia el suroeste, y el descuelgue
+ * hacia la costa que se ve desde Las Nieves.
+ *
+ * Subirlo más encoge los pines hasta que las etiquetas chocan; bajarlo
+ * devuelve el recorte. Si se cambia, hay que regenerar el relieve
+ * (ver scripts/relieve/README.md): las curvas de nivel están atadas a esta
+ * caja.
+ */
+const HOLGURA = 0.40;
 
 const TODOS = [...COMUNIDADES_CONOCIDAS, PLANTA];
 

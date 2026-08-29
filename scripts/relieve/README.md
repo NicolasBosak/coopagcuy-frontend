@@ -14,8 +14,8 @@ ajenos, y la paleta del proveedor se impondría sobre la institucional en la
 
 | Archivo | Qué es | Peso |
 |---|---|---|
-| `public/mapa/relieve-azuay.png` | Tinte hipsométrico + sombreado de relieve, PNG indexado 200×172 | ~19 KB |
-| `src/domain/comunidades/relieve.generado.ts` | Curvas de nivel cada 1000 m como rutas SVG | ~4,5 KB |
+| `public/mapa/relieve-azuay.png` | Tinte hipsométrico + sombreado de relieve, PNG indexado 320×274 | ~45 KB |
+| `src/domain/comunidades/relieve.generado.ts` | Curvas de nivel cada 1000 m como rutas SVG | ~12 KB |
 
 Va como archivo suelto y no como `data:` URI dentro del bundle: en base64
 pesaría un tercio más, engordaría el JS que bloquea el primer pintado, y el
@@ -23,7 +23,9 @@ service worker no podría cachearlo por separado.
 
 ## Cuándo hay que volver a generarlo
 
-**Solo si cambia el encuadre del mapa.** Las curvas de nivel están en
+**Solo si cambia el encuadre del mapa** — es decir, si se toca `HOLGURA` en
+`coordenadas.ts` o se añade una comunidad fuera de la caja actual (60 km de
+este a oeste por 51 de norte a sur). Las curvas de nivel están en
 coordenadas del lienzo de 320×275 que produce `proyectar()` en
 `coordenadas.ts`; si se añade una comunidad fuera de la caja actual, o cambia
 `HOLGURA`, la caja se mueve y el relieve deja de coincidir con los pines.
@@ -38,8 +40,8 @@ Necesita Python 3 y salida a internet. Desde esta carpeta:
 python bajar_malla.py
 ```
 
-Descarga 8600 puntos de elevación (86 peticiones, ~2 min por el límite de una
-llamada por segundo de la API pública) y los deja en `malla.json`. Si el
+Descarga 21 920 puntos de elevación (220 peticiones, ~7 min por el límite de
+una llamada por segundo de la API pública) y los deja en `malla.json`. Si el
 archivo ya existe no vuelve a descargar: bórralo para forzarlo.
 
 Si cambió la caja, actualiza `LAT0/LAT1/LON0/LON1` en `bajar_malla.py` para

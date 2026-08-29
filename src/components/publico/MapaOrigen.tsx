@@ -1,7 +1,10 @@
 import {
-    COMUNIDADES_CONOCIDAS, LIENZO, PLANTA, clave, desnivelAPlanta, enlaceMapa,
-    kmAPlanta, proyectar, ubicacionDe, type Ubicacion,
+    COMUNIDADES_CONOCIDAS, LIENZO, PLANTA, altitudTexto, clave, desnivelAPlanta,
+    enlaceMapa, kmAPlanta, msnmMedio, proyectar, ubicacionDe, type Ubicacion,
 } from "../../domain/comunidades/coordenadas";
+import {
+    FICHA_PLANTA, descripcionDe, type Descripcion,
+} from "../../domain/comunidades/descripciones";
 import { CURVAS, CURVAS_INTERVALO } from "../../domain/comunidades/relieve.generado";
 
 /**
@@ -13,8 +16,8 @@ import { CURVAS, CURVAS_INTERVALO } from "../../domain/comunidades/relieve.gener
  *
  * El relieve es REAL —malla de elevación SRTM 30 m, ver scripts/relieve— y es
  * lo que hace entender el viaje. Visto en plano, 23 km parecen un paseo; con
- * el terreno debajo se ve lo que de verdad ocurre: los cuyes bajan del páramo
- * (2663–3274 m) al fondo del valle del Jubones (1089 m), entre 1574 y 2185
+ * el terreno debajo se ve lo que de verdad ocurre: los cuyes bajan de la
+ * cordillera occidental al fondo del valle de Yunguilla, entre 1500 y 2100
  * metros de desnivel por carretera de montaña.
  *
  * Va en SVG con un PNG horneado, no con tiles de un tercero: esta página se
@@ -22,7 +25,7 @@ import { CURVAS, CURVAS_INTERVALO } from "../../domain/comunidades/relieve.gener
  * de la cabecera ya cargan con fetchPriority alto), la app es una PWA que
  * cachea lo suyo con Workbox y no cachearía tiles ajenos, y la paleta del
  * proveedor se impondría sobre la institucional en la única pantalla que ve
- * el consumidor final. El relieve horneado pesa 19 KB y funciona sin señal.
+ * el consumidor final.
  */
 
 interface Aporte {
@@ -79,6 +82,85 @@ const HALO = {
     paintOrder: "stroke" as const,
 };
 
+function temperaturaTexto(t: { min: number; max: number }) {
+    return t.min === t.max ? `${t.min} °C` : `${t.min}–${t.max} °C`;
+}
+
+/** Un dato suelto de la ficha: altitud, temperatura, habitantes. */
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+    return (
+        <div>
+            <dt className="text-[10px] uppercase tracking-[0.12em] text-gray-400">
+                {etiqueta}
+            </dt>
+            <dd className="text-sm font-semibold text-gray-800 tabular-nums">
+                {valor}
+            </dd>
+        </div>
+    );
+}
+
+/** El cuerpo de una ficha de comunidad, ya desplegado. */
+function Ficha({ ficha, ubicacion }: {
+    ficha: Descripcion; ubicacion: Ubicacion | null;
+}) {
+    return (
+        <div className="pb-3 pt-1 space-y-3">
+            <p className="text-sm text-gray-600 leading-relaxed">{ficha.texto}</p>
+
+            {/* El origen del nombre va aparte: es lo que convierte un punto
+                del mapa en un lugar, y es lo que la gente recuerda. */}
+            {ficha.origenNombre && (
+                <p className="text-sm text-primary-800 leading-relaxed border-l-2
+                        border-oliva-400 pl-3">
+                    {ficha.origenNombre}
+                </p>
+            )}
+
+            <dl className="flex flex-wrap gap-x-8 gap-y-2">
+                {ubicacion && (
+                    <Dato etiqueta="Altitud" valor={altitudTexto(ubicacion)} />
+                )}
+                <Dato etiqueta="Temperatura"
+                    valor={temperaturaTexto(ficha.temperatura)} />
+                {ficha.poblacion !== undefined && (
+                    <Dato etiqueta="Habitantes"
+                        valor={ficha.poblacion.toLocaleString("es-EC")} />
+                )}
+            </dl>
+
+            {ubicacion && (
+                <a
+                    href={enlaceMapa(ubicacion)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm font-semibold text-primary-700
+                       underline underline-offset-2 decoration-primary-200
+                       hover:decoration-primary-600"
+                >
+                    Ver la ubicación en el mapa
+                    <span aria-hidden="true"> ↗</span>
+                </a>
+            )}
+        </div>
+    );
+}
+
+/* El galón que abre y cierra una ficha. `<details>` nativo y no un estado de
+   React a propósito: funciona sin JavaScript, el teclado y el lector de
+   pantalla ya saben usarlo, y el navegador lo encuentra al buscar en la
+   página aunque esté plegado. */
+function Chevron() {
+    return (
+        <svg viewBox="0 0 12 12" aria-hidden="true"
+            className="w-3 h-3 shrink-0 text-gray-400 transition-transform
+                 duration-200 ease-salida group-open:rotate-180">
+            <path d="M2 4.5 L6 8.5 L10 4.5" fill="none" stroke="currentColor"
+                strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 export function MapaOrigen({ aportes }: Props) {
     const ubicados: AporteUbicado[] = aportes
         .map((a) => ({ ...a, ubicacion: ubicacionDe(a.comunidad) }))
@@ -123,11 +205,12 @@ export function MapaOrigen({ aportes }: Props) {
                         role="img"
                         aria-label={
                             conPin.length > 0
-                                ? `Mapa del relieve del sur del Azuay. La planta está a `
-                                + `${metros(PLANTA.msnm)} metros, en el valle. `
+                                ? `Mapa del relieve del sur del Azuay. La planta está en `
+                                + `${PLANTA.nombre}, a ${metros(msnmMedio(PLANTA))} metros, `
+                                + `en el valle. `
                                 + conPin.map((a) =>
-                                    `${a.ubicacion.nombre}, a ${metros(a.ubicacion.msnm)} `
-                                    + `metros de altitud y ${kmAPlanta(a.ubicacion)} `
+                                    `${a.ubicacion.nombre}, a ${altitudTexto(a.ubicacion)} `
+                                    + `de altitud y ${kmAPlanta(a.ubicacion)} `
                                     + `kilómetros, aportó ${a.cantidad} cuyes`).join(". ")
                                 + "."
                                 : "Mapa del relieve del sur del Azuay con las comunidades "
@@ -144,7 +227,7 @@ export function MapaOrigen({ aportes }: Props) {
                             preserveAspectRatio="none"
                         />
 
-                        {/* Curvas de nivel reales. Muy tenues: dan la lectura de
+                        {/* Curvas de nivel reales. Tenues: dan la lectura de
                             carta topográfica sin taparle el paso a los pines. */}
                         <g fill="none" stroke="#4a5747" strokeOpacity="0.42"
                             strokeWidth="0.6" aria-hidden="true">
@@ -204,7 +287,12 @@ export function MapaOrigen({ aportes }: Props) {
                         {conPin.map((a, i) => {
                             const c = proyectar(a.ubicacion);
                             const r = radio(a.cantidad);
-                            const alaIzquierda = c.x > LIENZO.ancho * 0.6;
+                            // El anclaje manual manda sobre la regla automática
+                            const ajuste = a.ubicacion.etiqueta;
+                            const alaIzquierda = ajuste?.lado
+                                ? ajuste.lado === "izq"
+                                : c.x > LIENZO.ancho * 0.6;
+                            const dy = ajuste?.dy ?? 0;
                             return (
                                 <g key={`pin-${a.ubicacion.nombre}`}
                                     className="animate-fade-in"
@@ -215,7 +303,7 @@ export function MapaOrigen({ aportes }: Props) {
                                         fill="#005a66" />
                                     <text
                                         x={alaIzquierda ? c.x - r - 5 : c.x + r + 5}
-                                        y={c.y - 2}
+                                        y={c.y - 2 + dy}
                                         textAnchor={alaIzquierda ? "end" : "start"}
                                         className="fill-primary-800 font-semibold"
                                         style={{ fontSize: "11px", ...HALO }}
@@ -226,12 +314,12 @@ export function MapaOrigen({ aportes }: Props) {
                                         que convierte el mapa en un viaje. */}
                                     <text
                                         x={alaIzquierda ? c.x - r - 5 : c.x + r + 5}
-                                        y={c.y + 11}
+                                        y={c.y + 11 + dy}
                                         textAnchor={alaIzquierda ? "end" : "start"}
                                         className="fill-gray-700"
                                         style={{ fontSize: "9px", ...HALO, strokeWidth: 2.5 }}
                                     >
-                                        {metros(a.ubicacion.msnm)} m
+                                        {altitudTexto(a.ubicacion)}
                                     </text>
                                 </g>
                             );
@@ -262,7 +350,7 @@ export function MapaOrigen({ aportes }: Props) {
                                 className="fill-gray-700"
                                 style={{ fontSize: "9px", ...HALO, strokeWidth: 2.5 }}
                             >
-                                {metros(PLANTA.msnm)} m
+                                {altitudTexto(PLANTA)}
                             </text>
                         </g>
 
@@ -304,58 +392,72 @@ export function MapaOrigen({ aportes }: Props) {
                     Relieve real · SRTM 30 m · curvas cada {metros(CURVAS_INTERVALO)} m
                 </p>
 
-                {/* ── La leyenda ──────────────────────────────────────── */}
-                <ul className="divide-y divide-gray-100">
-                    {ubicados.map((a) => (
-                        <li key={a.comunidad}
-                            className="flex items-baseline justify-between gap-3 py-2.5">
-                            <span className="min-w-0">
-                                {a.ubicacion ? (
-                                    <a
-                                        href={enlaceMapa(a.ubicacion)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-semibold text-primary-700
-                               underline underline-offset-2 decoration-primary-200
-                               hover:decoration-primary-600"
-                                    >
-                                        {a.ubicacion.nombre}
-                                        <span className="text-primary-400" aria-hidden="true">
-                                            {" "}↗
-                                        </span>
-                                        <span className="sr-only"> (abre en Google Maps)</span>
-                                    </a>
-                                ) : (
-                                    <span className="text-sm font-semibold text-gray-800">
-                                        {a.comunidad}
+                {/* ── Las comunidades ─────────────────────────────────
+                    Cada una se abre para leer quién es. Plegadas de inicio:
+                    quien solo quiere saber de dónde vino su cuy lo ve en la
+                    línea, y quien tiene curiosidad la abre. */}
+                <ul className="divide-y divide-gray-100 border-t border-gray-100">
+                    {ubicados.map((a) => {
+                        const ficha = descripcionDe(a.comunidad);
+                        const nombre = a.ubicacion?.nombre ?? a.comunidad;
+                        const cabecera = (
+                            <>
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-semibold text-gray-900">
+                                        {nombre}
                                     </span>
+                                    <span className="block text-xs text-gray-500">
+                                        {a.ubicacion
+                                            ? <>
+                                                {a.ubicacion.canton} · {altitudTexto(a.ubicacion)}
+                                                <br />
+                                                {kmAPlanta(a.ubicacion)} km · baja unos{" "}
+                                                <strong className="font-semibold text-gray-700">
+                                                    {metros(desnivelAPlanta(a.ubicacion))} m
+                                                </strong>{" "}
+                                                hasta la planta
+                                            </>
+                                            // Nunca se inventa una posición aproximada: en
+                                            // una ficha cuya única función es ser creíble,
+                                            // un pin inventado cuesta más que un hueco
+                                            // declarado.
+                                            : "Ubicación pendiente de registro"}
+                                    </span>
+                                </span>
+                                <span className="shrink-0 flex items-center gap-2">
+                                    <span className="text-sm font-bold text-gray-800
+                                     tabular-nums">
+                                        {a.cantidad}
+                                        <span className="font-medium text-gray-400 text-xs">
+                                            {" "}{a.cantidad === 1 ? "cuy" : "cuyes"}
+                                        </span>
+                                    </span>
+                                    {ficha && <Chevron />}
+                                </span>
+                            </>
+                        );
+
+                        return (
+                            <li key={a.comunidad}>
+                                {ficha ? (
+                                    <details className="group">
+                                        <summary className="flex items-baseline justify-between
+                                       gap-3 py-3 cursor-pointer list-none
+                                       [&::-webkit-details-marker]:hidden
+                                       hover:bg-gray-50 -mx-1 px-1 rounded">
+                                            {cabecera}
+                                        </summary>
+                                        <Ficha ficha={ficha} ubicacion={a.ubicacion} />
+                                    </details>
+                                ) : (
+                                    <div className="flex items-baseline justify-between
+                                     gap-3 py-3">
+                                        {cabecera}
+                                    </div>
                                 )}
-                                <span className="block text-xs text-gray-500">
-                                    {a.ubicacion
-                                        ? <>
-                                            {a.ubicacion.canton} · {metros(a.ubicacion.msnm)} m
-                                            <br />
-                                            {kmAPlanta(a.ubicacion)} km · baja{" "}
-                                            <strong className="font-semibold text-gray-700">
-                                                {metros(desnivelAPlanta(a.ubicacion))} m
-                                            </strong>{" "}
-                                            hasta la planta
-                                        </>
-                                        // Nunca se inventa una posición aproximada: en una
-                                        // ficha cuya única función es ser creíble, un pin
-                                        // inventado cuesta más que un hueco declarado.
-                                        : "Ubicación pendiente de registro"}
-                                </span>
-                            </span>
-                            <span className="shrink-0 text-sm font-bold text-gray-800
-                             tabular-nums">
-                                {a.cantidad}
-                                <span className="font-medium text-gray-400 text-xs">
-                                    {" "}{a.cantidad === 1 ? "cuy" : "cuyes"}
-                                </span>
-                            </span>
-                        </li>
-                    ))}
+                            </li>
+                        );
+                    })}
                 </ul>
 
                 {/* La frase solo puede hablar de las comunidades cuya ubicación
@@ -370,7 +472,7 @@ export function MapaOrigen({ aportes }: Props) {
                             ? <>{todasUbicadas ? "De ahí" : conPin[0].ubicacion.nombre}
                                 {todasUbicadas ? " a la planta hay " : " está a "}
                                 <strong className="text-gray-700">{masLejos} km</strong>
-                                {todasUbicadas ? " y " : " de la planta, y baja "}
+                                {todasUbicadas ? " y unos " : " de la planta, y baja unos "}
                                 <strong className="text-gray-700">
                                     {metros(masAlto)} metros</strong>
                                 {todasUbicadas ? " de bajada." : " para llegar."}</>
@@ -384,24 +486,34 @@ export function MapaOrigen({ aportes }: Props) {
                 )}
             </div>
 
-            {/* ── El contexto ─────────────────────────────────────────
-                Va aparte y rotulado a propósito. Todo lo de arriba es el
-                registro del lote y medida del terreno. Esto de aquí es lo que
-                cuenta la cooperativa sobre su región, y no lo verifica ningún
-                control. Mezclarlos le prestaría duda a los datos, que es lo
-                único que esta pantalla tiene para ofrecer. */}
+            {/* ── El destino ─────────────────────────────────────────
+                Cierra el recorrido: dónde termina el viaje que dibuja el
+                mapa. El texto es de la cooperativa —su documento de
+                comunidades— y no una redacción nuestra: en una ficha cuya
+                única función es ser creíble, quien responde por estas frases
+                tiene que ser quien las firma. */}
             <div className="bg-primary-50 border-t border-primary-100 px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em]
                         text-primary-700 mb-1.5">
-                    Sobre la crianza
+                    Dónde se faena
+                </p>
+                <p className="text-sm font-bold text-primary-900 mb-1">
+                    {PLANTA.nombre} · {PLANTA.canton} · {altitudTexto(PLANTA)}
                 </p>
                 <p className="text-sm text-primary-900 leading-relaxed">
-                    En Nabón, Pucará y Santa Isabel la crianza de cuyes viene de
-                    mucho antes de esta cooperativa: se hace en la casa, en galpones
-                    familiares, con pasto y forraje del mismo terreno. COOPAGCUY
-                    reúne a esas familias y registra cada lote desde que sale de la
-                    comunidad. Lo que ves arriba es ese registro.
+                    {FICHA_PLANTA.texto}
                 </p>
+                <a
+                    href={enlaceMapa(PLANTA)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-sm font-semibold text-primary-700
+                       underline underline-offset-2 decoration-primary-300
+                       hover:decoration-primary-700"
+                >
+                    Ver la planta en el mapa
+                    <span aria-hidden="true"> ↗</span>
+                </a>
             </div>
         </section>
     );

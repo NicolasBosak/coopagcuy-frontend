@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faenamientoApi } from "../api/faenamiento";
 import { MapaOrigen } from "../components/publico/MapaOrigen";
+import { PLANTA } from "../domain/comunidades/coordenadas";
 
 const fecha = (v: string) => new Date(v).toLocaleDateString("es-EC", {
     day: "2-digit", month: "long", year: "numeric",
@@ -183,7 +184,10 @@ export default function QRPublico() {
         contenido: <Datos filas={[
             ["Peso promedio canal", `${data.pesoPromedioCanalGramos} g`],
             ["Estado canal", data.estadoCanal],
-            ["Planta", "Sulupali Chico, Santa Isabel"],
+            // El nombre de la planta sale del catálogo, no de un literal:
+            // estuvo escrito a mano aquí y "Centro de Faenamiento de Cuyes"
+            // en coordenadas.ts, y nada obligaba a que coincidieran.
+            ["Planta", `${PLANTA.nombre}, ${PLANTA.canton}`],
         ]} />,
     });
 

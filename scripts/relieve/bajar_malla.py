@@ -6,10 +6,10 @@ OpenTopoData admite 100 puntos por peticion y 1 llamada por segundo.
 import json, time, urllib.request, os, sys
 
 # La misma caja que calcula coordenadas.ts (holgura del 8 %)
-LAT0, LAT1 = -3.3614063, -3.0630937   # sur, norte
-LON0, LON1 = -79.5284453, -79.1808327  # oeste, este
+LAT0, LAT1 = -3.4436994, -2.9808006   # sur, norte
+LON0, LON1 = -79.6243384, -79.0849396  # oeste, este
 
-ANCHO, ALTO = 100, 86   # columnas x filas
+ANCHO, ALTO = 160, 137   # columnas x filas (~375 m por celda)
 SALIDA = "malla.json"
 
 if os.path.exists(SALIDA):
