@@ -352,6 +352,7 @@ export function FormPagoProductora({ ticket, onClose }: Props) {
                             id="comprobante"
                             type="file" accept="image/*"
                             onChange={leerComprobante}
+                            aria-describedby="nombre-comprobante"
                             className="sr-only peer"
                         />
                         <label
@@ -361,13 +362,24 @@ export function FormPagoProductora({ ticket, onClose }: Props) {
                                 border-primary-200 bg-primary-50 text-primary-800
                                 font-bold text-xs cursor-pointer shrink-0
                                 hover:bg-primary-100 transition-colors duration-150
+                                peer-focus:ring-2 peer-focus:ring-primary-500
                                 peer-focus-visible:ring-2
                                 peer-focus-visible:ring-primary-500
                                 peer-focus-visible:ring-offset-1"
                         >
                             📎 Adjuntar captura
                         </label>
-                        <span className="text-xs text-gray-500 truncate">
+                        {/* id + aria-live: `leerComprobante` limpia
+                            e.target.value tras cada selección (para poder
+                            re-elegir el mismo archivo), así que el input ya
+                            no trae el nombre del archivo y un lector de
+                            pantalla que lo consulte directo escucha "ningún
+                            archivo elegido" aunque la captura sí se leyó.
+                            Este span, anunciado por su cuenta, es ahora la
+                            única fuente de esa confirmación. */}
+                        <span id="nombre-comprobante" aria-live="polite"
+                            title={nombreArchivo ?? undefined}
+                            className="text-xs text-gray-500 truncate">
                             {nombreArchivo ?? "Ningún archivo seleccionado"}
                         </span>
                     </div>
