@@ -33,6 +33,32 @@ const ALIADOS_LOCALES = [
     { src: "/brand/aliados/universidad-catolica.png", nombre: "Universidad Católica de Cuenca", alto: "h-9" },
 ];
 
+// Niveles 1 y 2 de la jerarquía institucional: el proyecto, y quienes lo
+// ejecutan y cofinancian. Mismo orden que en el login y en la página pública.
+// Los dos últimos son logotipos muy anchos (3.79:1 y 4.49:1) y a h-7 piden
+// unos 256 px: entran recién en lg para no apretar la cabecera en la tablet,
+// que es donde se opera en campo.
+const ALIADOS_CABECERA = [
+    {
+        src: "/brand/aliados/familias-campesinas.png",
+        nombre: "Familias Campesinas Liderando",
+        alto: "h-8 sm:h-9",
+        visible: "block",
+    },
+    {
+        src: "/brand/aliados/ayuda-en-accion.png",
+        nombre: "Ayuda en Acción",
+        alto: "h-7",
+        visible: "hidden lg:block",
+    },
+    {
+        src: "/brand/aliados/union-europea.png",
+        nombre: "Cofinanciado por la Unión Europea",
+        alto: "h-7",
+        visible: "hidden lg:block",
+    },
+];
+
 export function MainLayout({ children }: { children: ReactNode }) {
     const { auth, logout } = useAuth();
     const navigate = useNavigate();
@@ -85,12 +111,19 @@ export function MainLayout({ children }: { children: ReactNode }) {
                             respalda: son dos marcas distintas, no una sola. */}
                         <span className="hidden xs:block filo w-1 h-8 rounded-full
                                    ml-1 sm:ml-2" />
-                        <img
-                            src="/brand/aliados/familias-campesinas.png"
-                            alt="Familias Campesinas Liderando"
-                            className="hidden xs:block h-8 sm:h-9 w-auto object-contain
-                                 shrink-0"
-                        />
+                        {/* El hidden xs:flex va aquí y no en cada imagen: si
+                            la condición se quedara en el <img>, por debajo de
+                            xs este contenedor seguiría existiendo vacío y el
+                            gap-2.5 de la fila padre metería 10 px de aire
+                            muerto donde hoy no hay nada. */}
+                        <div className="hidden xs:flex items-center gap-2.5
+                                  lg:gap-3.5">
+                            {ALIADOS_CABECERA.map(({ src, nombre, alto, visible }) => (
+                                <img key={src} src={src} alt={nombre}
+                                    className={`${visible} ${alto} w-auto
+                                        object-contain shrink-0`} />
+                            ))}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
