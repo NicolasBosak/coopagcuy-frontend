@@ -1223,7 +1223,7 @@ export default function Reportes() {
                             <StatCard
                                 label="Cobrado local"
                                 value={usd(totalGanancia.cobradoLocal)}
-                                sublabel="ya está en manos de la productora"
+                                sublabel="la CAT ya lo recibió; la productora aún no"
                                 color="green" delay={0}
                             />
                             <StatCard
