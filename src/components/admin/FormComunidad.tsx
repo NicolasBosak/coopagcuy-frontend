@@ -29,6 +29,16 @@ export function FormComunidad({ comunidad, onClose }: Props) {
     const [cat, setCat] = useState(comunidad?.catReferencia ?? "");
     const [error, setError] = useState<string | null>(null);
 
+    // Ubicación en el mapa público. Opcional: una comunidad nueva nace sin
+    // coordenadas y funciona igual, solo que sin pin (ver coordenadas.ts en
+    // el front, MapaOrigen). null de entrada al crear; los valores existentes
+    // al editar, para que no baste con abrir y guardar el formulario para
+    // borrarlos sin querer.
+    const [latitud, setLatitud] = useState<number | null>(comunidad?.latitud ?? null);
+    const [longitud, setLongitud] = useState<number | null>(comunidad?.longitud ?? null);
+    const [altitudMin, setAltitudMin] = useState<number | null>(comunidad?.altitudMinM ?? null);
+    const [altitudMax, setAltitudMax] = useState<number | null>(comunidad?.altitudMaxM ?? null);
+
     // El selector de CAT sigue viviendo aquí (no en SelectorCanton, que solo
     // resuelve cantón): se piden con inactivos incluidos (misma consulta que
     // useNombreCat, así que no duplica la petición) y se filtran abajo con
@@ -54,17 +64,13 @@ export function FormComunidad({ comunidad, onClose }: Props) {
         mutationFn: async () => {
             const body = {
                 nombre, cantonId: cantonId!, catReferencia: cat,
-                // Al editar hay que reenviar las coordenadas existentes: el
-                // API las asigna incondicionalmente con lo que llegue en el
-                // cuerpo, y este formulario no las edita. Omitirlas las
-                // pondría en null y la comunidad desaparecería del mapa
-                // público con solo cambiarle el nombre.
-                ...(editando && {
-                    latitud: comunidad.latitud,
-                    longitud: comunidad.longitud,
-                    altitudMinM: comunidad.altitudMinM,
-                    altitudMaxM: comunidad.altitudMaxM,
-                }),
+                // El API las asigna incondicionalmente con lo que llegue en
+                // el cuerpo: si se omitieran quedarían en null y la
+                // comunidad desaparecería del mapa público con solo
+                // cambiarle el nombre. Van siempre, tomadas del estado del
+                // formulario (null si no se han tocado).
+                latitud, longitud,
+                altitudMinM: altitudMin, altitudMaxM: altitudMax,
             };
             if (editando) {
                 await catalogosApi.actualizarComunidad(comunidad.id, body);
@@ -168,6 +174,45 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                         Puede estar en otro cantón o en otra provincia: la comunidad
                         entrega donde le queda más cerca.
                     </p>
+                </div>
+
+                <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs font-bold uppercase tracking-wide
+                        text-gray-500 mb-1">
+                        Ubicación (opcional)
+                    </p>
+                    <p className="text-xs text-gray-500 mb-3">
+                        Sitúa la comunidad en el mapa de la ficha pública del QR.
+                        Sin coordenadas la comunidad funciona igual: solo no
+                        aparece dibujada.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <input type="number" step="0.000001" value={latitud ?? ""}
+                            onChange={(e) => setLatitud(
+                                e.target.value === "" ? null : Number(e.target.value))}
+                            placeholder="Latitud (-3.284722)"
+                            className="h-12 px-3 rounded-xl border-2 border-gray-200
+                                text-base focus:border-primary-500 focus:outline-none" />
+                        <input type="number" step="0.000001" value={longitud ?? ""}
+                            onChange={(e) => setLongitud(
+                                e.target.value === "" ? null : Number(e.target.value))}
+                            placeholder="Longitud (-79.400833)"
+                            className="h-12 px-3 rounded-xl border-2 border-gray-200
+                                text-base focus:border-primary-500 focus:outline-none" />
+                        <input type="number" value={altitudMin ?? ""}
+                            onChange={(e) => setAltitudMin(
+                                e.target.value === "" ? null : Number(e.target.value))}
+                            placeholder="Altitud mínima (m)"
+                            className="h-12 px-3 rounded-xl border-2 border-gray-200
+                                text-base focus:border-primary-500 focus:outline-none" />
+                        <input type="number" value={altitudMax ?? ""}
+                            onChange={(e) => setAltitudMax(
+                                e.target.value === "" ? null : Number(e.target.value))}
+                            placeholder="Altitud máxima (m)"
+                            className="h-12 px-3 rounded-xl border-2 border-gray-200
+                                text-base focus:border-primary-500 focus:outline-none" />
+                    </div>
                 </div>
 
                 {error && (

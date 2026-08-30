@@ -1,18 +1,30 @@
 /**
- * Dónde queda cada comunidad de la cooperativa, y dónde la planta.
+ * Geometría del mapa de origen: proyección, distancias y la planta.
  *
- * Vive en el front y no en la base de datos a propósito: en el piloto las
- * comunidades son cinco y llegan sembradas por migración
- * (AppDbContext.cs — HasData de Comunidad), así que darles latitud y longitud
- * en el modelo costaría una migración, un cambio de contrato de API y una
- * actualización del SRS a cambio de nada que el consumidor note. Si algún día
- * la cooperativa empieza a dar de alta comunidades nuevas desde
- * Administración, este archivo deja de alcanzar y las coordenadas tienen que
- * subir al catálogo.
+ * Las COORDENADAS DE LAS COMUNIDADES ya no viven aquí. Subieron al catálogo
+ * (Comunidad.Latitud/Longitud/AltitudMinM/AltitudMaxM) el día en que la
+ * cooperativa pudo dar de alta comunidades desde Administración, que es
+ * exactamente lo que la cabecera anterior de este archivo anticipaba. Llegan
+ * dentro de cada aporte de la ficha pública.
  *
- * Único lugar donde se escribe una coordenada. El pin del mapa y el enlace a
- * Google Maps salen los dos de aquí: si estuvieran en dos sitios, un día
- * apuntarían a lugares distintos y nadie lo notaría.
+ * Lo que SÍ sigue aquí es lo que no es un dato de catálogo: la coordenada de
+ * la planta —única y fija—, la proyección al lienzo y las fórmulas de
+ * distancia y desnivel.
+ *
+ * ── El encuadre está CONGELADO ──────────────────────────────────────
+ *
+ * RANGO_LAT y RANGO_LON son literales y no se recalculan a partir de las
+ * comunidades que llegan. El relieve del fondo es una malla SRTM horneada
+ * (relieve.generado, producida por scripts/relieve) para este encuadre
+ * exacto: si el marco se moviera al aparecer una comunidad lejana, el
+ * terreno se quedaría donde estaba y los pines señalarían montañas que no
+ * son. Un mapa desincronizado es peor que un pin de menos.
+ *
+ * Una comunidad cuya coordenada caiga fuera de este marco NO recibe pin. La
+ * ficha sigue diciendo su nombre, su cantón, su provincia y su enlace a
+ * Google Maps, que se arma desde la coordenada y no depende del encuadre.
+ * Para dibujar otra provincia hay que regenerar el relieve con
+ * scripts/relieve y actualizar estos dos rangos a la vez.
  */
 
 export interface Coordenada {
@@ -95,87 +107,29 @@ export function clave(nombre: string): string {
 }
 
 /**
- * Las comunidades con ubicación conocida, indexadas por todas las formas en
- * que se las ha escrito.
+ * Retoques de rótulo sobre el mapa, por comunidad.
  *
- * Los alias no son adorno: "lasnieves" es lo que guarda el catálogo y
- * "nieves" es como la nombra la cooperativa de viva voz; "patacocha" es el
- * error de escritura documentado en el API. Cualquiera de las tres tiene que
- * llevar al mismo pin.
+ * NO subieron al catálogo con las coordenadas, y a propósito: son
+ * decisiones de cartografía sobre un encuadre fijo —qué etiqueta se monta
+ * sobre cuál—, no hechos sobre dónde está una comunidad. El día que se
+ * regenere el relieve habrá que revisarlos; el día que se corrija una
+ * latitud en Administración, no.
+ *
+ * `nombre` está porque la cooperativa llama «El Progreso» a la comunidad
+ * que el catálogo guarda como «Nabón / El Progreso»: en la ficha pública va
+ * el nombre corto, que es como se nombra a sí misma y cabe en la etiqueta.
+ *
+ * Una comunidad que no esté aquí cae en la regla automática, que es lo
+ * correcto para las que se den de alta desde Administración.
  */
-const UBICACIONES: { alias: string[]; ubicacion: Ubicacion }[] = [
-    {
-        alias: ["las nieves", "nieves"],
-        ubicacion: {
-            // OJO: el catálogo del API la siembra en cantón "Nabón"
-            // (AppDbContext.cs), pero el documento de la cooperativa la sitúa
-            // en PUCARÁ. Manda el documento: es de quien conoce el
-            // territorio. La semilla del API queda por corregir.
-            nombre: "Las Nieves", canton: "Pucará",
-            // Sube 4 px: deja respirar el hueco con la etiqueta de Huertas,
-            // que queda justo debajo.
-            etiqueta: { dy: -4 },
-            lat: -3.083667,   // 3°05'01.2"S
-            lon: -79.451222,  // 79°27'04.4"W
-            msnm: { min: 3200, max: 3370 },
-        },
-    },
-    {
-        alias: ["huertas"],
-        ubicacion: {
-            nombre: "Huertas", canton: "Santa Isabel",
-            lat: -3.135528,   // 3°08'07.9"S
-            lon: -79.395972,  // 79°23'45.5"W
-            msnm: { min: 2600, max: 2900 },
-        },
-    },
-    {
-        alias: ["patococha", "patacocha"],
-        ubicacion: {
-            nombre: "Patococha", canton: "Pucará",
-            lat: -3.225944,   // 3°13'33.4"S
-            lon: -79.504472,  // 79°30'16.1"W
-            msnm: { min: 3190, max: 3190 },
-        },
-    },
-    {
-        alias: ["nabon / el progreso", "nabon/el progreso", "el progreso"],
-        ubicacion: {
-            // La cooperativa la llama "El Progreso" a secas; el catálogo del
-            // API la guarda como "Nabón / El Progreso", que es la referencia
-            // del centro de acopio. En la ficha pública va el nombre corto:
-            // es como se nombra a sí misma, y cabe en la etiqueta del mapa.
-            nombre: "El Progreso", canton: "Nabón",
-            // Baja 14 px: sin esto se monta sobre la altitud de la planta,
-            // que le queda a 25 px en el encuadre ancho.
-            etiqueta: { dy: 14 },
-            lat: -3.340833,   // 3°20'27.0"S
-            lon: -79.204806,  // 79°12'17.3"W
-            msnm: { min: 2600, max: 2800 },
-        },
-    },
-    // Falta Pelincay (cantón Pucará, CAT PEL). Es la quinta comunidad
-    // sembrada y todavía no tiene coordenada tomada. Deliberadamente NO se
-    // pone una posición aproximada: en una pantalla cuya única función es
-    // ser creíble, un pin inventado cuesta más que un hueco declarado.
-    // `ubicacionDe` devuelve null y el mapa la muestra sin pin, con su
-    // nombre y su cantidad intactos.
-];
+const ROTULOS = new Map<string, { nombre?: string; lado?: "izq" | "der"; dy?: number }>([
+    [clave("Las Nieves"), { dy: -4 }],
+    [clave("Nabón / El Progreso"), { nombre: "El Progreso", dy: 14 }],
+]);
 
-const POR_CLAVE = new Map<string, Ubicacion>(
-    UBICACIONES.flatMap(({ alias, ubicacion }) =>
-        alias.map((a) => [clave(a), ubicacion] as const)),
-);
-
-/** La ubicación de una comunidad, o null si todavía no se ha registrado. */
-export function ubicacionDe(nombreComunidad: string): Ubicacion | null {
-    return POR_CLAVE.get(clave(nombreComunidad)) ?? null;
+export function rotuloDe(nombreComunidad: string) {
+    return ROTULOS.get(clave(nombreComunidad)) ?? {};
 }
-
-/** Todas las comunidades con ubicación conocida, de norte a sur. */
-export const COMUNIDADES_CONOCIDAS: Ubicacion[] = UBICACIONES
-    .map((u) => u.ubicacion)
-    .sort((a, b) => b.lat - a.lat);
 
 // ── Distancia ────────────────────────────────────────────────────────
 
@@ -253,8 +207,6 @@ export function altitudTexto(u: Ubicacion): string {
  */
 const HOLGURA = 0.40;
 
-const TODOS = [...COMUNIDADES_CONOCIDAS, PLANTA];
-
 function rango(valores: number[]) {
     const min = Math.min(...valores);
     const max = Math.max(...valores);
@@ -262,8 +214,38 @@ function rango(valores: number[]) {
     return { min: min - holgura, max: max + holgura };
 }
 
-const RANGO_LAT = rango(TODOS.map((u) => u.lat));
-const RANGO_LON = rango(TODOS.map((u) => u.lon));
+/**
+ * Las cinco coordenadas que definen el encuadre horneado: las cuatro
+ * comunidades del piloto con posición tomada, más la planta.
+ *
+ * Pelincay no está: nunca se le tomó coordenada, así que tampoco entraba en
+ * el cálculo del encuadre de hoy. Meterla ahora con una cifra aproximada
+ * movería el marco y desalinearía el relieve.
+ *
+ * Se quedan aquí como literales, y NO se leen del catálogo, aunque el
+ * catálogo ya las tenga. Son la geometría del PNG de relieve, no el dato de
+ * dónde está una comunidad: si mañana alguien corrige por 200 metros la
+ * coordenada de Huertas en Administración, el mapa de fondo no se
+ * reproyecta, y este marco no debe moverse con ella.
+ *
+ * Solo se tocan a la vez que se regenera el relieve con scripts/relieve.
+ */
+const ENCUADRE_PILOTO: Coordenada[] = [
+    { lat: -3.225944, lon: -79.504472 },  // Patococha
+    { lat: -3.083667, lon: -79.451222 },  // Las Nieves
+    { lat: -3.135528, lon: -79.395972 },  // Huertas
+    { lat: -3.340833, lon: -79.204806 },  // Nabón / El Progreso
+    { lat: PLANTA.lat, lon: PLANTA.lon },
+];
+
+const RANGO_LAT = rango(ENCUADRE_PILOTO.map((u) => u.lat));
+const RANGO_LON = rango(ENCUADRE_PILOTO.map((u) => u.lon));
+
+/** ¿La coordenada cae dentro del encuadre horneado? Ver cabecera. */
+export function dentroDelEncuadre(c: Coordenada): boolean {
+    return c.lat >= RANGO_LAT.min && c.lat <= RANGO_LAT.max
+        && c.lon >= RANGO_LON.min && c.lon <= RANGO_LON.max;
+}
 
 /**
  * El lienzo. El ancho es fijo y el alto sale de la forma real del territorio,
@@ -279,10 +261,10 @@ export const LIENZO = {
 /**
  * Coordenada geográfica → punto del SVG.
  *
- * El encuadre se calcula sobre TODAS las comunidades conocidas, nunca sobre
- * las que aportaron a un lote concreto. Si el marco se ajustara al subconjunto,
- * el mismo territorio se vería a una escala distinta en cada lote y dos fichas
- * públicas seguidas mostrarían mapas incomparables entre sí.
+ * El encuadre es el fijo de ENCUADRE_PILOTO, nunca el de las comunidades que
+ * aportaron a un lote concreto. Si el marco se ajustara al subconjunto de
+ * cada ficha, el mismo territorio se vería a una escala distinta en cada
+ * lote —y encima desalineado del relieve horneado, que es una imagen fija.
  */
 export function proyectar(c: Coordenada): { x: number; y: number } {
     return {

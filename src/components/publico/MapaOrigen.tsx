@@ -1,6 +1,6 @@
 import {
-    COMUNIDADES_CONOCIDAS, LIENZO, PLANTA, altitudTexto, clave, desnivelAPlanta,
-    enlaceMapa, kmAPlanta, msnmMedio, proyectar, ubicacionDe, type Ubicacion,
+    LIENZO, PLANTA, altitudTexto, dentroDelEncuadre, desnivelAPlanta,
+    enlaceMapa, kmAPlanta, msnmMedio, proyectar, rotuloDe, type Ubicacion,
 } from "../../domain/comunidades/coordenadas";
 import {
     FICHA_PLANTA, descripcionDe, type Descripcion,
@@ -31,6 +31,10 @@ import { CURVAS, CURVAS_INTERVALO } from "../../domain/comunidades/relieve.gener
 interface Aporte {
     comunidad: string;
     cantidad: number;
+    latitud: number | null;
+    longitud: number | null;
+    altitudMinM: number | null;
+    altitudMaxM: number | null;
 }
 
 interface Props {
@@ -162,17 +166,41 @@ function Chevron() {
 }
 
 export function MapaOrigen({ aportes }: Props) {
+    // Una comunidad sin coordenadas (dada de alta sin ponérselas) o fuera del
+    // encuadre horneado no lleva pin. Sigue nombrada en el texto de la
+    // ficha: lo que se pierde es el punto en el mapa, no la trazabilidad.
     const ubicados: AporteUbicado[] = aportes
-        .map((a) => ({ ...a, ubicacion: ubicacionDe(a.comunidad) }))
+        .map((a) => {
+            if (a.latitud === null || a.longitud === null) {
+                return { ...a, ubicacion: null };
+            }
+            const coordenada = { lat: a.latitud, lon: a.longitud };
+            if (!dentroDelEncuadre(coordenada)) {
+                return { ...a, ubicacion: null };
+            }
+            const ajuste = rotuloDe(a.comunidad);
+            return {
+                ...a,
+                ubicacion: {
+                    ...coordenada,
+                    nombre: ajuste.nombre ?? a.comunidad,
+                    // El cantón no viaja en el aporte (ComunidadAporteDto no
+                    // lo lleva): ya se lee arriba, en la cabecera "Origen" de
+                    // la ficha. Repetirlo aquí por comunidad costaría otro
+                    // viaje al catálogo por un dato que ya está en pantalla.
+                    canton: "",
+                    etiqueta: ajuste,
+                    msnm: {
+                        min: a.altitudMinM ?? 0,
+                        max: a.altitudMaxM ?? 0,
+                    },
+                } satisfies Ubicacion,
+            };
+        })
         .sort((a, b) => b.cantidad - a.cantidad);
 
     const conPin = ubicados.filter((a) => a.ubicacion !== null) as
         (AporteUbicado & { ubicacion: Ubicacion })[];
-
-    // Las comunidades de la cooperativa que NO aportaron a este lote.
-    const aportantes = new Set(conPin.map((a) => clave(a.ubicacion.nombre)));
-    const contexto = COMUNIDADES_CONOCIDAS
-        .filter((u) => !aportantes.has(clave(u.nombre)));
 
     const maxCantidad = Math.max(...conPin.map((a) => a.cantidad), 1);
     const radio = (cantidad: number) =>
@@ -259,27 +287,6 @@ export function MapaOrigen({ aportes }: Props) {
                                     stroke="#004954" strokeWidth="1"
                                     strokeDasharray="3 3"
                                 />
-                            );
-                        })}
-
-                        {/* Comunidades de la cooperativa que no aportaron aquí */}
-                        {contexto.map((u) => {
-                            const c = proyectar(u);
-                            const alaIzquierda = c.x > LIENZO.ancho * 0.6;
-                            return (
-                                <g key={`ctx-${u.nombre}`} className="animate-fade-in">
-                                    <circle cx={c.x} cy={c.y} r="3.5"
-                                        fill="#ffffff" stroke="#6b7280" strokeWidth="1.5" />
-                                    <text
-                                        x={alaIzquierda ? c.x - 7 : c.x + 7}
-                                        y={c.y + 3.5}
-                                        textAnchor={alaIzquierda ? "end" : "start"}
-                                        className="fill-gray-500"
-                                        style={{ fontSize: "9px", ...HALO, strokeWidth: 2.5 }}
-                                    >
-                                        {u.nombre}
-                                    </text>
-                                </g>
                             );
                         })}
 
@@ -409,7 +416,10 @@ export function MapaOrigen({ aportes }: Props) {
                                     <span className="block text-xs text-gray-500">
                                         {a.ubicacion
                                             ? <>
-                                                {a.ubicacion.canton} · {altitudTexto(a.ubicacion)}
+                                                {/* Sin cantón aquí: ComunidadAporteDto no
+                                                    lo trae por comunidad, y ya se lee arriba
+                                                    en la cabecera "Origen" de la ficha. */}
+                                                {altitudTexto(a.ubicacion)}
                                                 <br />
                                                 {kmAPlanta(a.ubicacion)} km · baja unos{" "}
                                                 <strong className="font-semibold text-gray-700">
