@@ -123,10 +123,15 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
 
     const productoraElegida = productoras.find((p) => p.id === productoraId);
 
+    // Una sola consulta con inactivos incluidos (misma clave de caché que usa
+    // useNombreCat más abajo, así que TanStack Query la deduplica en una sola
+    // petición) y se filtra aquí a los activos: son los únicos que tiene
+    // sentido ofrecer como elección nueva en el selector de abajo.
     const {
-        data: centros = [], isLoading: cargandoCentros,
+        data: centrosTodos = [], isLoading: cargandoCentros,
         isError: errorCentros, refetch: refetchCentros,
-    } = useCentrosAcopio();
+    } = useCentrosAcopio(true);
+    const centros = useMemo(() => centrosTodos.filter((c) => c.activo), [centrosTodos]);
     const nombreCat = useNombreCat();
 
     // Ajusta el arreglo de cuyes al cambiar la cantidad: conserva los ya
@@ -411,22 +416,31 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             aparte: eso lo cubre la opción "Cargando…" de abajo),
                                             no hay nada que elegir. `isLoading` de TanStack Query
                                             es `false` tanto si terminó como si falló o quedó
-                                            pausada sin red, así que el aviso real depende de
-                                            `isError`, no de si "sigue cargando". */}
+                                            pausada sin red, así que el aviso real depende primero
+                                            de `isOnline` (ver JaulaEnArmado, que usa el mismo
+                                            orden) y luego de `isError`: sin mirar `isOnline`
+                                            antes, una consulta pausada por falta de red se ve
+                                            idéntica a un catálogo vacío, y a la operadora en
+                                            campo se le diría que no hay centros creados cuando en
+                                            realidad lo que falta es señal. */}
                                         {!catFijo && centros.length === 0 && !cargandoCentros ? (
                                             <div className="rounded-2xl border-2 border-teja-200
                                                 bg-teja-50 px-3 py-2.5">
                                                 <p className="text-sm font-semibold text-teja-700">
-                                                    {errorCentros
-                                                        ? "No se pudo cargar el catálogo de centros."
-                                                        : "Todavía no hay centros de acopio creados."}
+                                                    {!isOnline
+                                                        ? "Sin conexión: no se pudo cargar el catálogo de centros."
+                                                        : errorCentros
+                                                            ? "No se pudo cargar el catálogo de centros."
+                                                            : "Todavía no hay centros de acopio creados."}
                                                 </p>
                                                 <p className="mt-0.5 text-xs text-teja-600">
-                                                    {errorCentros
-                                                        ? "Revisa la conexión con el servidor e intenta de nuevo."
-                                                        : "Pide a un administrador que cree uno en Administración."}
+                                                    {!isOnline
+                                                        ? "Conéctate al menos una vez para descargar el catálogo a la tablet."
+                                                        : errorCentros
+                                                            ? "Revisa la conexión con el servidor e intenta de nuevo."
+                                                            : "Pide a un administrador que cree uno en Administración."}
                                                 </p>
-                                                {errorCentros && (
+                                                {isOnline && errorCentros && (
                                                     <button
                                                         type="button"
                                                         onClick={() => refetchCentros()}
@@ -471,11 +485,13 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                         )}
                                         {/* Para el operador de CAT esto no bloquea nada (su
                                             centro ya quedó fijado arriba), pero igual hay que
-                                            decir que el resto del catálogo no cargó. */}
+                                            decir por qué el resto del catálogo no está: sin red
+                                            no es lo mismo que un fallo del servidor. */}
                                         {catFijo && centros.length === 0 && !cargandoCentros && (
                                             <p className="mt-1 text-xs text-gray-400">
-                                                No se pudo cargar el resto del catálogo de
-                                                centros; tu centro asignado sigue disponible.
+                                                {!isOnline
+                                                    ? "Sin conexión: no se pudo cargar el resto del catálogo de centros; tu centro asignado sigue disponible."
+                                                    : "No se pudo cargar el resto del catálogo de centros; tu centro asignado sigue disponible."}
                                             </p>
                                         )}
                                     </div>

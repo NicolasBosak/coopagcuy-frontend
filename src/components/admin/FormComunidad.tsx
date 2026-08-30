@@ -4,7 +4,9 @@ import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import type { Comunidad } from "../../types/admin";
-import { useCantones, useCentrosAcopio, etiquetaCat, conValorVigente } from "../../hooks/useCatalogos";
+import {
+    useCantones, useCentrosAcopio, etiquetaCat, conValorVigente, catalogoBloqueado,
+} from "../../hooks/useCatalogos";
 
 interface Props {
     comunidad: Comunidad | null; // null = crear nueva
@@ -43,6 +45,13 @@ export function FormComunidad({ comunidad, onClose }: Props) {
     const centros = useMemo(
         () => conValorVigente(centrosTodos, cat || null, (c) => c.codigo),
         [centrosTodos, cat]);
+
+    // Capa 1 (visible): con cualquiera de los dos catálogos en error o sin
+    // elegir, el botón de guardar queda deshabilitado. Antes de esto, la
+    // rama de error de SelectorCatalogo quitaba el <select required> pero
+    // nada avisaba que ya no había forma de bloquear el envío.
+    const catalogoInvalido = catalogoBloqueado(errorCantones, cantonId)
+        || catalogoBloqueado(errorCentros, cat);
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -89,7 +98,7 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                         Cancelar
                     </button>
                     <button type="submit" form="form-comunidad"
-                        disabled={mutation.isPending}
+                        disabled={mutation.isPending || catalogoInvalido}
                         className="flex-1 h-12 bg-primary-600 hover:bg-primary-700
                        disabled:bg-primary-300 text-white rounded-2xl
                        text-sm font-bold transition">
@@ -100,7 +109,20 @@ export function FormComunidad({ comunidad, onClose }: Props) {
         >
             <form
                 id="form-comunidad"
-                onSubmit={(e) => { e.preventDefault(); setError(null); mutation.mutate(); }}
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    setError(null);
+                    // Capa 2 (garantía): repite la misma condición del botón
+                    // por si se llega aquí sin pasar por él (por ejemplo,
+                    // Enter dentro de un campo de texto). Sin esto, un
+                    // catálogo caído dejaría guardar cantonId: 0 o
+                    // catReferencia: "" con solo forzar el envío del form.
+                    if (catalogoInvalido) {
+                        setError("Elige un cantón y un centro de acopio válidos antes de guardar.");
+                        return;
+                    }
+                    mutation.mutate();
+                }}
                 className="space-y-4"
             >
                 <div>

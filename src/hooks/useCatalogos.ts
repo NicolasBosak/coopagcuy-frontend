@@ -86,3 +86,20 @@ export function conValorVigente<T extends { activo: boolean }>(
 export function etiquetaCat(c: { nombre: string; canton: string; provincia: string }) {
     return `${c.nombre} (${c.canton}, ${c.provincia})`;
 }
+
+/**
+ * Indica si un catálogo obligatorio impide continuar: cuando falló (la rama
+ * de error de `SelectorCatalogo` reemplaza al `<select>`, y con él se va la
+ * validación nativa `required` del navegador) o cuando todavía no hay nada
+ * elegido.
+ *
+ * Vive aquí y no junto a `SelectorCatalogo` porque el lint de react-refresh
+ * de este repo exige que un archivo de componente solo exporte componentes.
+ * Se usa en dos capas — deshabilitar el botón de guardar (visible) y volver
+ * a comprobarla dentro del propio manejador de envío (garantía, por si se
+ * llega ahí por cualquier otro camino) — para que cada formulario use la
+ * MISMA condición en vez de reimplementarla y que alguno la olvide.
+ */
+export function catalogoBloqueado(error: boolean, valor: string | number): boolean {
+    return error || !valor;
+}

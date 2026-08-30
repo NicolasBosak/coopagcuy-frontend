@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../../api/recepcion";
 import { useAuth } from "../../context/useAuth";
@@ -17,10 +17,15 @@ export function JaulaEnArmado({ isOnline }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
     const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
+    // Una sola consulta con inactivos incluidos (misma clave de caché que usa
+    // useNombreCat más abajo, así que TanStack Query la deduplica en una sola
+    // petición) y se filtra aquí a los activos: son los únicos que tiene
+    // sentido ofrecer como elección nueva en el selector de abajo.
     const {
-        data: centros = [], isLoading: cargandoCentros,
+        data: centrosTodos = [], isLoading: cargandoCentros,
         isError: errorCentros, refetch: refetchCentros,
-    } = useCentrosAcopio();
+    } = useCentrosAcopio(true);
+    const centros = useMemo(() => centrosTodos.filter((c) => c.activo), [centrosTodos]);
     const nombreCat = useNombreCat();
     // Sin centro fijo, arranca vacío y se queda así hasta que alguien elija
     // uno a mano: ya no hay preselección automática del primer centro del

@@ -6,7 +6,9 @@ import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import { useAuth } from "../../context/useAuth";
 import type { CrearProductoraRequest, Productora } from "../../types/productora";
-import { useCentrosAcopio, useNombreCat, etiquetaCat, conValorVigente } from "../../hooks/useCatalogos";
+import {
+    useCentrosAcopio, useNombreCat, etiquetaCat, conValorVigente, catalogoBloqueado,
+} from "../../hooks/useCatalogos";
 
 interface Props {
     productora?: Productora | null; // presente = modo edición (RF-105)
@@ -68,6 +70,11 @@ export function FormProductora({ productora = null, onClose }: Props) {
         [centrosTodos, form.catAsignado]);
     const nombreCat = useNombreCat();
 
+    // Con CAT fijo (OperadorCAT) el selector ni se muestra: el servidor
+    // sella su propio centro y este catálogo no interviene en el envío.
+    // Capa 1 (visible): ver SelectorCatalogo.
+    const catalogoInvalido = !catFijo && catalogoBloqueado(errorCentros, form.catAsignado);
+
     const mutation = useMutation({
         mutationFn: async () => {
             if (editando) {
@@ -103,6 +110,13 @@ export function FormProductora({ productora = null, onClose }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        // Capa 2 (garantía): repite la condición del botón por si se llega
+        // aquí sin pasar por él. Sin esto, un catálogo caído dejaría
+        // guardar catAsignado: "" con solo forzar el envío del formulario.
+        if (catalogoInvalido) {
+            setError("Elige un centro de acopio válido antes de guardar.");
+            return;
+        }
         mutation.mutate();
     };
 
@@ -157,7 +171,7 @@ export function FormProductora({ productora = null, onClose }: Props) {
                         Cancelar
                     </button>
                     <button type="submit" form="form-productora"
-                        disabled={mutation.isPending}
+                        disabled={mutation.isPending || catalogoInvalido}
                         className="flex-1 h-12 bg-primary-600 hover:bg-primary-700
                        disabled:bg-primary-300 text-white rounded-2xl
                        text-sm font-bold transition">

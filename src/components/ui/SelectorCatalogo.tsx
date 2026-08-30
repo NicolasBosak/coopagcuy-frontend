@@ -24,7 +24,12 @@ interface Props {
  * `required` del select deja al usuario sin poder avanzar y sin saber por
  * qué. Por eso el error reemplaza al select por un aviso con botón de
  * reintento, en vez de dejar un desplegable vacío detrás de un
- * marcador de posición.
+ * marcador de posición. Como al hacerlo desaparece también el `required`
+ * nativo, quien use este componente para un catálogo obligatorio debe
+ * combinarlo con `catalogoBloqueado` (en `hooks/useCatalogos.ts` — no puede
+ * vivir en este archivo porque el lint de react-refresh exige que un
+ * archivo de componente solo exporte componentes) para no dejar que se
+ * guarde con un valor centinela.
  */
 export function SelectorCatalogo({
     label, value, onChange, opciones, cargando, error, onReintentar, disabled,

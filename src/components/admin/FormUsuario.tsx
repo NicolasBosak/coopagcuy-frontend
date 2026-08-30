@@ -7,7 +7,9 @@ import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import type { Usuario } from "../../types/admin";
 import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
-import { useCentrosAcopio, etiquetaCat, conValorVigente } from "../../hooks/useCatalogos";
+import {
+    useCentrosAcopio, etiquetaCat, conValorVigente, catalogoBloqueado,
+} from "../../hooks/useCatalogos";
 
 interface Props {
     usuario: Usuario | null; // null = crear nuevo
@@ -43,6 +45,10 @@ export function FormUsuario({ usuario, onClose }: Props) {
     const centros = useMemo(
         () => conValorVigente(centrosTodos, catAsignado || null, (c) => c.codigo),
         [centrosTodos, catAsignado]);
+
+    // Solo un OperadorCAT depende de este catálogo; para el resto de roles
+    // el selector ni se muestra. Capa 1 (visible): ver SelectorCatalogo.
+    const catalogoInvalido = esOperadorCat && catalogoBloqueado(errorCentros, catAsignado);
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -90,6 +96,14 @@ export function FormUsuario({ usuario, onClose }: Props) {
             setError("El número de cédula debe tener 10 dígitos.");
             return;
         }
+        // Capa 2 (garantía): repite la condición del botón por si se llega
+        // aquí sin pasar por él. Sin esto, un catálogo caído dejaría
+        // guardar catAsignado: "" para un OperadorCAT con solo forzar el
+        // envío del formulario.
+        if (catalogoInvalido) {
+            setError("Elige un centro de acopio válido antes de guardar.");
+            return;
+        }
         mutation.mutate();
     };
 
@@ -113,7 +127,7 @@ export function FormUsuario({ usuario, onClose }: Props) {
                         Cancelar
                     </button>
                     <button type="submit" form="form-usuario"
-                        disabled={mutation.isPending}
+                        disabled={mutation.isPending || catalogoInvalido}
                         className="flex-1 h-12 bg-primary-600 hover:bg-primary-700
                        disabled:bg-primary-300 text-white rounded-2xl
                        text-sm font-bold transition">
