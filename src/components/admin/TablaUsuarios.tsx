@@ -9,7 +9,7 @@ import { useAuth } from "../../context/useAuth";
 import type { Usuario } from "../../types/admin";
 import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
-import { CENTROS_ACOPIO } from "../../types/productora";
+import { useNombreCat } from "../../hooks/useCatalogos";
 
 export function TablaUsuarios() {
     const qc = useQueryClient();
@@ -48,8 +48,7 @@ export function TablaUsuarios() {
     const nombreRol = (rol: string) =>
         ROLES.find((r) => r.value === rol)?.label ?? rol;
 
-    const nombreCat = (cat: string) =>
-        CENTROS_ACOPIO.find((c) => c.value === cat)?.label ?? cat;
+    const nombreCat = useNombreCat();
 
     return (
         <>

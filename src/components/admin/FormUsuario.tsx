@@ -6,7 +6,7 @@ import { ModalPasswordTemporal } from "./ModalPasswordTemporal";
 import type { Usuario } from "../../types/admin";
 import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
-import { CENTROS_ACOPIO } from "../../types/productora";
+import { useCentrosAcopio, etiquetaCat } from "../../hooks/useCatalogos";
 
 interface Props {
     usuario: Usuario | null; // null = crear nuevo
@@ -24,10 +24,14 @@ export function FormUsuario({ usuario, onClose }: Props) {
     // el formulario da paso al modal que la muestra una única vez
     const [temporal, setTemporal] = useState<PasswordTemporal | null>(null);
     const [rol, setRol] = useState(usuario?.rol ?? "OperadorCAT");
-    const [catAsignado, setCatAsignado] = useState(usuario?.catAsignado ?? "PAT");
+    // Sin valor por defecto: el catálogo llega del API y ya no hay un
+    // centro "seguro" para precargar. El selector obliga a elegir uno.
+    const [catAsignado, setCatAsignado] = useState(usuario?.catAsignado ?? "");
     const [error, setError] = useState<string | null>(null);
 
     const esOperadorCat = rol === "OperadorCAT";
+
+    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -182,13 +186,17 @@ export function FormUsuario({ usuario, onClose }: Props) {
                             Centro de acopio asignado
                         </label>
                         <select
+                            required
                             value={catAsignado}
                             onChange={(e) => setCatAsignado(e.target.value)}
                             className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
                            text-base focus:border-primary-500 focus:outline-none"
                         >
-                            {CENTROS_ACOPIO.map(({ value, label }) => (
-                                <option key={value} value={value}>{label}</option>
+                            <option value="" disabled>
+                                {cargandoCentros ? "Cargando centros…" : "Selecciona un centro…"}
+                            </option>
+                            {centros.map((c) => (
+                                <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                             ))}
                         </select>
                         <p className="text-xs text-gray-400 mt-1">

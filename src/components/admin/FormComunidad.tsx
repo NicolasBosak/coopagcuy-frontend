@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import type { Comunidad } from "../../types/admin";
-import { CENTROS_ACOPIO } from "../../types/productora";
+import { useCantones, useCentrosAcopio, etiquetaCat } from "../../hooks/useCatalogos";
 
 interface Props {
     comunidad: Comunidad | null; // null = crear nueva
@@ -15,13 +15,20 @@ export function FormComunidad({ comunidad, onClose }: Props) {
     const editando = comunidad !== null;
 
     const [nombre, setNombre] = useState(comunidad?.nombre ?? "");
-    const [canton, setCanton] = useState(comunidad?.canton ?? "");
-    const [cat, setCat] = useState(comunidad?.catReferencia ?? "PAT");
+    // 0 = nada elegido todavía: no hay un cantón "por defecto" razonable
+    // ahora que el catálogo llega del servidor.
+    const [cantonId, setCantonId] = useState(comunidad?.cantonId ?? 0);
+    const [cat, setCat] = useState(comunidad?.catReferencia ?? "");
     const [error, setError] = useState<string | null>(null);
+
+    // La gestión de provincias y cantones (alta, edición) es de la Task 8;
+    // aquí solo se listan para poblar el selector de esta comunidad.
+    const { data: cantones = [], isLoading: cargandoCantones } = useCantones();
+    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
 
     const mutation = useMutation({
         mutationFn: async () => {
-            const body = { nombre, canton, catReferencia: cat };
+            const body = { nombre, cantonId, catReferencia: cat };
             if (editando) {
                 await catalogosApi.actualizarComunidad(comunidad.id, body);
             } else {
@@ -84,13 +91,22 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                         text-gray-500 mb-1">
                         Cantón
                     </label>
-                    <input
-                        type="text" required value={canton}
-                        onChange={(e) => setCanton(e.target.value)}
-                        placeholder="Por ejemplo: Pucará"
+                    <select
+                        required
+                        value={cantonId || ""}
+                        onChange={(e) => setCantonId(Number(e.target.value))}
                         className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
                        text-base focus:border-primary-500 focus:outline-none"
-                    />
+                    >
+                        <option value="" disabled>
+                            {cargandoCantones ? "Cargando cantones…" : "Seleccionar cantón…"}
+                        </option>
+                        {cantones.map((c) => (
+                            <option key={c.id} value={c.id}>
+                                {c.nombre} ({c.provincia})
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div>
@@ -99,13 +115,17 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                         Centro de acopio de referencia
                     </label>
                     <select
+                        required
                         value={cat}
                         onChange={(e) => setCat(e.target.value)}
                         className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
                        text-base focus:border-primary-500 focus:outline-none"
                     >
-                        {CENTROS_ACOPIO.map(({ value, label }) => (
-                            <option key={value} value={value}>{label}</option>
+                        <option value="" disabled>
+                            {cargandoCentros ? "Cargando centros…" : "Seleccionar centro…"}
+                        </option>
+                        {centros.map((c) => (
+                            <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                         ))}
                     </select>
                 </div>

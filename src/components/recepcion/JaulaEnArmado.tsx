@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../../api/recepcion";
 import { useAuth } from "../../context/useAuth";
-import { CENTROS_ACOPIO, type CentroAcopio } from "../../types/productora";
+import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../../hooks/useCatalogos";
 import { CAPACIDAD_JAULA } from "../../domain/reglasRecepcion";
 
 interface Props {
@@ -17,14 +17,23 @@ export function JaulaEnArmado({ isOnline }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
     const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
-    const [cat, setCat] = useState<CentroAcopio>(
-        (catFijo as CentroAcopio) ?? "PAT");
+    const { data: centros = [] } = useCentrosAcopio();
+    const nombreCat = useNombreCat();
+    // Sin centro fijo, arranca vacío; se resuelve al primer centro del
+    // catálogo apenas llega (más abajo), derivado en el render en vez de
+    // un efecto para no encadenar un setState con cada carga del catálogo.
+    const [cat, setCat] = useState<string>(catFijo ?? "");
     const [aviso, setAviso] = useState<string | null>(null);
 
+    const catResuelto = cat || centros[0]?.codigo || "";
+
     const { data: jaula, isLoading } = useQuery({
-        queryKey: ["lote_abierto", cat],
-        queryFn: () => recepcionApi.obtenerLoteAbierto(cat),
-        enabled: isOnline,
+        queryKey: ["lote_abierto", catResuelto],
+        queryFn: () => recepcionApi.obtenerLoteAbierto(catResuelto),
+        // Sin centro resuelto todavía (catálogo cargando y sin centro fijo)
+        // no hay nada que consultar: consultar con "" traería el lote
+        // equivocado.
+        enabled: isOnline && !!catResuelto,
         refetchInterval: 30_000,
     });
 
@@ -52,18 +61,17 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     {catFijo ? (
                         <span className="h-9 px-3 inline-flex items-center rounded-lg
                              bg-primary-50 text-primary-800 text-xs font-bold">
-                            {CENTROS_ACOPIO.find((c) => c.value === catFijo)?.label
-                                ?? catFijo}
+                            {nombreCat(catFijo)}
                         </span>
                     ) : (
                         <select
-                            value={cat}
-                            onChange={(e) => setCat(e.target.value as CentroAcopio)}
+                            value={catResuelto}
+                            onChange={(e) => setCat(e.target.value)}
                             className="h-9 px-2 rounded-lg border-2 border-gray-200 text-xs
                          font-semibold focus:border-primary-500 focus:outline-none"
                         >
-                            {CENTROS_ACOPIO.map(({ value, label }) => (
-                                <option key={value} value={value}>{label}</option>
+                            {centros.map((c) => (
+                                <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                             ))}
                         </select>
                     )}
@@ -88,6 +96,10 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     Sin conexión: las entregas se guardan en la tablet y se
                     sumarán a la jaula al sincronizar.
                 </p>
+            ) : !catResuelto ? (
+                // Sin centro fijo, esto solo se ve un instante: catResuelto
+                // toma el primer centro del catálogo apenas llega.
+                <p className="text-sm text-gray-400">Cargando centros de acopio…</p>
             ) : isLoading ? (
                 <p className="text-sm text-gray-400">Consultando jaula…</p>
             ) : !jaula ? (

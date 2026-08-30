@@ -1,13 +1,13 @@
-import { CENTROS_ACOPIO, type CentroAcopio } from "../../types/productora";
+import { useCentrosAcopio, etiquetaCat } from "../../hooks/useCatalogos";
 import { fechaLocal } from "../../utils/fechaLocal";
 
 interface Props {
     desde: string;
     hasta: string;
-    cat: CentroAcopio | "";
+    cat: string;
     onDesdeChange: (v: string) => void;
     onHastaChange: (v: string) => void;
-    onCatChange: (v: CentroAcopio | "") => void;
+    onCatChange: (v: string) => void;
 }
 
 const fmt = fechaLocal;
@@ -51,6 +51,8 @@ const PRESETS: { label: string; rango: () => [string, string] }[] = [
 export function FiltrosPeriodo({
     desde, hasta, cat, onDesdeChange, onHastaChange, onCatChange
 }: Props) {
+    const { data: centros = [] } = useCentrosAcopio();
+
     const aplicarPreset = (rango: [string, string]) => {
         onDesdeChange(rango[0]);
         onHastaChange(rango[1]);
@@ -118,13 +120,13 @@ export function FiltrosPeriodo({
                     </label>
                     <select
                         value={cat}
-                        onChange={(e) => onCatChange(e.target.value as CentroAcopio | "")}
+                        onChange={(e) => onCatChange(e.target.value)}
                         className="h-10 px-3 border-2 border-gray-200 rounded-xl text-sm
                        focus:border-primary-500 focus:outline-none"
                     >
                         <option value="">Todos</option>
-                        {CENTROS_ACOPIO.map(({ value, label }) => (
-                            <option key={value} value={value}>{label}</option>
+                        {centros.map((c) => (
+                            <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                         ))}
                     </select>
                 </div>

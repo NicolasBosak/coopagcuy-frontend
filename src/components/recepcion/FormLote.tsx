@@ -11,8 +11,7 @@ import type {
     RegistrarEntregaRequest, CuyRegistro,
     EstadoOreja, TamanoAnimal, EntregaOffline
 } from "../../types/recepcion";
-import type { CentroAcopio } from "../../types/productora";
-import { CENTROS_ACOPIO } from "../../types/productora";
+import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../../hooks/useCatalogos";
 import {
     COLORES, MAX_ENTREGA, evaluarCuy, PESO_MINIMO_GRAMOS, PESO_MAXIMO_GRAMOS,
     CAPACIDAD_JAULA, MAX_BYTES_EVIDENCIA_ENTREGA
@@ -75,15 +74,16 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const [errorFoto, setErrorFoto] = useState<string | null>(null);
 
     // Datos generales del lote. Un Operador de CAT queda fijado a su centro.
-    const catFijo = auth.rol === "OperadorCAT"
-        ? (auth.catAsignado as CentroAcopio | null) : null;
+    const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
     const [productoraId, setProductoraId] = useState(0);
     // Registro sin catálogo (offline): cédula de la productora digitada a mano.
     // El servidor la resuelve al sincronizar; si no coincide con ninguna
     // productora del centro, la entrega va a la bandeja de vinculación.
     const [cedulaManual, setCedulaManual] = useState("");
-    const [centroAcopio, setCentroAcopio] = useState<CentroAcopio>(
-        catFijo ?? "PAT");
+    // Sin centro fijo, arranca vacío; centroAcopioResuelto (más abajo) lo
+    // completa con el primero del catálogo apenas llega. Ya no hay un
+    // centro "por defecto" seguro ahora que la lista viene del servidor.
+    const [centroAcopio, setCentroAcopio] = useState<string>(catFijo ?? "");
     const [cantidad, setCantidad] = useState(1);
     const [enAyunas, setEnAyunas] = useState(true);
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
@@ -120,6 +120,15 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     }, [productoras, busqueda]);
 
     const productoraElegida = productoras.find((p) => p.id === productoraId);
+
+    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
+    const nombreCat = useNombreCat();
+
+    // Sin centro fijo (no es Operador de CAT) y sin nada elegido todavía, se
+    // resuelve al primer centro del catálogo apenas llega: derivado en el
+    // render (no en un efecto) para no encadenar renders con un setState.
+    // Un Operador de CAT no pasa por aquí: su campo ya arrancó con catFijo.
+    const centroAcopioResuelto = centroAcopio || centros[0]?.codigo || "";
 
     // Ajusta el arreglo de cuyes al cambiar la cantidad: conserva los ya
     // registrados y precarga los nuevos con los valores del último
@@ -158,7 +167,11 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const cedulaManualValida = esCedulaValida(cedulaManual);
 
     const puedeAvanzar = () => {
-        if (paso === 1) return productoraId !== 0 || cedulaManualValida;
+        // Exige centroAcopio además de la productora/cédula: sin catFijo y
+        // sin catálogo todavía (p. ej. abierto sin conexión antes de que se
+        // cacheara), el selector puede seguir vacío y no hay dónde recibir.
+        if (paso === 1)
+            return (productoraId !== 0 || cedulaManualValida) && !!centroAcopioResuelto;
         if (paso === 2) return cantidad >= 1;
         if (paso === 3) return cuyes.every((c) => c.pesoGramos > 0);
         if (paso === 4) return responsable.trim().length > 0;
@@ -168,13 +181,16 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const elegirProductora = (id: number, cat: string) => {
         setProductoraId(id);
         setCedulaManual("");   // productora y cédula manual son excluyentes
-        // Con CAT fijo del operador no se cambia el centro
-        if (!catFijo && CENTROS_ACOPIO.some((c) => c.value === cat))
-            setCentroAcopio(cat as CentroAcopio);
+        // Con CAT fijo del operador no se cambia el centro. Mientras el
+        // catálogo carga, `centros` está vacío: juzgar el CAT de la
+        // productora contra una lista vacía lo invalidaría sin motivo, así
+        // que se espera a que la consulta termine antes de decidir.
+        if (!catFijo && !cargandoCentros && centros.some((c) => c.codigo === cat))
+            setCentroAcopio(cat);
     };
 
     const construirRequest = (): RegistrarEntregaRequest => ({
-        centroAcopio,
+        centroAcopio: centroAcopioResuelto,
         productoraId,
         // Sin productora elegida se envía la cédula: el servidor la resuelve
         cedulaProductora: productoraId === 0 && cedulaManualValida
@@ -391,17 +407,25 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                             Centro de acopio
                                         </label>
                                         <select
-                                            value={centroAcopio}
+                                            value={centroAcopioResuelto}
                                             disabled={!!catFijo}
-                                            onChange={(e) =>
-                                                setCentroAcopio(e.target.value as CentroAcopio)}
+                                            onChange={(e) => setCentroAcopio(e.target.value)}
                                             className="w-full h-12 px-3 rounded-2xl border-2
                                  border-gray-200 bg-white text-base
                                  focus:border-primary-500 focus:outline-none
                                  disabled:bg-gray-50 disabled:text-gray-500"
                                         >
-                                            {CENTROS_ACOPIO.map(({ value, label }) => (
-                                                <option key={value} value={value}>{label}</option>
+                                            {!centroAcopioResuelto && (
+                                                <option value="" disabled>
+                                                    {cargandoCentros
+                                                        ? "Cargando centros…"
+                                                        : "Seleccionar centro…"}
+                                                </option>
+                                            )}
+                                            {centros.map((c) => (
+                                                <option key={c.codigo} value={c.codigo}>
+                                                    {etiquetaCat(c)}
+                                                </option>
                                             ))}
                                         </select>
                                     </div>
@@ -884,8 +908,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                         : cedulaManualValida
                                             ? `Cédula ${cedulaManual} (por vincular)`
                                             : "—"],
-                                    ["Centro de acopio", CENTROS_ACOPIO.find(
-                                        c => c.value === centroAcopio)?.label ?? centroAcopio],
+                                    ["Centro de acopio", nombreCat(centroAcopioResuelto)],
                                     ["Cantidad", `${cuyes.length} cuyes`],
                                     ["Peso del lote", `${pesoTotal.toLocaleString("es-EC")} g`
                                         + (pesoPromedio ? ` (${pesoPromedio} g promedio)` : "")],

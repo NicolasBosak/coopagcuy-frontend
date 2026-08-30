@@ -4,7 +4,8 @@ import { productorasApi } from "../../api/productoras";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { useAuth } from "../../context/useAuth";
-import { CENTROS_ACOPIO, type CrearProductoraRequest, type Productora } from "../../types/productora";
+import type { CrearProductoraRequest, Productora } from "../../types/productora";
+import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../../hooks/useCatalogos";
 
 interface Props {
     productora?: Productora | null; // presente = modo edición (RF-105)
@@ -15,7 +16,9 @@ const EMPTY: CrearProductoraRequest = {
     nombreCompleto: "",
     cedula: "",
     comunidadId: 0,
-    catAsignado: "PAT",
+    // Sin valor por defecto: el catálogo llega del API, así que no hay un
+    // centro "seguro" para precargar aquí.
+    catAsignado: "",
     telefono: "",
 };
 
@@ -50,6 +53,9 @@ export function FormProductora({ productora = null, onClose }: Props) {
         queryKey: ["comunidades"],
         queryFn: () => catalogosApi.listarComunidades(),
     });
+
+    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
+    const nombreCat = useNombreCat();
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -209,18 +215,21 @@ export function FormProductora({ productora = null, onClose }: Props) {
                         {catFijo ? (
                             <div className="w-full h-12 px-3 rounded-xl border-2 border-gray-100
                                     bg-gray-50 text-base text-gray-500 flex items-center">
-                                {CENTROS_ACOPIO.find((c) => c.value === catFijo)?.label
-                                    ?? catFijo}
+                                {nombreCat(catFijo)}
                             </div>
                         ) : (
                             <select
+                                required
                                 value={form.catAsignado}
                                 onChange={(e) => setForm({ ...form, catAsignado: e.target.value })}
                                 className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
                              text-base focus:border-primary-500 focus:outline-none"
                             >
-                                {CENTROS_ACOPIO.map(({ value, label }) => (
-                                    <option key={value} value={value}>{label}</option>
+                                <option value="" disabled>
+                                    {cargandoCentros ? "Cargando centros…" : "Seleccionar centro…"}
+                                </option>
+                                {centros.map((c) => (
+                                    <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                                 ))}
                             </select>
                         )}

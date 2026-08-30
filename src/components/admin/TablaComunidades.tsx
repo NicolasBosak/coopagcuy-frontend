@@ -4,7 +4,7 @@ import { catalogosApi } from "../../api/admin";
 import { Badge } from "../ui/Badge";
 import { FormComunidad } from "./FormComunidad";
 import type { Comunidad } from "../../types/admin";
-import { CENTROS_ACOPIO } from "../../types/productora";
+import { useNombreCat } from "../../hooks/useCatalogos";
 
 export function TablaComunidades() {
     const qc = useQueryClient();
@@ -22,8 +22,7 @@ export function TablaComunidades() {
         onSuccess: () => qc.invalidateQueries({ queryKey: ["comunidades"] }),
     });
 
-    const nombreCat = (cat: string) =>
-        CENTROS_ACOPIO.find((c) => c.value === cat)?.label ?? cat;
+    const nombreCat = useNombreCat();
 
     return (
         <>
