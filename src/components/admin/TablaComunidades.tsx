@@ -5,13 +5,17 @@ import { Badge } from "../ui/Badge";
 import { FormComunidad } from "./FormComunidad";
 import type { Comunidad } from "../../types/admin";
 import { useNombreCat } from "../../hooks/useCatalogos";
+import { useIsOnline } from "../../context/useIsOnline";
 
 export function TablaComunidades() {
     const qc = useQueryClient();
+    const isOnline = useIsOnline();
     const [comunidadEditar, setComunidadEditar] = useState<Comunidad | null>(null);
     const [showForm, setShowForm] = useState(false);
 
-    const { data: comunidades = [], isLoading } = useQuery({
+    const {
+        data: comunidades = [], isLoading, isError, refetch,
+    } = useQuery({
         queryKey: ["comunidades", "admin"],
         queryFn: () => catalogosApi.listarComunidades(true),
     });
@@ -47,6 +51,38 @@ export function TablaComunidades() {
                 {isLoading ? (
                     <div className="p-8 text-center text-sm text-gray-400">
                         Cargando comunidades…
+                    </div>
+                ) : comunidades.length === 0 ? (
+                    // isLoading es false tanto si la consulta terminó vacía como si
+                    // falló o quedó pausada sin red: sin distinguir los tres casos,
+                    // un fallo de red se vería igual que un catálogo genuinamente
+                    // vacío. Antes de esto era la única de las cuatro tablas de
+                    // catálogos que no distinguía nada: pintaba la tabla con sus
+                    // cabeceras y cero filas, sin ningún aviso.
+                    <div className="p-8 text-center text-sm">
+                        {!isOnline ? (
+                            <p className="text-teja-600">
+                                Sin conexión: no se pudo cargar el catálogo de comunidades.
+                            </p>
+                        ) : isError ? (
+                            <>
+                                <p className="text-teja-600 font-semibold">
+                                    No se pudo cargar el catálogo de comunidades.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => refetch()}
+                                    className="mt-1.5 text-xs font-bold text-teja-700
+                                       underline underline-offset-2"
+                                >
+                                    Reintentar
+                                </button>
+                            </>
+                        ) : (
+                            <p className="text-gray-400">
+                                Todavía no hay comunidades creadas.
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <table className="w-full text-sm">

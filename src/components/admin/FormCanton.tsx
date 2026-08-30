@@ -61,6 +61,10 @@ export function FormCanton({ canton, onClose }: Props) {
             // caché dejaría la tabla de centros mostrando el nombre viejo
             // hasta que otra acción, sin relación, la refrescara.
             qc.invalidateQueries({ queryKey: ["centros-acopio"] });
+            // Mismo motivo: Comunidad también lleva el cantón desnormalizado
+            // (`comunidad.canton`), y TablaComunidades lo pinta en su propia
+            // columna.
+            qc.invalidateQueries({ queryKey: ["comunidades"] });
             onClose();
         },
         onError: (e: unknown) => {

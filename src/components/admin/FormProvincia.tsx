@@ -34,6 +34,10 @@ export function FormProvincia({ provincia, onClose }: Props) {
             // refrescara.
             qc.invalidateQueries({ queryKey: ["cantones"] });
             qc.invalidateQueries({ queryKey: ["centros-acopio"] });
+            // Mismo motivo, un nivel más abajo: Comunidad lleva tanto el
+            // cantón como la provincia desnormalizados (`comunidad.provincia`),
+            // y TablaComunidades acaba de sumar la columna Provincia.
+            qc.invalidateQueries({ queryKey: ["comunidades"] });
             onClose();
         },
         onError: (e: unknown) => {

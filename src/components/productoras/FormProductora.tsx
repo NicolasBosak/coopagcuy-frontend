@@ -53,8 +53,16 @@ export function FormProductora({ productora = null, onClose }: Props) {
     );
     const [error, setError] = useState<string | null>(null);
 
-    // Catálogo de comunidades gestionable — RF-506
-    const { data: comunidades = [] } = useQuery({
+    // Catálogo de comunidades gestionable — RF-506. Con isError/isOnline
+    // (no un useQuery pelado): TanStack Query deja isLoading en false tanto
+    // si la consulta falló como si quedó pausada sin red, y en ambos casos
+    // data cae a [] — sin distinguirlos, se le decía al operador que creara
+    // una comunidad que en realidad ya existe, y el OperadorCAT ni siquiera
+    // tiene Administración en su menú para hacerlo.
+    const {
+        data: comunidades = [], isLoading: cargandoComunidades,
+        isError: errorComunidades, refetch: refetchComunidades,
+    } = useQuery({
         queryKey: ["comunidades"],
         queryFn: () => catalogosApi.listarComunidades(),
     });
@@ -75,7 +83,9 @@ export function FormProductora({ productora = null, onClose }: Props) {
     // Con CAT fijo (OperadorCAT) el selector ni se muestra: el servidor
     // sella su propio centro y este catálogo no interviene en el envío.
     // Capa 1 (visible): ver SelectorCatalogo.
-    const catalogoInvalido = !catFijo && catalogoBloqueado(errorCentros, form.catAsignado);
+    const catalogoInvalido =
+        catalogoBloqueado(errorComunidades, form.comunidadId)
+        || (!catFijo && catalogoBloqueado(errorCentros, form.catAsignado));
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -116,7 +126,7 @@ export function FormProductora({ productora = null, onClose }: Props) {
         // aquí sin pasar por él. Sin esto, un catálogo caído dejaría
         // guardar catAsignado: "" con solo forzar el envío del formulario.
         if (catalogoInvalido) {
-            setError("Elige un centro de acopio válido antes de guardar.");
+            setError("Elige una comunidad y un centro de acopio válidos antes de guardar.");
             return;
         }
         mutation.mutate();
@@ -186,34 +196,27 @@ export function FormProductora({ productora = null, onClose }: Props) {
                 {field("Nombre completo", "nombreCompleto", "text", "María Chuqui Guamán")}
                     {field("Cédula", "cedula", "text", "0102030405", editando)}
 
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-wide
-                              text-gray-500 mb-1">
-                            Comunidad
-                        </label>
-                        {/* Solo del catálogo: sin texto libre no hay forma de
-                            escribir "Patacocha" y partir el origen en dos */}
-                        <select
-                            required
-                            value={form.comunidadId || ""}
-                            onChange={(e) => elegirComunidad(Number(e.target.value))}
-                            className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                       text-base focus:border-primary-500 focus:outline-none"
-                        >
-                            <option value="">Seleccionar comunidad…</option>
-                            {comunidades.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.nombre} ({c.canton})
-                                </option>
-                            ))}
-                        </select>
-                        {comunidades.length === 0 && (
-                            <p className="mt-1 text-xs text-teja-700">
-                                No hay comunidades en el catálogo. Crea una en
-                                Administración antes de registrar productoras.
-                            </p>
-                        )}
-                    </div>
+                    {/* Solo del catálogo: sin texto libre no hay forma de escribir
+                        "Patacocha" y partir el origen en dos. Los cuatro estados
+                        (cargando / cargado / no se pudo cargar / sin conexión) los
+                        cubre SelectorCatalogo, igual que el centro de acopio más
+                        abajo en este mismo formulario: antes, un catálogo caído o
+                        sin red se veía igual que uno genuinamente vacío, y el
+                        aviso de abajo mandaba a Administración a crear una
+                        comunidad que ya existía. */}
+                    <SelectorCatalogo
+                        label="Comunidad"
+                        value={form.comunidadId ? String(form.comunidadId) : ""}
+                        onChange={(v) => elegirComunidad(Number(v))}
+                        cargando={cargandoComunidades}
+                        error={errorComunidades}
+                        isOnline={isOnline}
+                        onReintentar={() => refetchComunidades()}
+                        opciones={comunidades.map((c) => ({
+                            value: String(c.id),
+                            label: `${c.nombre} (${c.canton})`,
+                        }))}
+                    />
 
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wide
