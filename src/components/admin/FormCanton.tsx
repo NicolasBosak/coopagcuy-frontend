@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { geografiaApi } from "../../api/catalogos";
 import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
-import { useProvincias, catalogoBloqueado } from "../../hooks/useCatalogos";
+import { useProvincias, catalogoBloqueado, conValorVigente } from "../../hooks/useCatalogos";
 import type { Canton } from "../../types/admin";
 
 interface Props {
@@ -23,21 +23,16 @@ export function FormCanton({ canton, onClose }: Props) {
     // provincia dada de baja, su opción tiene que seguir apareciendo o el
     // selector se vería vacío pese a tener un valor asignado.
     //
-    // No se reusa conValorVigente (hooks/useCatalogos) porque exige un campo
-    // "activo" y Provincia lo llama "activa" (concuerda en género con el
-    // sustantivo, igual que "cantón activo"/"centro activo" más abajo): el
-    // genérico no tipa con esta forma. La lógica es la misma, a mano.
+    // conValorVigente ahora recibe el predicado de "está activo" en vez de
+    // asumir un campo `activo`: Provincia lo llama `activa`, y con el
+    // predicado explícito el genérico tipa igual para las tres entidades.
     const {
         data: provinciasTodas = [], isLoading: cargandoProvincias,
         isError: errorProvincias, refetch: refetchProvincias,
     } = useProvincias(true);
-    const provincias = useMemo(() => {
-        const activas = provinciasTodas.filter((p) => p.activa);
-        if (!provinciaId) return activas;
-        if (activas.some((p) => p.id === provinciaId)) return activas;
-        const vigente = provinciasTodas.find((p) => p.id === provinciaId);
-        return vigente ? [...activas, vigente] : activas;
-    }, [provinciasTodas, provinciaId]);
+    const provincias = useMemo(
+        () => conValorVigente(provinciasTodas, provinciaId || null, (p) => p.id, (p) => p.activa),
+        [provinciasTodas, provinciaId]);
 
     // Capa 1 (visible): con el catálogo de provincias caído o sin elegir,
     // el botón de guardar queda deshabilitado (misma disciplina que

@@ -62,13 +62,21 @@ export function useNombreCat() {
  * `required` obligaría a reasignarlo sin que nadie lo haya pedido. El
  * elemento inactivo solo aparece cuando coincide con `valorActual`: nunca
  * se ofrece como opción nueva para otros registros.
+ *
+ * `estaActivo` recibe el predicado en vez de asumir un campo `activo`
+ * fijo: `Canton` y `CentroAcopio` lo llaman `activo`, pero `Provincia` lo
+ * llama `activa` (concuerda en género con el sustantivo). Antes de esto, el
+ * genérico exigía `{ activo: boolean }` y `FormCanton` no podía reusarlo
+ * para su selector de provincia, así que traía la misma lógica copiada a
+ * mano — justo la duplicación que este componente existe para evitar.
  */
-export function conValorVigente<T extends { activo: boolean }>(
+export function conValorVigente<T>(
     items: T[],
     valorActual: string | number | null | undefined,
     clave: (item: T) => string | number,
+    estaActivo: (item: T) => boolean,
 ): T[] {
-    const activos = items.filter((i) => i.activo);
+    const activos = items.filter(estaActivo);
     if (valorActual === null || valorActual === undefined || valorActual === "" || valorActual === 0)
         return activos;
     if (activos.some((i) => clave(i) === valorActual)) return activos;

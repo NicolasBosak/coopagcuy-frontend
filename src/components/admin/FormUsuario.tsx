@@ -43,7 +43,7 @@ export function FormUsuario({ usuario, onClose }: Props) {
         isError: errorCentros, refetch: refetchCentros,
     } = useCentrosAcopio(true);
     const centros = useMemo(
-        () => conValorVigente(centrosTodos, catAsignado || null, (c) => c.codigo),
+        () => conValorVigente(centrosTodos, catAsignado || null, (c) => c.codigo, (c) => c.activo),
         [centrosTodos, catAsignado]);
 
     // Solo un OperadorCAT depende de este catálogo; para el resto de roles

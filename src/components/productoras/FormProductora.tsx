@@ -66,7 +66,7 @@ export function FormProductora({ productora = null, onClose }: Props) {
         isError: errorCentros, refetch: refetchCentros,
     } = useCentrosAcopio(true);
     const centros = useMemo(
-        () => conValorVigente(centrosTodos, form.catAsignado || null, (c) => c.codigo),
+        () => conValorVigente(centrosTodos, form.catAsignado || null, (c) => c.codigo, (c) => c.activo),
         [centrosTodos, form.catAsignado]);
     const nombreCat = useNombreCat();
 

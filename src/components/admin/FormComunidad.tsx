@@ -40,10 +40,10 @@ export function FormComunidad({ comunidad, onClose }: Props) {
     } = useCentrosAcopio(true);
 
     const cantones = useMemo(
-        () => conValorVigente(cantonesTodos, cantonId || null, (c) => c.id),
+        () => conValorVigente(cantonesTodos, cantonId || null, (c) => c.id, (c) => c.activo),
         [cantonesTodos, cantonId]);
     const centros = useMemo(
-        () => conValorVigente(centrosTodos, cat || null, (c) => c.codigo),
+        () => conValorVigente(centrosTodos, cat || null, (c) => c.codigo, (c) => c.activo),
         [centrosTodos, cat]);
 
     // Capa 1 (visible): con cualquiera de los dos catálogos en error o sin
