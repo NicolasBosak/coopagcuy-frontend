@@ -195,6 +195,7 @@ export interface PaginaPublica {
     codigoLote: string;
     comunidadOrigen: string;
     canton: string;
+    provincia: string;
     nombreProductora: string;
     centroAcopio: string;
     fechaRecepcion: string;

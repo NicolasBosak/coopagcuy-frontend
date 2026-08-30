@@ -156,7 +156,7 @@ export default function QRPublico() {
             cuando: fecha(data.fechaRecepcion),
             contenido: <Datos filas={[
                 ["Comunidad", data.comunidadOrigen],
-                ["Cantón", data.canton],
+                ["Cantón", `${data.canton}, ${data.provincia}`],
                 ["Centro de acopio", data.centroAcopio],
                 ["Productora", data.nombreProductora],
                 ["Animales", `${data.cantidadAnimales} cuyes`],
