@@ -3,10 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
+import { SelectorCanton } from "./SelectorCanton";
 import { useIsOnline } from "../../context/useIsOnline";
 import type { Comunidad } from "../../types/admin";
 import {
-    useCantones, useCentrosAcopio, etiquetaCat, conValorVigente, catalogoBloqueado,
+    useCentrosAcopio, etiquetaCat, conValorVigente, catalogoBloqueado,
 } from "../../hooks/useCatalogos";
 
 interface Props {
@@ -20,45 +21,39 @@ export function FormComunidad({ comunidad, onClose }: Props) {
     const isOnline = useIsOnline();
 
     const [nombre, setNombre] = useState(comunidad?.nombre ?? "");
-    // 0 = nada elegido todavía: no hay un cantón "por defecto" razonable
-    // ahora que el catálogo llega del servidor.
-    const [cantonId, setCantonId] = useState(comunidad?.cantonId ?? 0);
+    // undefined = nada elegido todavía. El encadenamiento provincia->cantón
+    // (deducción de la provincia al editar, reseteo al cambiar de
+    // provincia, los cuatro estados) lo resuelve SelectorCanton: aquí solo
+    // se guarda el id elegido.
+    const [cantonId, setCantonId] = useState<number | undefined>(comunidad?.cantonId);
     const [cat, setCat] = useState(comunidad?.catReferencia ?? "");
     const [error, setError] = useState<string | null>(null);
 
-    // La gestión de provincias y cantones (alta, edición) es de la Task 8;
-    // aquí solo se listan para poblar el selector de esta comunidad.
-    // Se piden con inactivos incluidos (misma consulta que useNombreCat, así
-    // que no duplica la petición) y se filtran abajo con conValorVigente:
-    // así, si el cantón o el CAT de ESTA comunidad fue dado de baja después
-    // de asignárselo, su opción se conserva en vez de desaparecer.
-    const {
-        data: cantonesTodos = [], isLoading: cargandoCantones,
-        isError: errorCantones, refetch: refetchCantones,
-    } = useCantones(undefined, true);
+    // El selector de CAT sigue viviendo aquí (no en SelectorCanton, que solo
+    // resuelve cantón): se piden con inactivos incluidos (misma consulta que
+    // useNombreCat, así que no duplica la petición) y se filtran abajo con
+    // conValorVigente, para que el CAT ya asignado a ESTA comunidad se
+    // conserve en la lista aunque haya sido dado de baja después.
     const {
         data: centrosTodos = [], isLoading: cargandoCentros,
         isError: errorCentros, refetch: refetchCentros,
     } = useCentrosAcopio(true);
 
-    const cantones = useMemo(
-        () => conValorVigente(cantonesTodos, cantonId || null, (c) => c.id, (c) => c.activo),
-        [cantonesTodos, cantonId]);
     const centros = useMemo(
         () => conValorVigente(centrosTodos, cat || null, (c) => c.codigo, (c) => c.activo),
         [centrosTodos, cat]);
 
-    // Capa 1 (visible): con cualquiera de los dos catálogos en error o sin
-    // elegir, el botón de guardar queda deshabilitado. Antes de esto, la
-    // rama de error de SelectorCatalogo quitaba el <select required> pero
-    // nada avisaba que ya no había forma de bloquear el envío.
-    const catalogoInvalido = catalogoBloqueado(errorCantones, cantonId)
-        || catalogoBloqueado(errorCentros, cat);
+    // Capa 1 (visible): sin cantón elegido o con el catálogo de CAT en error
+    // (o sin elegir), el botón de guardar queda deshabilitado. Antes de
+    // esto, la rama de error de SelectorCatalogo quitaba el <select
+    // required> pero nada avisaba que ya no había forma de bloquear el
+    // envío.
+    const catalogoInvalido = !cantonId || catalogoBloqueado(errorCentros, cat);
 
     const mutation = useMutation({
         mutationFn: async () => {
             const body = {
-                nombre, cantonId, catReferencia: cat,
+                nombre, cantonId: cantonId!, catReferencia: cat,
                 // Al editar hay que reenviar las coordenadas existentes: el
                 // API las asigna incondicionalmente con lo que llegue en el
                 // cuerpo, y este formulario no las edita. Omitirlas las
@@ -147,33 +142,33 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                     />
                 </div>
 
-                <SelectorCatalogo
-                    label="Cantón"
-                    value={cantonId ? String(cantonId) : ""}
-                    onChange={(v) => setCantonId(Number(v))}
-                    cargando={cargandoCantones}
-                    error={errorCantones}
-                    isOnline={isOnline}
-                    onReintentar={() => refetchCantones()}
-                    opciones={cantones.map((c) => ({
-                        value: String(c.id),
-                        label: `${c.nombre} (${c.provincia})${c.activo ? "" : " — dado de baja"}`,
-                    }))}
-                />
+                <SelectorCanton cantonId={cantonId} onCambio={setCantonId} />
 
-                <SelectorCatalogo
-                    label="Centro de acopio de referencia"
-                    value={cat}
-                    onChange={setCat}
-                    cargando={cargandoCentros}
-                    error={errorCentros}
-                    isOnline={isOnline}
-                    onReintentar={() => refetchCentros()}
-                    opciones={centros.map((c) => ({
-                        value: c.codigo,
-                        label: `${etiquetaCat(c)}${c.activo ? "" : " — dado de baja"}`,
-                    }))}
-                />
+                <div>
+                    <SelectorCatalogo
+                        label="Centro de acopio de referencia"
+                        value={cat}
+                        onChange={setCat}
+                        cargando={cargandoCentros}
+                        error={errorCentros}
+                        isOnline={isOnline}
+                        onReintentar={() => refetchCentros()}
+                        opciones={centros.map((c) => ({
+                            value: c.codigo,
+                            label: `${etiquetaCat(c)}${c.activo ? "" : " — dado de baja"}`,
+                        }))}
+                    />
+                    {/* La lista NO se filtra por la provincia elegida arriba:
+                        una comunidad entrega en el CAT que le queda más
+                        cerca, aunque esté en otra provincia, y el sistema lo
+                        permite a propósito (el API lo verifica con pruebas
+                        propias). Este texto existe para que nadie "arregle"
+                        esto dentro de unos meses agregando un filtro. */}
+                    <p className="text-xs text-gray-500 mt-1">
+                        Puede estar en otro cantón o en otra provincia: la comunidad
+                        entrega donde le queda más cerca.
+                    </p>
+                </div>
 
                 {error && (
                     <div className="bg-teja-50 border border-teja-100 rounded-xl

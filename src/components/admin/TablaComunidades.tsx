@@ -52,7 +52,7 @@ export function TablaComunidades() {
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                {["Comunidad", "Cantón", "CAT de referencia", "Estado", ""]
+                                {["Comunidad", "Cantón", "Provincia", "CAT de referencia", "Estado", ""]
                                     .map((h) => (
                                         <th key={h}
                                             className="px-4 py-3 text-left text-xs font-bold
@@ -69,6 +69,7 @@ export function TablaComunidades() {
                                         {c.nombre}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">{c.canton}</td>
+                                    <td className="px-4 py-3 text-gray-600">{c.provincia}</td>
                                     <td className="px-4 py-3 text-gray-600">
                                         {nombreCat(c.catReferencia)}
                                     </td>
