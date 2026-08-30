@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { productorasApi } from "../../api/productoras";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
+import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import { useAuth } from "../../context/useAuth";
 import type { CrearProductoraRequest, Productora } from "../../types/productora";
-import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../../hooks/useCatalogos";
+import { useCentrosAcopio, useNombreCat, etiquetaCat, conValorVigente } from "../../hooks/useCatalogos";
 
 interface Props {
     productora?: Productora | null; // presente = modo edición (RF-105)
@@ -54,7 +55,17 @@ export function FormProductora({ productora = null, onClose }: Props) {
         queryFn: () => catalogosApi.listarComunidades(),
     });
 
-    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
+    // Con inactivos incluidos (misma consulta que useNombreCat, así que no
+    // duplica la petición) y filtrado con conValorVigente: si el CAT que ya
+    // tiene asignado esta productora fue dado de baja, su opción se
+    // conserva en vez de dejarla sin nada asignado.
+    const {
+        data: centrosTodos = [], isLoading: cargandoCentros,
+        isError: errorCentros, refetch: refetchCentros,
+    } = useCentrosAcopio(true);
+    const centros = useMemo(
+        () => conValorVigente(centrosTodos, form.catAsignado || null, (c) => c.codigo),
+        [centrosTodos, form.catAsignado]);
     const nombreCat = useNombreCat();
 
     const mutation = useMutation({
@@ -218,20 +229,18 @@ export function FormProductora({ productora = null, onClose }: Props) {
                                 {nombreCat(catFijo)}
                             </div>
                         ) : (
-                            <select
-                                required
+                            <SelectorCatalogo
+                                label=""
                                 value={form.catAsignado}
-                                onChange={(e) => setForm({ ...form, catAsignado: e.target.value })}
-                                className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                             text-base focus:border-primary-500 focus:outline-none"
-                            >
-                                <option value="" disabled>
-                                    {cargandoCentros ? "Cargando centros…" : "Seleccionar centro…"}
-                                </option>
-                                {centros.map((c) => (
-                                    <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
-                                ))}
-                            </select>
+                                onChange={(v) => setForm({ ...form, catAsignado: v })}
+                                cargando={cargandoCentros}
+                                error={errorCentros}
+                                onReintentar={() => refetchCentros()}
+                                opciones={centros.map((c) => ({
+                                    value: c.codigo,
+                                    label: `${etiquetaCat(c)}${c.activo ? "" : " — dado de baja"}`,
+                                }))}
+                            />
                         )}
                     </div>
 

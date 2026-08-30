@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
+import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import type { Comunidad } from "../../types/admin";
-import { useCantones, useCentrosAcopio, etiquetaCat } from "../../hooks/useCatalogos";
+import { useCantones, useCentrosAcopio, etiquetaCat, conValorVigente } from "../../hooks/useCatalogos";
 
 interface Props {
     comunidad: Comunidad | null; // null = crear nueva
@@ -23,12 +24,42 @@ export function FormComunidad({ comunidad, onClose }: Props) {
 
     // La gestión de provincias y cantones (alta, edición) es de la Task 8;
     // aquí solo se listan para poblar el selector de esta comunidad.
-    const { data: cantones = [], isLoading: cargandoCantones } = useCantones();
-    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
+    // Se piden con inactivos incluidos (misma consulta que useNombreCat, así
+    // que no duplica la petición) y se filtran abajo con conValorVigente:
+    // así, si el cantón o el CAT de ESTA comunidad fue dado de baja después
+    // de asignárselo, su opción se conserva en vez de desaparecer.
+    const {
+        data: cantonesTodos = [], isLoading: cargandoCantones,
+        isError: errorCantones, refetch: refetchCantones,
+    } = useCantones(undefined, true);
+    const {
+        data: centrosTodos = [], isLoading: cargandoCentros,
+        isError: errorCentros, refetch: refetchCentros,
+    } = useCentrosAcopio(true);
+
+    const cantones = useMemo(
+        () => conValorVigente(cantonesTodos, cantonId || null, (c) => c.id),
+        [cantonesTodos, cantonId]);
+    const centros = useMemo(
+        () => conValorVigente(centrosTodos, cat || null, (c) => c.codigo),
+        [centrosTodos, cat]);
 
     const mutation = useMutation({
         mutationFn: async () => {
-            const body = { nombre, cantonId, catReferencia: cat };
+            const body = {
+                nombre, cantonId, catReferencia: cat,
+                // Al editar hay que reenviar las coordenadas existentes: el
+                // API las asigna incondicionalmente con lo que llegue en el
+                // cuerpo, y este formulario no las edita. Omitirlas las
+                // pondría en null y la comunidad desaparecería del mapa
+                // público con solo cambiarle el nombre.
+                ...(editando && {
+                    latitud: comunidad.latitud,
+                    longitud: comunidad.longitud,
+                    altitudMinM: comunidad.altitudMinM,
+                    altitudMaxM: comunidad.altitudMaxM,
+                }),
+            };
             if (editando) {
                 await catalogosApi.actualizarComunidad(comunidad.id, body);
             } else {
@@ -86,49 +117,31 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs font-bold uppercase tracking-wide
-                        text-gray-500 mb-1">
-                        Cantón
-                    </label>
-                    <select
-                        required
-                        value={cantonId || ""}
-                        onChange={(e) => setCantonId(Number(e.target.value))}
-                        className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                       text-base focus:border-primary-500 focus:outline-none"
-                    >
-                        <option value="" disabled>
-                            {cargandoCantones ? "Cargando cantones…" : "Seleccionar cantón…"}
-                        </option>
-                        {cantones.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.nombre} ({c.provincia})
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                <SelectorCatalogo
+                    label="Cantón"
+                    value={cantonId ? String(cantonId) : ""}
+                    onChange={(v) => setCantonId(Number(v))}
+                    cargando={cargandoCantones}
+                    error={errorCantones}
+                    onReintentar={() => refetchCantones()}
+                    opciones={cantones.map((c) => ({
+                        value: String(c.id),
+                        label: `${c.nombre} (${c.provincia})${c.activo ? "" : " — dado de baja"}`,
+                    }))}
+                />
 
-                <div>
-                    <label className="block text-xs font-bold uppercase tracking-wide
-                        text-gray-500 mb-1">
-                        Centro de acopio de referencia
-                    </label>
-                    <select
-                        required
-                        value={cat}
-                        onChange={(e) => setCat(e.target.value)}
-                        className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                       text-base focus:border-primary-500 focus:outline-none"
-                    >
-                        <option value="" disabled>
-                            {cargandoCentros ? "Cargando centros…" : "Seleccionar centro…"}
-                        </option>
-                        {centros.map((c) => (
-                            <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
-                        ))}
-                    </select>
-                </div>
+                <SelectorCatalogo
+                    label="Centro de acopio de referencia"
+                    value={cat}
+                    onChange={setCat}
+                    cargando={cargandoCentros}
+                    error={errorCentros}
+                    onReintentar={() => refetchCentros()}
+                    opciones={centros.map((c) => ({
+                        value: c.codigo,
+                        label: `${etiquetaCat(c)}${c.activo ? "" : " — dado de baja"}`,
+                    }))}
+                />
 
                 {error && (
                     <div className="bg-teja-50 border border-teja-100 rounded-xl

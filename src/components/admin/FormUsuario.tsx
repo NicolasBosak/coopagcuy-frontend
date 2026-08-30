@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usuariosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { ModalPasswordTemporal } from "./ModalPasswordTemporal";
+import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import type { Usuario } from "../../types/admin";
 import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
-import { useCentrosAcopio, etiquetaCat } from "../../hooks/useCatalogos";
+import { useCentrosAcopio, etiquetaCat, conValorVigente } from "../../hooks/useCatalogos";
 
 interface Props {
     usuario: Usuario | null; // null = crear nuevo
@@ -31,7 +32,17 @@ export function FormUsuario({ usuario, onClose }: Props) {
 
     const esOperadorCat = rol === "OperadorCAT";
 
-    const { data: centros = [], isLoading: cargandoCentros } = useCentrosAcopio();
+    // Con inactivos incluidos (misma consulta que useNombreCat, así que no
+    // duplica la petición) y filtrado con conValorVigente: si el centro que
+    // este usuario ya tiene asignado fue dado de baja, su opción se
+    // conserva en vez de dejarlo sin nada asignado.
+    const {
+        data: centrosTodos = [], isLoading: cargandoCentros,
+        isError: errorCentros, refetch: refetchCentros,
+    } = useCentrosAcopio(true);
+    const centros = useMemo(
+        () => conValorVigente(centrosTodos, catAsignado || null, (c) => c.codigo),
+        [centrosTodos, catAsignado]);
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -181,24 +192,18 @@ export function FormUsuario({ usuario, onClose }: Props) {
                 {/* Un Operador de CAT queda restringido a su centro */}
                 {esOperadorCat && (
                     <div className="animate-fade-in">
-                        <label className="block text-xs font-bold uppercase tracking-wide
-                          text-gray-500 mb-1">
-                            Centro de acopio asignado
-                        </label>
-                        <select
-                            required
+                        <SelectorCatalogo
+                            label="Centro de acopio asignado"
                             value={catAsignado}
-                            onChange={(e) => setCatAsignado(e.target.value)}
-                            className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                           text-base focus:border-primary-500 focus:outline-none"
-                        >
-                            <option value="" disabled>
-                                {cargandoCentros ? "Cargando centros…" : "Selecciona un centro…"}
-                            </option>
-                            {centros.map((c) => (
-                                <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
-                            ))}
-                        </select>
+                            onChange={setCatAsignado}
+                            cargando={cargandoCentros}
+                            error={errorCentros}
+                            onReintentar={() => refetchCentros()}
+                            opciones={centros.map((c) => ({
+                                value: c.codigo,
+                                label: `${etiquetaCat(c)}${c.activo ? "" : " — dado de baja"}`,
+                            }))}
+                        />
                         <p className="text-xs text-gray-400 mt-1">
                             Solo podrá registrar entregas en este centro.
                         </p>

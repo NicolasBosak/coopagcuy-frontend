@@ -17,23 +17,23 @@ export function JaulaEnArmado({ isOnline }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
     const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
-    const { data: centros = [] } = useCentrosAcopio();
+    const {
+        data: centros = [], isLoading: cargandoCentros,
+        isError: errorCentros, refetch: refetchCentros,
+    } = useCentrosAcopio();
     const nombreCat = useNombreCat();
-    // Sin centro fijo, arranca vacío; se resuelve al primer centro del
-    // catálogo apenas llega (más abajo), derivado en el render en vez de
-    // un efecto para no encadenar un setState con cada carga del catálogo.
+    // Sin centro fijo, arranca vacío y se queda así hasta que alguien elija
+    // uno a mano: ya no hay preselección automática del primer centro del
+    // catálogo (ver el selector más abajo).
     const [cat, setCat] = useState<string>(catFijo ?? "");
     const [aviso, setAviso] = useState<string | null>(null);
 
-    const catResuelto = cat || centros[0]?.codigo || "";
-
     const { data: jaula, isLoading } = useQuery({
-        queryKey: ["lote_abierto", catResuelto],
-        queryFn: () => recepcionApi.obtenerLoteAbierto(catResuelto),
-        // Sin centro resuelto todavía (catálogo cargando y sin centro fijo)
-        // no hay nada que consultar: consultar con "" traería el lote
-        // equivocado.
-        enabled: isOnline && !!catResuelto,
+        queryKey: ["lote_abierto", cat],
+        queryFn: () => recepcionApi.obtenerLoteAbierto(cat),
+        // Sin centro elegido todavía no hay nada que consultar: consultar
+        // con "" traería el lote equivocado.
+        enabled: isOnline && !!cat,
         refetchInterval: 30_000,
     });
 
@@ -65,11 +65,16 @@ export function JaulaEnArmado({ isOnline }: Props) {
                         </span>
                     ) : (
                         <select
-                            value={catResuelto}
+                            value={cat}
                             onChange={(e) => setCat(e.target.value)}
                             className="h-9 px-2 rounded-lg border-2 border-gray-200 text-xs
                          font-semibold focus:border-primary-500 focus:outline-none"
                         >
+                            {/* Marcador de posición: sin él el select se ve como una
+                                caja vacía en vez de pedir explícitamente una elección. */}
+                            <option value="" disabled>
+                                {cargandoCentros ? "Cargando…" : "Seleccionar centro…"}
+                            </option>
                             {centros.map((c) => (
                                 <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                             ))}
@@ -96,10 +101,34 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     Sin conexión: las entregas se guardan en la tablet y se
                     sumarán a la jaula al sincronizar.
                 </p>
-            ) : !catResuelto ? (
-                // Sin centro fijo, esto solo se ve un instante: catResuelto
-                // toma el primer centro del catálogo apenas llega.
-                <p className="text-sm text-gray-400">Cargando centros de acopio…</p>
+            ) : !cat ? (
+                // Ya no hay preselección automática: sin CAT fijo, esto se ve
+                // hasta que alguien elija un centro en el select de arriba,
+                // no solo "un instante". Por eso el mensaje no puede seguir
+                // diciendo "cargando" — mentiría en cuanto el catálogo llegue
+                // y nadie haya elegido nada todavía.
+                centros.length === 0 && !cargandoCentros ? (
+                    <p className="text-sm text-teja-600">
+                        {errorCentros
+                            ? "No se pudo cargar el catálogo de centros de acopio. "
+                            : "Todavía no hay centros de acopio creados. "}
+                        {errorCentros && (
+                            <button
+                                type="button"
+                                onClick={() => refetchCentros()}
+                                className="font-bold underline underline-offset-2"
+                            >
+                                Reintentar
+                            </button>
+                        )}
+                    </p>
+                ) : (
+                    <p className="text-sm text-gray-400">
+                        {cargandoCentros
+                            ? "Cargando centros de acopio…"
+                            : "Elige un centro de acopio para ver su jaula."}
+                    </p>
+                )
             ) : isLoading ? (
                 <p className="text-sm text-gray-400">Consultando jaula…</p>
             ) : !jaula ? (

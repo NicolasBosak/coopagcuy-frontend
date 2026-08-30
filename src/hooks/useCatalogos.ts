@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { geografiaApi, centrosAcopioApi } from "../api/catalogos";
 
@@ -43,8 +44,36 @@ export function useCentrosAcopio(incluirInactivos = false) {
  */
 export function useNombreCat() {
     const { data: centros = [] } = useCentrosAcopio(true);
-    return (codigo: string) =>
-        centros.find((c) => c.codigo === codigo)?.nombre ?? codigo;
+    // useCallback: sin esto se devuelve un cierre nuevo en cada render, y
+    // cualquier efecto o memo que lo incluya en sus dependencias se
+    // reejecutaría sin necesidad.
+    return useCallback(
+        (codigo: string) => centros.find((c) => c.codigo === codigo)?.nombre ?? codigo,
+        [centros],
+    );
+}
+
+/**
+ * Filtra un catálogo a solo sus elementos activos, pero conserva el que ya
+ * tiene asignado el registro que se está editando aunque esté desactivado.
+ *
+ * Sin esto, abrir para editar un registro cuyo centro/cantón fue dado de
+ * baja mostraría el selector como si no tuviera nada asignado, y el
+ * `required` obligaría a reasignarlo sin que nadie lo haya pedido. El
+ * elemento inactivo solo aparece cuando coincide con `valorActual`: nunca
+ * se ofrece como opción nueva para otros registros.
+ */
+export function conValorVigente<T extends { activo: boolean }>(
+    items: T[],
+    valorActual: string | number | null | undefined,
+    clave: (item: T) => string | number,
+): T[] {
+    const activos = items.filter((i) => i.activo);
+    if (valorActual === null || valorActual === undefined || valorActual === "" || valorActual === 0)
+        return activos;
+    if (activos.some((i) => clave(i) === valorActual)) return activos;
+    const vigente = items.find((i) => clave(i) === valorActual);
+    return vigente ? [...activos, vigente] : activos;
 }
 
 /**

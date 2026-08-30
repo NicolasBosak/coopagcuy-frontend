@@ -51,7 +51,7 @@ const PRESETS: { label: string; rango: () => [string, string] }[] = [
 export function FiltrosPeriodo({
     desde, hasta, cat, onDesdeChange, onHastaChange, onCatChange
 }: Props) {
-    const { data: centros = [] } = useCentrosAcopio();
+    const { data: centros = [], isLoading: cargandoCentros, isError: errorCentros } = useCentrosAcopio();
 
     const aplicarPreset = (rango: [string, string]) => {
         onDesdeChange(rango[0]);
@@ -117,6 +117,11 @@ export function FiltrosPeriodo({
                     <label className="block text-xs font-bold uppercase tracking-wide
                             text-gray-500 mb-1">
                         Centro de acopio
+                        {/* "Todos" sigue siempre disponible: un catálogo que no
+                            cargó o sigue cargando no debe bloquear el filtro,
+                            solo informar de que la lista de CAT está incompleta. */}
+                        {cargandoCentros && " (cargando…)"}
+                        {errorCentros && " (no se pudo cargar la lista de CAT)"}
                     </label>
                     <select
                         value={cat}

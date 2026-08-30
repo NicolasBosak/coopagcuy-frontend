@@ -24,7 +24,7 @@ export default function Productoras() {
     const [filtroCat, setFiltroCat] = useState<string>("");
     const [filtroBusq, setFiltroBusq] = useState("");
 
-    const { data: centros = [] } = useCentrosAcopio();
+    const { data: centros = [], isLoading: cargandoCentros, isError: errorCentros } = useCentrosAcopio();
     const nombreCat = useNombreCat();
 
     const { data = [], isLoading } = useQuery({
@@ -91,10 +91,15 @@ export default function Productoras() {
                     <select
                         value={filtroCat}
                         onChange={(e) => setFiltroCat(e.target.value)}
+                        title={errorCentros
+                            ? "No se pudo cargar la lista de CAT; solo está disponible \"Todos los CAT\"."
+                            : undefined}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                        <option value="">Todos los CAT</option>
+                        <option value="">
+                            {cargandoCentros ? "Cargando CAT…" : "Todos los CAT"}
+                        </option>
                         {centros.map((c) => (
                             <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                         ))}
