@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
+import { ConectividadContext } from "../../context/ConectividadContextInstance";
 
 // Cada ítem declara qué roles pueden verlo. El admin técnico atiende soporte:
 // no aparece en la operación de la cadena. Ocultarlo aquí es cosmética — la
@@ -82,6 +83,12 @@ export function MainLayout({ children }: { children: ReactNode }) {
         (i) => i.roles === null || (auth.rol && i.roles.includes(auth.rol)));
 
     return (
+        // El mismo `online` que pinta el indicador de la cabecera baja por
+        // contexto a todo lo que se monte dentro de MainLayout (todas las
+        // pantallas de la app): así ningún selector ni tabla de
+        // Administración necesita su propio listener de online/offline ni
+        // leer `navigator.onLine` sin reactividad en el render.
+        <ConectividadContext.Provider value={online}>
         <div className="min-h-screen bg-superficie flex flex-col">
             {/* Barra superior: marca + proyecto + estado + salir */}
             <header className="bg-blanco/90 backdrop-blur border-b border-gray-200
@@ -237,5 +244,6 @@ export function MainLayout({ children }: { children: ReactNode }) {
                 </div>
             </footer>
         </div>
+        </ConectividadContext.Provider>
     );
 }

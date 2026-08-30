@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useProvincias, useCantones } from "../../hooks/useCatalogos";
+import { useMemo, useState } from "react";
+import { SelectorCatalogo } from "../ui/SelectorCatalogo";
+import { useIsOnline } from "../../context/useIsOnline";
+import { useProvincias, useCantones, conValorVigente } from "../../hooks/useCatalogos";
 
 interface Props {
     cantonId: number | undefined;
@@ -15,39 +17,46 @@ interface Props {
  * distinguir.
  *
  * Vive suelto y no dentro de un formulario porque lo usan dos —el del centro
- * de acopio y el de la comunidad— y las tres reglas de abajo son fáciles de
+ * de acopio y el de la comunidad— y las reglas de abajo son fáciles de
  * implementar mal por separado.
  *
- * No usa `SelectorCatalogo` (a diferencia de `FormCanton`): ese componente
- * reemplaza el select por el aviso de error en cuanto `error` es cierto, sin
- * mirar si ya hay opciones cacheadas que mostrar, y tampoco distingue "sin
- * conexión" de un error real. Provincias y cantones se cachean 10 minutos
- * (`CACHE_LARGO` en `useCatalogos`), así que envolver esto en
- * `SelectorCatalogo` escondería un select perfectamente usable —con datos
- * de esa caché— detrás de un aviso apenas la consulta quedara en pausa por
- * falta de red. En vez de eso, cada select de aquí sigue el mismo patrón ya
- * usado en `FormLote` y `JaulaEnArmado` para el mismo problema: el aviso
- * solo reemplaza al select cuando de verdad no hay ninguna opción que
- * mostrar, y dentro de ese caso, el orden de comprobación es sin conexión
- * primero, error después y catálogo vacío al final (igual que
- * `TablaProvincias`/`TablaCantones`) — porque en TanStack Query v5 una
- * consulta *offline* queda pausada, no en error: `isLoading` e `isError`
- * son ambos `false`, y mirar `isError` antes que `navigator.onLine`
- * confundiría "sin señal" con "el catálogo está vacío".
+ * El select de Provincia usa `SelectorCatalogo` (que ya cubre sus cuatro
+ * estados incluyendo "sin conexión" y "hay caché, no ocultar el select");
+ * el de Cantón no: mientras no hay provincia elegida, ese select tiene un
+ * QUINTO estado que `SelectorCatalogo` no modela —"todavía no aplica"— con
+ * su propio texto ("Elige antes la provincia") y sin mirar `error`/`isOnline`
+ * de ninguna consulta, porque en ese momento no hay nada que el usuario
+ * pueda hacer con un aviso de "no se pudo cargar". Forzarlo dentro de
+ * `SelectorCatalogo` habría exigido agregarle un prop de placeholder
+ * personalizado solo para este llamador.
  */
 export function SelectorCanton({ cantonId, onCambio, requerido = true }: Props) {
-    const isOnline = navigator.onLine;
+    const isOnline = useIsOnline();
 
+    // Con inactivas incluidas y filtradas después con `conValorVigente`
+    // (mismo patrón que `FormComunidad`): si la provincia o el cantón que
+    // ya tiene asignado este registro fueron dados de baja después de
+    // asignárselos, sus opciones se conservan en vez de desaparecer. Sin
+    // esto, editar un registro así dejaba la provincia en blanco (no se
+    // podía deducir desde un cantón inactivo, que las consultas de solo
+    // activos no traían) y el cantón deshabilitado pidiendo "Elige antes la
+    // provincia" — el administrador no podía ver qué tenía guardado, y en
+    // cuanto tocaba el select de provincia para mirar, `onCambio(undefined)`
+    // le borraba la asignación.
     const {
-        data: provincias = [], isLoading: cargandoProvincias,
+        data: provinciasTodas = [], isLoading: cargandoProvincias,
         isError: errorProvincias, refetch: refetchProvincias,
-    } = useProvincias();
+    } = useProvincias(true);
 
-    // Todos los cantones activos, sin filtrar por provincia: misma clave de
-    // caché que `useCantones()` sin argumentos, así que no dispara una
-    // petición aparte. Sirve para deducir la provincia de un `cantonId` que
-    // llega en modo edición (ver `provinciaDerivada` abajo).
-    const { data: todosLosCantones = [] } = useCantones();
+    // Todos los cantones, activos e inactivos, sin filtrar por provincia:
+    // misma clave de caché que usa `FormComunidad` para su propio
+    // `cantonesTodos`, así que la comparten en vez de duplicar la petición.
+    // Sirve para deducir la provincia de un `cantonId` que llega en modo
+    // edición (ver `provinciaDerivada` abajo). Ojo: esto NO significa que
+    // este componente dispare una sola petición de cantones en total — la
+    // consulta de abajo, filtrada por la provincia elegida, es una segunda
+    // consulta aparte.
+    const { data: todosLosCantones = [] } = useCantones(undefined, true);
 
     // Provincia elegida a mano por el usuario. Empieza sin definir: mientras
     // no se toque el selector, la deducción de abajo la completa.
@@ -58,72 +67,54 @@ export function SelectorCanton({ cantonId, onCambio, requerido = true }: Props) 
     // deshabilitado, dejando al usuario sin ver lo que ya está guardado.
     //
     // Se deduce como valor DERIVADO del render, no con un `useEffect` que
-    // llama a `setState` (ese patrón ya se cambió en la Task 7, ver el
-    // historial de `FormLote`): un efecto fuerza un render extra con
-    // parpadeo, y encima dispara el lint `react-hooks/set-state-in-effect`
-    // que existe justo para evitarlo. En cuanto el usuario elige una
-    // provincia a mano, `provinciaElegida` queda definida y manda por
-    // encima de esta deducción; para entonces el `onChange` de abajo ya
-    // limpió `cantonId` con `onCambio(undefined)`, así que la deducción
-    // tampoco tiene de dónde volver a calcularse con el valor viejo.
+    // llama a `setState`: un efecto fuerza un render extra con parpadeo, y
+    // encima dispara el lint `react-hooks/set-state-in-effect` que existe
+    // justo para evitarlo. En cuanto el usuario elige una provincia a mano,
+    // `provinciaElegida` queda definida y manda por encima de esta
+    // deducción; para entonces el `onChange` de abajo ya limpió `cantonId`
+    // con `onCambio(undefined)`, así que la deducción tampoco tiene de dónde
+    // volver a calcularse con el valor viejo.
     const provinciaDerivada = todosLosCantones.find((c) => c.id === cantonId)?.provinciaId;
     const provinciaId = provinciaElegida ?? provinciaDerivada;
 
+    // `provinciasTodas` ya incluye inactivas, así que cualquier
+    // `provinciaId` real (elegido a mano o derivado del cantón) aparece
+    // siempre en `provincias`, dada de baja o no.
+    const provincias = useMemo(
+        () => conValorVigente(
+            provinciasTodas, provinciaId ?? null, (p) => p.id, (p) => p.activa),
+        [provinciasTodas, provinciaId]);
+
     const {
-        data: cantonesDeProvincia = [], isLoading: cargandoCantones,
+        data: cantonesDeProvinciaTodos = [], isLoading: cargandoCantones,
         isError: errorCantones, refetch: refetchCantones,
-    } = useCantones(provinciaId);
+    } = useCantones(provinciaId, true);
+    const cantonesDeProvincia = useMemo(
+        () => conValorVigente(
+            cantonesDeProvinciaTodos, cantonId ?? null, (c) => c.id, (c) => c.activo),
+        [cantonesDeProvinciaTodos, cantonId]);
 
     return (
         <>
-            <div>
-                <label className="block text-xs font-bold uppercase tracking-wide
-                    text-gray-500 mb-1">
-                    Provincia
-                </label>
-                {provincias.length === 0 && !cargandoProvincias ? (
-                    <div className="rounded-xl border-2 border-teja-100 bg-teja-50 px-3 py-2.5">
-                        <p className="text-sm font-semibold text-teja-700">
-                            {!isOnline
-                                ? "Sin conexión: no se pudo cargar el catálogo de provincias."
-                                : errorProvincias
-                                    ? "No se pudo cargar el catálogo de provincias."
-                                    : "Todavía no hay provincias creadas."}
-                        </p>
-                        {isOnline && errorProvincias && (
-                            <button
-                                type="button"
-                                onClick={() => refetchProvincias()}
-                                className="mt-1.5 text-xs font-bold text-teja-700
-                                   underline underline-offset-2"
-                            >
-                                Reintentar
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <select
-                        required={requerido}
-                        value={provinciaId ?? ""}
-                        onChange={(e) => {
-                            setProvinciaElegida(e.target.value ? Number(e.target.value) : undefined);
-                            // El cantón elegido pertenecía a la provincia anterior:
-                            // sin limpiarlo, el formulario enviaría un cantón que no
-                            // está en la lista que el usuario tiene delante.
-                            onCambio(undefined);
-                        }}
-                        className="w-full h-12 px-3 rounded-xl border-2 border-gray-200
-                            text-base focus:border-primary-500 focus:outline-none"
-                    >
-                        <option value="">
-                            {cargandoProvincias ? "Cargando…" : "Elige una provincia…"}
-                        </option>
-                        {provincias.map((p) => (
-                            <option key={p.id} value={p.id}>{p.nombre}</option>
-                        ))}
-                    </select>
-                )}
-            </div>
+            <SelectorCatalogo
+                label="Provincia"
+                value={provinciaId ? String(provinciaId) : ""}
+                onChange={(v) => {
+                    setProvinciaElegida(v ? Number(v) : undefined);
+                    // El cantón elegido pertenecía a la provincia anterior:
+                    // sin limpiarlo, el formulario enviaría un cantón que no
+                    // está en la lista que el usuario tiene delante.
+                    onCambio(undefined);
+                }}
+                cargando={cargandoProvincias}
+                error={errorProvincias}
+                isOnline={isOnline}
+                onReintentar={() => refetchProvincias()}
+                opciones={provincias.map((p) => ({
+                    value: String(p.id),
+                    label: `${p.nombre}${p.activa ? "" : " — dada de baja"}`,
+                }))}
+            />
 
             <div>
                 <label className="block text-xs font-bold uppercase tracking-wide
@@ -173,7 +164,9 @@ export function SelectorCanton({ cantonId, onCambio, requerido = true }: Props) 
                                     : "Elige un cantón…"}
                         </option>
                         {cantonesDeProvincia.map((c) => (
-                            <option key={c.id} value={c.id}>{c.nombre}</option>
+                            <option key={c.id} value={c.id}>
+                                {c.nombre}{c.activo ? "" : " — dado de baja"}
+                            </option>
                         ))}
                     </select>
                 )}

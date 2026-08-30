@@ -19,7 +19,12 @@ export function TablaComunidades() {
     const toggle = useMutation({
         mutationFn: ({ id, activa }: { id: number; activa: boolean }) =>
             catalogosApi.cambiarEstadoComunidad(id, activa),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["comunidades"] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["comunidades"] });
+            // Mismo motivo que en FormComunidad: activar/desactivar una
+            // comunidad cambia `totalComunidades` en TablaCantones.
+            qc.invalidateQueries({ queryKey: ["cantones"] });
+        },
     });
 
     const nombreCat = useNombreCat();

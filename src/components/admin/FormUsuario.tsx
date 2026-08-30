@@ -4,6 +4,7 @@ import { usuariosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { ModalPasswordTemporal } from "./ModalPasswordTemporal";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
+import { useIsOnline } from "../../context/useIsOnline";
 import type { Usuario } from "../../types/admin";
 import type { PasswordTemporal } from "../../types/recuperacion";
 import { ROLES } from "../../types/admin";
@@ -19,6 +20,7 @@ interface Props {
 export function FormUsuario({ usuario, onClose }: Props) {
     const qc = useQueryClient();
     const editando = usuario !== null;
+    const isOnline = useIsOnline();
 
     const [nombre, setNombre] = useState(usuario?.nombreCompleto ?? "");
     const [cedula, setCedula] = useState(usuario?.cedula ?? "");
@@ -212,6 +214,7 @@ export function FormUsuario({ usuario, onClose }: Props) {
                             onChange={setCatAsignado}
                             cargando={cargandoCentros}
                             error={errorCentros}
+                            isOnline={isOnline}
                             onReintentar={() => refetchCentros()}
                             opciones={centros.map((c) => ({
                                 value: c.codigo,

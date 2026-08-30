@@ -5,11 +5,16 @@ import { Badge } from "../ui/Badge";
 import { FormCentroAcopio } from "./FormCentroAcopio";
 import type { CentroAcopio } from "../../types/admin";
 import { useCentrosAcopio } from "../../hooks/useCatalogos";
+import { useIsOnline } from "../../context/useIsOnline";
 
 export function TablaCentrosAcopio() {
     const qc = useQueryClient();
+    const isOnline = useIsOnline();
     const [centroEditar, setCentroEditar] = useState<CentroAcopio | null>(null);
     const [showForm, setShowForm] = useState(false);
+    // El mensaje del 409 al desactivar (ver `toggle` abajo) se limpia al
+    // abrir "Nuevo centro" o "Editar": sin esto sobrevive a abrir un
+    // formulario que no tiene nada que ver con el aviso.
     const [error, setError] = useState<string | null>(null);
 
     // Con inactivos incluidos: el administrador tiene que poder reactivar un
@@ -39,7 +44,11 @@ export function TablaCentrosAcopio() {
         <>
             <div className="flex justify-end mb-4">
                 <button
-                    onClick={() => { setCentroEditar(null); setShowForm(true); }}
+                    onClick={() => {
+                        setError(null);
+                        setCentroEditar(null);
+                        setShowForm(true);
+                    }}
                     className="h-11 px-5 bg-primary-600 hover:bg-primary-700
                      text-white text-sm font-semibold rounded-xl transition
                      active:scale-[0.98]"
@@ -67,7 +76,7 @@ export function TablaCentrosAcopio() {
                     // un fallo de red se vería igual que un catálogo genuinamente
                     // vacío.
                     <div className="p-8 text-center text-sm">
-                        {!navigator.onLine ? (
+                        {!isOnline ? (
                             <p className="text-teja-600">
                                 Sin conexión: no se pudo cargar el catálogo de centros de acopio.
                             </p>
@@ -123,6 +132,7 @@ export function TablaCentrosAcopio() {
                                     <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
                                         <button
                                             onClick={() => {
+                                                setError(null);
                                                 setCentroEditar(c);
                                                 setShowForm(true);
                                             }}

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { geografiaApi } from "../../api/catalogos";
 import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
+import { useIsOnline } from "../../context/useIsOnline";
 import { useProvincias, catalogoBloqueado, conValorVigente } from "../../hooks/useCatalogos";
 import type { Canton } from "../../types/admin";
 
@@ -14,6 +15,7 @@ interface Props {
 export function FormCanton({ canton, onClose }: Props) {
     const qc = useQueryClient();
     const editando = canton !== null;
+    const isOnline = useIsOnline();
 
     const [nombre, setNombre] = useState(canton?.nombre ?? "");
     const [provinciaId, setProvinciaId] = useState<number | undefined>(canton?.provinciaId);
@@ -54,6 +56,11 @@ export function FormCanton({ canton, onClose }: Props) {
             // sin esto, TablaProvincias mostraría el conteo desactualizado
             // hasta que algo más invalide su caché.
             qc.invalidateQueries({ queryKey: ["provincias"] });
+            // El nombre del cantón viaja desnormalizado dentro de cada
+            // CentroAcopio (`centro.canton`): renombrarlo sin invalidar esta
+            // caché dejaría la tabla de centros mostrando el nombre viejo
+            // hasta que otra acción, sin relación, la refrescara.
+            qc.invalidateQueries({ queryKey: ["centros-acopio"] });
             onClose();
         },
         onError: (e: unknown) => {
@@ -119,6 +126,7 @@ export function FormCanton({ canton, onClose }: Props) {
                     onChange={(v) => setProvinciaId(v ? Number(v) : undefined)}
                     cargando={cargandoProvincias}
                     error={errorProvincias}
+                    isOnline={isOnline}
                     onReintentar={() => refetchProvincias()}
                     opciones={provincias.map((p) => ({
                         value: String(p.id),

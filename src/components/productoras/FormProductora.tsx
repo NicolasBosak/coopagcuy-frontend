@@ -5,6 +5,7 @@ import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
 import { useAuth } from "../../context/useAuth";
+import { useIsOnline } from "../../context/useIsOnline";
 import type { CrearProductoraRequest, Productora } from "../../types/productora";
 import {
     useCentrosAcopio, useNombreCat, etiquetaCat, conValorVigente, catalogoBloqueado,
@@ -28,6 +29,7 @@ const EMPTY: CrearProductoraRequest = {
 export function FormProductora({ productora = null, onClose }: Props) {
     const queryClient = useQueryClient();
     const { auth } = useAuth();
+    const isOnline = useIsOnline();
     const editando = productora !== null;
 
     // El operador de CAT queda fijado a su centro, pero NO a las comunidades
@@ -249,6 +251,7 @@ export function FormProductora({ productora = null, onClose }: Props) {
                                 onChange={(v) => setForm({ ...form, catAsignado: v })}
                                 cargando={cargandoCentros}
                                 error={errorCentros}
+                                isOnline={isOnline}
                                 onReintentar={() => refetchCentros()}
                                 opciones={centros.map((c) => ({
                                     value: c.codigo,

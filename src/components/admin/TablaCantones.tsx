@@ -5,11 +5,16 @@ import { Badge } from "../ui/Badge";
 import { FormCanton } from "./FormCanton";
 import type { Canton } from "../../types/admin";
 import { useProvincias, useCantones } from "../../hooks/useCatalogos";
+import { useIsOnline } from "../../context/useIsOnline";
 
 export function TablaCantones() {
     const qc = useQueryClient();
+    const isOnline = useIsOnline();
     const [cantonEditar, setCantonEditar] = useState<Canton | null>(null);
     const [showForm, setShowForm] = useState(false);
+    // El mensaje del 409 al desactivar (ver `toggle` abajo) se limpia al
+    // abrir un formulario o al cambiar el filtro de provincia: sin esto
+    // sobrevive a acciones que no tienen nada que ver con el aviso.
     const [error, setError] = useState<string | null>(null);
     const [filtroProvincia, setFiltroProvincia] = useState<number | undefined>();
 
@@ -52,8 +57,11 @@ export function TablaCantones() {
                     </label>
                     <select
                         value={filtroProvincia ?? ""}
-                        onChange={(e) => setFiltroProvincia(
-                            e.target.value ? Number(e.target.value) : undefined)}
+                        onChange={(e) => {
+                            setError(null);
+                            setFiltroProvincia(
+                                e.target.value ? Number(e.target.value) : undefined);
+                        }}
                         className="h-11 px-3 rounded-xl border-2 border-gray-200
                             text-base focus:border-primary-500 focus:outline-none"
                     >
@@ -65,7 +73,11 @@ export function TablaCantones() {
                 </div>
 
                 <button
-                    onClick={() => { setCantonEditar(null); setShowForm(true); }}
+                    onClick={() => {
+                        setError(null);
+                        setCantonEditar(null);
+                        setShowForm(true);
+                    }}
                     className="h-11 px-5 bg-primary-600 hover:bg-primary-700
                         text-white text-sm font-semibold rounded-xl transition
                         active:scale-[0.98]"
@@ -93,7 +105,7 @@ export function TablaCantones() {
                     // un fallo de red se vería igual que un catálogo genuinamente
                     // vacío (o que un filtro sin resultados).
                     <div className="p-8 text-center text-sm">
-                        {!navigator.onLine ? (
+                        {!isOnline ? (
                             <p className="text-teja-600">
                                 Sin conexión: no se pudo cargar el catálogo de cantones.
                             </p>
@@ -152,6 +164,7 @@ export function TablaCantones() {
                                     <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
                                         <button
                                             onClick={() => {
+                                                setError(null);
                                                 setCantonEditar(c);
                                                 setShowForm(true);
                                             }}

@@ -26,6 +26,14 @@ export function FormProvincia({ provincia, onClose }: Props) {
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["provincias"] });
+            // El nombre de la provincia viaja desnormalizado dentro de cada
+            // Canton (`canton.provincia`) y, un nivel más abajo, dentro de
+            // cada CentroAcopio (`centro.provincia`): renombrarla sin
+            // invalidar estas dos cachés dejaría ambas tablas mostrando el
+            // nombre viejo hasta que otra acción, sin relación, las
+            // refrescara.
+            qc.invalidateQueries({ queryKey: ["cantones"] });
+            qc.invalidateQueries({ queryKey: ["centros-acopio"] });
             onClose();
         },
         onError: (e: unknown) => {

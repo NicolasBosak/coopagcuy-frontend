@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { catalogosApi } from "../../api/admin";
 import { ModalShell } from "../ui/ModalShell";
 import { SelectorCatalogo } from "../ui/SelectorCatalogo";
+import { useIsOnline } from "../../context/useIsOnline";
 import type { Comunidad } from "../../types/admin";
 import {
     useCantones, useCentrosAcopio, etiquetaCat, conValorVigente, catalogoBloqueado,
@@ -16,6 +17,7 @@ interface Props {
 export function FormComunidad({ comunidad, onClose }: Props) {
     const qc = useQueryClient();
     const editando = comunidad !== null;
+    const isOnline = useIsOnline();
 
     const [nombre, setNombre] = useState(comunidad?.nombre ?? "");
     // 0 = nada elegido todavía: no hay un cantón "por defecto" razonable
@@ -77,6 +79,12 @@ export function FormComunidad({ comunidad, onClose }: Props) {
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["comunidades"] });
+            // TablaCantones pinta `c.totalComunidades`: sin esto, crear o
+            // editar una comunidad deja ese conteo desactualizado hasta que
+            // algo más, sin relación, invalide la caché de cantones — y
+            // puede llegar a contradecir en pantalla el mensaje del 409 que
+            // el administrador esté leyendo en ese momento en otra pestaña.
+            qc.invalidateQueries({ queryKey: ["cantones"] });
             onClose();
         },
         onError: (e: unknown) => {
@@ -145,6 +153,7 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                     onChange={(v) => setCantonId(Number(v))}
                     cargando={cargandoCantones}
                     error={errorCantones}
+                    isOnline={isOnline}
                     onReintentar={() => refetchCantones()}
                     opciones={cantones.map((c) => ({
                         value: String(c.id),
@@ -158,6 +167,7 @@ export function FormComunidad({ comunidad, onClose }: Props) {
                     onChange={setCat}
                     cargando={cargandoCentros}
                     error={errorCentros}
+                    isOnline={isOnline}
                     onReintentar={() => refetchCentros()}
                     opciones={centros.map((c) => ({
                         value: c.codigo,
