@@ -180,3 +180,16 @@ export interface MargenDto {
     animalesSinCosto: number;
     unidadesDevueltas: number;
 }
+
+// Las dos vías por las que se vende un cuy, separadas. Aquí sumar SÍ vale
+// —un cuy vendido en la comunidad nunca llega a la planta, así que no hay
+// doble conteo—, y es la única excepción de esta pestaña: las cifras de
+// dinero no se suman entre sí.
+//
+// despachadasClientes va neta de devoluciones, igual que margenDto.ingreso.
+export interface UnidadesMesDto {
+    agrupacion: string;
+    vendidasComunidad: number;
+    despachadasClientes: number;
+    total: number;
+}

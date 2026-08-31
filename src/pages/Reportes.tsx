@@ -16,7 +16,7 @@ import {
     BarrasDivergentes, type FilaDivergente,
 } from "../components/reportes/graficos/BarrasDivergentes";
 import { StatCard } from "../components/ui/StatCard";
-import type { MargenDto } from "../types/reportes";
+import type { MargenDto, UnidadesMesDto } from "../types/reportes";
 import { useAuth } from "../context/useAuth";
 import { fechaLocal } from "../utils/fechaLocal";
 
@@ -149,6 +149,15 @@ const COLS_DINERO_MARGEN: Col[] = [
     { label: "Unidades devueltas", align: "centro" },
 ];
 
+// Las dos vías de venta, separadas. Son conteos de animales, no dinero, así
+// que se centran igual que "N.º de pagos" y los contadores del margen — y el
+// total dice "animales" a propósito: es la única suma real de esta pestaña.
+const COLS_UNIDADES: Col[] = [
+    { label: "Vendidas en la comunidad", align: "centro", tono: "text-gray-700" },
+    { label: "Despachadas a clientes", align: "centro", tono: "text-gray-700" },
+    { label: "Total de animales", align: "centro" },
+];
+
 // Las tres series del gráfico de ganancias. Mismo orden y mismo significado
 // que las columnas de la tabla, para que el ojo no tenga que reaprenderlas.
 const SERIES_GANANCIA: SerieBarras[] = [
@@ -247,6 +256,21 @@ function FilaMargen({ primeraCelda, r }: { primeraCelda: React.ReactNode; r: Mar
                 { contenido: contador(r.despachosSinPrecio, "sin precio") },
                 { contenido: contador(r.animalesSinCosto, "sin costo") },
                 { contenido: contador(r.unidadesDevueltas, "devueltas") },
+            ]} />
+        </tr>
+    );
+}
+
+// Única tabla de esta pestaña donde la última columna es una suma real: las
+// dos vías de venta nunca comparten un mismo cuy.
+function FilaUnidades({ primeraCelda, r }: { primeraCelda: React.ReactNode; r: UnidadesMesDto }) {
+    return (
+        <tr className="hover:bg-gray-50">
+            {primeraCelda}
+            <Celdas columnas={COLS_UNIDADES} valores={[
+                { contenido: r.vendidasComunidad },
+                { contenido: r.despachadasClientes },
+                { contenido: r.total, clase: "font-bold text-primary-700" },
             ]} />
         </tr>
     );
@@ -420,6 +444,14 @@ export default function Reportes() {
         enabled: tab === "ganancias" && margenVista === "cliente",
     });
 
+    // ── Unidades vendidas: sí filtra por CAT, pero solo en comunidad ────
+
+    const qUnidades = useQuery({
+        queryKey: ["unidades_mes", desde, hasta, cat],
+        queryFn: () => reportesApi.unidadesPorMes(filtro),
+        enabled: tab === "ganancias",
+    });
+
     // ── Datos de los gráficos: se recalculan con cada cambio de filtro ──
 
     const barrasProductoras: FilaBarras[] = useMemo(() =>
@@ -543,6 +575,18 @@ export default function Reportes() {
         totalMargen.unidadesDevueltas > 0
         && `${totalMargen.unidadesDevueltas} unidades devueltas`,
     ].filter(Boolean) as string[];
+
+    // Los totales del período, sumados en el front sobre la misma respuesta
+    // que pinta la tabla de abajo — sin segunda llamada, que sería una vía
+    // más por la que las dos cifras podrían discrepar. Sumar aquí SÍ vale:
+    // un cuy vendido en la comunidad nunca llega a la planta, así que no hay
+    // doble conteo entre las dos columnas.
+    const totalesUnidades = useMemo(() => {
+        const filas = qUnidades.data ?? [];
+        const comunidad = filas.reduce((n, r) => n + r.vendidasComunidad, 0);
+        const despacho = filas.reduce((n, r) => n + r.despachadasClientes, 0);
+        return { comunidad, despacho, total: comunidad + despacho };
+    }, [qUnidades.data]);
 
     const handleExportar = async () => {
         setExportando(true);
@@ -1506,6 +1550,95 @@ export default function Reportes() {
                             transporte, faenamiento ni empaque, así que no es un resultado
                             contable de la cooperativa.
                         </p>
+                    </section>
+
+                    {/* Bloque 3: unidades vendidas — cuántos cuyes, no cuánto
+                        dinero. Las dos vías nunca comparten un mismo cuy (el
+                        sistema lo impide en cuatro sitios), así que aquí sumar
+                        SÍ es válido: es la única excepción de esta pestaña. */}
+                    <section>
+                        <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-800">
+                                    Unidades vendidas
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5 max-w-md">
+                                    Cuántos cuyes se vendieron, no cuánto dinero movieron. La
+                                    columna de comunidad se filtra por centro de acopio; la de
+                                    despacho no, porque un despacho reúne animales de varias
+                                    jaulas — y por tanto de varias CAT.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Las tres cifras del período, sumadas en el front sobre la
+                            misma respuesta que pinta la tabla de abajo. El rótulo del
+                            total dice "animales": sin esa palabra, la tarjeta podría
+                            leerse como permiso para sumar también el dinero de los
+                            bloques de arriba. */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+                            <StatCard
+                                label="Vendidas en la comunidad"
+                                value={totalesUnidades.comunidad}
+                                sublabel="venta directa, sin pasar por planta"
+                                color="gray" delay={0}
+                            />
+                            <StatCard
+                                label="Despachadas a clientes"
+                                value={totalesUnidades.despacho}
+                                sublabel="neto de devoluciones"
+                                color="gray" delay={60}
+                            />
+                            <StatCard
+                                label="Total de animales"
+                                value={totalesUnidades.total}
+                                sublabel="comunidad + despacho"
+                                color="green" delay={120}
+                            />
+                        </div>
+
+                        {/* La asimetría del filtro por CAT: acá SÍ se filtra, pero
+                            solo la columna de comunidad. Distinto del aviso del
+                            margen de arriba, que no se filtra en absoluto. */}
+                        {cat && (
+                            <div className="mb-3 rounded-lg border border-bayo-200 bg-bayo-50
+                              px-4 py-2.5 text-xs text-bayo-800">
+                                Filtraste <strong>{cat}</strong> arriba: la columna{" "}
+                                <strong>vendidas en la comunidad</strong> se acota a ese
+                                centro de acopio, pero <strong>despachadas a clientes</strong>{" "}
+                                sigue siendo de <strong>toda la cooperativa</strong> — un
+                                despacho reúne animales de varias jaulas, y por tanto de
+                                varias CAT, así que esa columna no se puede filtrar.
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+                            <PanelEstado
+                                cargando={qUnidades.isLoading}
+                                error={qUnidades.isError}
+                                vacio={(qUnidades.data ?? []).length === 0}
+                                mensajeVacio="No hay unidades vendidas en el período."
+                            >
+                                <table className="w-full text-sm">
+                                    <EncabezadoTabla
+                                        columnas={[...COLS_ID_MES, ...COLS_UNIDADES]} />
+                                    <tbody className="divide-y divide-gray-100">
+                                        {(qUnidades.data ?? []).map((r) => (
+                                            <FilaUnidades
+                                                key={r.agrupacion}
+                                                r={r}
+                                                primeraCelda={
+                                                    <td className="px-3 py-2.5 font-medium text-gray-800
+                                       capitalize">
+                                                        {nombreMesAgrupacion(r.agrupacion)}
+                                                    </td>
+                                                }
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </PanelEstado>
+                        </div>
                     </section>
                 </div>
             )}

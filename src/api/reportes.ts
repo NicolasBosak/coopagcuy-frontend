@@ -3,6 +3,7 @@ import type {
     Dashboard, ReporteProductora, ReporteCAT, ReporteNovedad,
     ReporteDevoluciones, ReporteEntrada, ReporteTransito, ReporteSalida,
     GananciaProductoraDto, GananciaCatDto, GananciaMesDto, MargenDto,
+    UnidadesMesDto,
 } from "../types/reportes";
 
 interface FiltroPeriodo {
@@ -177,6 +178,15 @@ export const reportesApi = {
     margenPorCliente: async (filtro: FiltroSinCat) => {
         const { data } = await client.get<MargenDto[]>(
             "/api/reportes/margen/cliente", { params: filtro });
+        return data;
+    },
+
+    // ── Unidades vendidas: las dos vías, separadas ──────────────────────
+    // Acepta `cat`, a diferencia de las dos de margen: aquí el filtro sí
+    // aplica, aunque solo a la columna de comunidad.
+    unidadesPorMes: async (filtro: FiltroPeriodo) => {
+        const { data } = await client.get<UnidadesMesDto[]>(
+            "/api/reportes/unidades/mes", { params: filtro });
         return data;
     },
 
