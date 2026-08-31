@@ -2,10 +2,10 @@ import { useState } from "react";
 import { MainLayout } from "../components/layout/MainLayout";
 import { Segmentado } from "../components/ui/Segmentado";
 import { TablaUsuarios } from "../components/admin/TablaUsuarios";
-import { TablaComunidades } from "../components/admin/TablaComunidades";
+import { PanelCatalogos } from "../components/admin/PanelCatalogos";
 import { SolicitudesPassword } from "../components/admin/SolicitudesPassword";
 
-type Tab = "usuarios" | "comunidades" | "contrasenas";
+type Tab = "usuarios" | "catalogos" | "contrasenas";
 
 // Esta pantalla solo elige pestaña. Cada una gestiona sus propios datos,
 // su formulario y sus errores: antes vivían las tres cosas aquí y el
@@ -20,7 +20,7 @@ export default function Administracion() {
                     Administración
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                    Usuarios, catálogo de comunidades y solicitudes de contraseña
+                    Usuarios, catálogos geográficos y solicitudes de contraseña
                 </p>
             </div>
 
@@ -30,14 +30,14 @@ export default function Administracion() {
                     onCambio={setTab}
                     opciones={[
                         { id: "usuarios", label: "Usuarios" },
-                        { id: "comunidades", label: "Comunidades" },
+                        { id: "catalogos", label: "Catálogos" },
                         { id: "contrasenas", label: "Contraseñas" },
                     ]}
                 />
             </div>
 
             {tab === "usuarios" && <TablaUsuarios />}
-            {tab === "comunidades" && <TablaComunidades />}
+            {tab === "catalogos" && <PanelCatalogos />}
             {tab === "contrasenas" && <SolicitudesPassword />}
         </MainLayout>
     );

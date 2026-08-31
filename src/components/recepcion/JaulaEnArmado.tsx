@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { recepcionApi } from "../../api/recepcion";
 import { useAuth } from "../../context/useAuth";
-import { CENTROS_ACOPIO, type CentroAcopio } from "../../types/productora";
+import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../../hooks/useCatalogos";
 import { CAPACIDAD_JAULA } from "../../domain/reglasRecepcion";
 
 interface Props {
@@ -17,14 +17,28 @@ export function JaulaEnArmado({ isOnline }: Props) {
     const qc = useQueryClient();
     const { auth } = useAuth();
     const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
-    const [cat, setCat] = useState<CentroAcopio>(
-        (catFijo as CentroAcopio) ?? "PAT");
+    // Una sola consulta con inactivos incluidos (misma clave de caché que usa
+    // useNombreCat más abajo, así que TanStack Query la deduplica en una sola
+    // petición) y se filtra aquí a los activos: son los únicos que tiene
+    // sentido ofrecer como elección nueva en el selector de abajo.
+    const {
+        data: centrosTodos = [], isLoading: cargandoCentros,
+        isError: errorCentros, refetch: refetchCentros,
+    } = useCentrosAcopio(true);
+    const centros = useMemo(() => centrosTodos.filter((c) => c.activo), [centrosTodos]);
+    const nombreCat = useNombreCat();
+    // Sin centro fijo, arranca vacío y se queda así hasta que alguien elija
+    // uno a mano: ya no hay preselección automática del primer centro del
+    // catálogo (ver el selector más abajo).
+    const [cat, setCat] = useState<string>(catFijo ?? "");
     const [aviso, setAviso] = useState<string | null>(null);
 
     const { data: jaula, isLoading } = useQuery({
         queryKey: ["lote_abierto", cat],
         queryFn: () => recepcionApi.obtenerLoteAbierto(cat),
-        enabled: isOnline,
+        // Sin centro elegido todavía no hay nada que consultar: consultar
+        // con "" traería el lote equivocado.
+        enabled: isOnline && !!cat,
         refetchInterval: 30_000,
     });
 
@@ -52,18 +66,22 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     {catFijo ? (
                         <span className="h-9 px-3 inline-flex items-center rounded-lg
                              bg-primary-50 text-primary-800 text-xs font-bold">
-                            {CENTROS_ACOPIO.find((c) => c.value === catFijo)?.label
-                                ?? catFijo}
+                            {nombreCat(catFijo)}
                         </span>
                     ) : (
                         <select
                             value={cat}
-                            onChange={(e) => setCat(e.target.value as CentroAcopio)}
+                            onChange={(e) => setCat(e.target.value)}
                             className="h-9 px-2 rounded-lg border-2 border-gray-200 text-xs
                          font-semibold focus:border-primary-500 focus:outline-none"
                         >
-                            {CENTROS_ACOPIO.map(({ value, label }) => (
-                                <option key={value} value={value}>{label}</option>
+                            {/* Marcador de posición: sin él el select se ve como una
+                                caja vacía en vez de pedir explícitamente una elección. */}
+                            <option value="" disabled>
+                                {cargandoCentros ? "Cargando…" : "Seleccionar centro…"}
+                            </option>
+                            {centros.map((c) => (
+                                <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                             ))}
                         </select>
                     )}
@@ -88,6 +106,34 @@ export function JaulaEnArmado({ isOnline }: Props) {
                     Sin conexión: las entregas se guardan en la tablet y se
                     sumarán a la jaula al sincronizar.
                 </p>
+            ) : !cat ? (
+                // Ya no hay preselección automática: sin CAT fijo, esto se ve
+                // hasta que alguien elija un centro en el select de arriba,
+                // no solo "un instante". Por eso el mensaje no puede seguir
+                // diciendo "cargando" — mentiría en cuanto el catálogo llegue
+                // y nadie haya elegido nada todavía.
+                centros.length === 0 && !cargandoCentros ? (
+                    <p className="text-sm text-teja-600">
+                        {errorCentros
+                            ? "No se pudo cargar el catálogo de centros de acopio. "
+                            : "Todavía no hay centros de acopio creados. "}
+                        {errorCentros && (
+                            <button
+                                type="button"
+                                onClick={() => refetchCentros()}
+                                className="font-bold underline underline-offset-2"
+                            >
+                                Reintentar
+                            </button>
+                        )}
+                    </p>
+                ) : (
+                    <p className="text-sm text-gray-400">
+                        {cargandoCentros
+                            ? "Cargando centros de acopio…"
+                            : "Elige un centro de acopio para ver su jaula."}
+                    </p>
+                )
             ) : isLoading ? (
                 <p className="text-sm text-gray-400">Consultando jaula…</p>
             ) : !jaula ? (

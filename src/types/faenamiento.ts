@@ -195,6 +195,7 @@ export interface PaginaPublica {
     codigoLote: string;
     comunidadOrigen: string;
     canton: string;
+    provincia: string;
     nombreProductora: string;
     centroAcopio: string;
     fechaRecepcion: string;
@@ -213,6 +214,15 @@ export interface PaginaPublica {
     destinoComercial: string | null;
     tipoMercado: string | null;
     ubicacionMercado: string | null;
-    // Comunidades que aportaron animales, con su cantidad
-    comunidadesAporte: { comunidad: string; cantidad: number }[];
+    // Comunidades que aportaron animales, con su cantidad y su ubicación
+    // en el catálogo (Comunidad.Latitud/Longitud/AltitudMinM/AltitudMaxM,
+    // desde la Task 11). Sin cantón: ya se lee arriba, en `canton`/`provincia`.
+    comunidadesAporte: {
+        comunidad: string;
+        cantidad: number;
+        latitud: number | null;
+        longitud: number | null;
+        altitudMinM: number | null;
+        altitudMaxM: number | null;
+    }[];
 }

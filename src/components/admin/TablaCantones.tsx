@@ -1,73 +1,118 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { catalogosApi } from "../../api/admin";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { geografiaApi } from "../../api/catalogos";
 import { Badge } from "../ui/Badge";
-import { FormComunidad } from "./FormComunidad";
-import type { Comunidad } from "../../types/admin";
-import { useNombreCat } from "../../hooks/useCatalogos";
+import { FormCanton } from "./FormCanton";
+import type { Canton } from "../../types/admin";
+import { useProvincias, useCantones } from "../../hooks/useCatalogos";
 import { useIsOnline } from "../../context/useIsOnline";
 
-export function TablaComunidades() {
+export function TablaCantones() {
     const qc = useQueryClient();
     const isOnline = useIsOnline();
-    const [comunidadEditar, setComunidadEditar] = useState<Comunidad | null>(null);
+    const [cantonEditar, setCantonEditar] = useState<Canton | null>(null);
     const [showForm, setShowForm] = useState(false);
+    // El mensaje del 409 al desactivar (ver `toggle` abajo) se limpia al
+    // abrir un formulario o al cambiar el filtro de provincia: sin esto
+    // sobrevive a acciones que no tienen nada que ver con el aviso.
+    const [error, setError] = useState<string | null>(null);
+    const [filtroProvincia, setFiltroProvincia] = useState<number | undefined>();
 
+    const { data: provincias = [] } = useProvincias(true);
+    // Con inactivos incluidos: el administrador tiene que poder reactivar un
+    // cantón dado de baja por error, y el filtro de arriba ya acota la vista
+    // a algo manejable (son 221 en total).
     const {
-        data: comunidades = [], isLoading, isError, refetch,
-    } = useQuery({
-        queryKey: ["comunidades", "admin"],
-        queryFn: () => catalogosApi.listarComunidades(true),
-    });
+        data: cantones = [], isLoading, isError, refetch,
+    } = useCantones(filtroProvincia, true);
 
     const toggle = useMutation({
-        mutationFn: ({ id, activa }: { id: number; activa: boolean }) =>
-            catalogosApi.cambiarEstadoComunidad(id, activa),
+        mutationFn: ({ id, activo }: { id: number; activo: boolean }) =>
+            geografiaApi.cambiarEstadoCanton(id, activo),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["comunidades"] });
-            // Mismo motivo que en FormComunidad: activar/desactivar una
-            // comunidad cambia `totalComunidades` en TablaCantones.
             qc.invalidateQueries({ queryKey: ["cantones"] });
+            // El cambio de estado mueve el conteo de cantones activos de su
+            // provincia: sin esto, TablaProvincias se quedaría con el
+            // número viejo hasta otra invalidación ajena.
+            qc.invalidateQueries({ queryKey: ["provincias"] });
+            setError(null);
+        },
+        // El API rechaza desactivar un cantón con comunidades vivas. El
+        // mensaje que manda ya explica cuántas son: mostrarlo tal cual es
+        // más útil que un "no se pudo" genérico.
+        onError: (e: unknown) => {
+            const err = e as { response?: { data?: { mensaje?: string } } };
+            setError(err.response?.data?.mensaje
+                ?? "No se pudo cambiar el estado del cantón.");
         },
     });
 
-    const nombreCat = useNombreCat();
-
     return (
         <>
-            <div className="flex justify-end mb-4">
+            <div className="flex flex-wrap gap-3 items-end justify-between mb-4">
+                <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide
+                        text-gray-500 mb-1">
+                        Provincia
+                    </label>
+                    <select
+                        value={filtroProvincia ?? ""}
+                        onChange={(e) => {
+                            setError(null);
+                            setFiltroProvincia(
+                                e.target.value ? Number(e.target.value) : undefined);
+                        }}
+                        className="h-11 px-3 rounded-xl border-2 border-gray-200
+                            text-base focus:border-primary-500 focus:outline-none"
+                    >
+                        <option value="">Todas</option>
+                        {provincias.map((p) => (
+                            <option key={p.id} value={p.id}>{p.nombre}</option>
+                        ))}
+                    </select>
+                </div>
+
                 <button
-                    onClick={() => { setComunidadEditar(null); setShowForm(true); }}
+                    onClick={() => {
+                        setError(null);
+                        setCantonEditar(null);
+                        setShowForm(true);
+                    }}
                     className="h-11 px-5 bg-primary-600 hover:bg-primary-700
-                     text-white text-sm font-semibold rounded-xl transition
-                     active:scale-[0.98]"
+                        text-white text-sm font-semibold rounded-xl transition
+                        active:scale-[0.98]"
                 >
-                    + Nueva comunidad
+                    + Nuevo cantón
                 </button>
             </div>
+
+            {error && (
+                <div className="mb-4 bg-teja-50 border border-teja-100 rounded-xl
+                    px-3 py-2 text-sm text-teja-700">
+                    {error}
+                </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto
                       animate-fade-in-up">
                 {isLoading ? (
                     <div className="p-8 text-center text-sm text-gray-400">
-                        Cargando comunidades…
+                        Cargando cantones…
                     </div>
-                ) : comunidades.length === 0 ? (
+                ) : cantones.length === 0 ? (
                     // isLoading es false tanto si la consulta terminó vacía como si
                     // falló o quedó pausada sin red: sin distinguir los tres casos,
                     // un fallo de red se vería igual que un catálogo genuinamente
-                    // vacío. Antes de esto era la única de las cuatro tablas de
-                    // catálogos que no distinguía nada: pintaba la tabla con sus
-                    // cabeceras y cero filas, sin ningún aviso.
+                    // vacío (o que un filtro sin resultados).
                     <div className="p-8 text-center text-sm">
                         {!isOnline ? (
                             <p className="text-teja-600">
-                                Sin conexión: no se pudo cargar el catálogo de comunidades.
+                                Sin conexión: no se pudo cargar el catálogo de cantones.
                             </p>
                         ) : isError ? (
                             <>
                                 <p className="text-teja-600 font-semibold">
-                                    No se pudo cargar el catálogo de comunidades.
+                                    No se pudo cargar el catálogo de cantones.
                                 </p>
                                 <button
                                     type="button"
@@ -80,7 +125,9 @@ export function TablaComunidades() {
                             </>
                         ) : (
                             <p className="text-gray-400">
-                                Todavía no hay comunidades creadas.
+                                {filtroProvincia
+                                    ? "Esta provincia todavía no tiene cantones creados."
+                                    : "Todavía no hay cantones creados."}
                             </p>
                         )}
                     </div>
@@ -88,7 +135,7 @@ export function TablaComunidades() {
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                {["Comunidad", "Cantón", "Provincia", "CAT de referencia", "Estado", ""]
+                                {["Cantón", "Provincia", "Comunidades activas", "Estado", ""]
                                     .map((h) => (
                                         <th key={h}
                                             className="px-4 py-3 text-left text-xs font-bold
@@ -99,26 +146,26 @@ export function TablaComunidades() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {comunidades.map((c) => (
+                            {cantones.map((c) => (
                                 <tr key={c.id} className="hover:bg-gray-50 transition">
                                     <td className="px-4 py-3 font-medium text-gray-800">
                                         {c.nombre}
                                     </td>
-                                    <td className="px-4 py-3 text-gray-600">{c.canton}</td>
                                     <td className="px-4 py-3 text-gray-600">{c.provincia}</td>
                                     <td className="px-4 py-3 text-gray-600">
-                                        {nombreCat(c.catReferencia)}
+                                        {c.totalComunidades}
                                     </td>
                                     <td className="px-4 py-3">
                                         <Badge
-                                            label={c.activa ? "Activa" : "Inactiva"}
-                                            variant={c.activa ? "success" : "danger"}
+                                            label={c.activo ? "Activo" : "Inactivo"}
+                                            variant={c.activo ? "success" : "danger"}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
                                         <button
                                             onClick={() => {
-                                                setComunidadEditar(c);
+                                                setError(null);
+                                                setCantonEditar(c);
                                                 setShowForm(true);
                                             }}
                                             className="text-xs font-semibold text-primary-600
@@ -128,14 +175,14 @@ export function TablaComunidades() {
                                         </button>
                                         <button
                                             onClick={() => toggle.mutate({
-                                                id: c.id, activa: !c.activa
+                                                id: c.id, activo: !c.activo
                                             })}
                                             className={`text-xs font-semibold
-                                    ${c.activa
+                                    ${c.activo
                                                     ? "text-teja-500 hover:text-teja-700"
                                                     : "text-primary-600 hover:text-primary-800"}`}
                                         >
-                                            {c.activa ? "Desactivar" : "Activar"}
+                                            {c.activo ? "Desactivar" : "Activar"}
                                         </button>
                                     </td>
                                 </tr>
@@ -146,8 +193,8 @@ export function TablaComunidades() {
             </div>
 
             {showForm && (
-                <FormComunidad
-                    comunidad={comunidadEditar}
+                <FormCanton
+                    canton={cantonEditar}
                     onClose={() => setShowForm(false)}
                 />
             )}

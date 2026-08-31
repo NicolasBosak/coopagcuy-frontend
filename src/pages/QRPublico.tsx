@@ -156,7 +156,13 @@ export default function QRPublico() {
             cuando: fecha(data.fechaRecepcion),
             contenido: <Datos filas={[
                 ["Comunidad", data.comunidadOrigen],
-                ["Cantón", data.canton],
+                // Sin productora asociada el API no puede nombrar un
+                // cantón y responde "—" (QRService.ConstruirPaginaAsync):
+                // "—, Ecuador" leería raro con un guion junto al país, así
+                // que ese caso muestra solo la provincia.
+                ["Cantón", data.canton === "—"
+                    ? data.provincia
+                    : `${data.canton}, ${data.provincia}`],
                 ["Centro de acopio", data.centroAcopio],
                 ["Productora", data.nombreProductora],
                 ["Animales", `${data.cantidadAnimales} cuyes`],
@@ -264,6 +270,13 @@ export default function QRPublico() {
                         : [{
                             comunidad: data.comunidadOrigen,
                             cantidad: data.cantidadAnimales,
+                            // Este fallback no trae comunidad del catálogo
+                            // (comunidadOrigen es un nombre ya unido, a
+                            // veces de varias comunidades con " y "), así
+                            // que no hay coordenada que ofrecer: el mapa
+                            // queda sin pin y el texto sigue nombrándola.
+                            latitud: null, longitud: null,
+                            altitudMinM: null, altitudMaxM: null,
                         }]}
                 />
 

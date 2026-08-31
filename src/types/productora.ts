@@ -23,7 +23,10 @@ export interface CrearProductoraRequest {
     telefono?: string;
 }
 
-export type CentroAcopio = "PAT" | "NIE" | "HUE" | "NAB" | "PEL";
+// El catálogo de centros de acopio ERA una constante aquí. Dejó de serlo
+// cuando se pudieron crear centros nuevos desde Administración: ahora llega
+// del API (useCentrosAcopio en src/hooks/useCatalogos.ts). Una lista quemada
+// aquí volvería a quedarse corta en cuanto se sume una provincia.
 
 // ── Pagos a productoras (registro digital) ────────────────────────────
 
@@ -143,10 +146,3 @@ export interface RegistrarVentaLocalRequest {
     observaciones?: string;
 }
 
-export const CENTROS_ACOPIO: { value: CentroAcopio; label: string }[] = [
-    { value: "PAT", label: "Patococha" },
-    { value: "NIE", label: "Las Nieves" },
-    { value: "HUE", label: "Huertas" },
-    { value: "NAB", label: "Nabón / El Progreso" },
-    { value: "PEL", label: "Pelincay" },
-];

@@ -5,7 +5,8 @@ import { MainLayout } from "../components/layout/MainLayout";
 import { Badge } from "../components/ui/Badge";
 import { FormProductora } from "../components/productoras/FormProductora";
 import { useAuth } from "../context/useAuth";
-import { CENTROS_ACOPIO, type CentroAcopio, type Productora } from "../types/productora";
+import type { Productora } from "../types/productora";
+import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../hooks/useCatalogos";
 
 export default function Productoras() {
     const { auth } = useAuth();
@@ -20,8 +21,11 @@ export default function Productoras() {
 
     const [showForm, setShowForm] = useState(false);
     const [productoraEditar, setProductoraEditar] = useState<Productora | null>(null);
-    const [filtroCat, setFiltroCat] = useState<CentroAcopio | "">("");
+    const [filtroCat, setFiltroCat] = useState<string>("");
     const [filtroBusq, setFiltroBusq] = useState("");
+
+    const { data: centros = [], isLoading: cargandoCentros, isError: errorCentros } = useCentrosAcopio();
+    const nombreCat = useNombreCat();
 
     const { data = [], isLoading } = useQuery({
         queryKey: ["productoras", filtroCat, puedeGestionar],
@@ -81,18 +85,23 @@ export default function Productoras() {
                 {catFijo ? (
                     <span className="inline-flex items-center px-3 py-2 rounded-lg
                          bg-primary-50 text-primary-800 text-sm font-semibold">
-                        {CENTROS_ACOPIO.find((c) => c.value === catFijo)?.label ?? catFijo}
+                        {nombreCat(catFijo)}
                     </span>
                 ) : (
                     <select
                         value={filtroCat}
-                        onChange={(e) => setFiltroCat(e.target.value as CentroAcopio | "")}
+                        onChange={(e) => setFiltroCat(e.target.value)}
+                        title={errorCentros
+                            ? "No se pudo cargar la lista de CAT; solo está disponible \"Todos los CAT\"."
+                            : undefined}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                        <option value="">Todos los CAT</option>
-                        {CENTROS_ACOPIO.map(({ value, label }) => (
-                            <option key={value} value={value}>{label}</option>
+                        <option value="">
+                            {cargandoCentros ? "Cargando CAT…" : "Todos los CAT"}
+                        </option>
+                        {centros.map((c) => (
+                            <option key={c.codigo} value={c.codigo}>{etiquetaCat(c)}</option>
                         ))}
                     </select>
                 )}

@@ -11,8 +11,7 @@ import type {
     RegistrarEntregaRequest, CuyRegistro,
     EstadoOreja, TamanoAnimal, EntregaOffline
 } from "../../types/recepcion";
-import type { CentroAcopio } from "../../types/productora";
-import { CENTROS_ACOPIO } from "../../types/productora";
+import { useCentrosAcopio, useNombreCat, etiquetaCat } from "../../hooks/useCatalogos";
 import {
     COLORES, MAX_ENTREGA, evaluarCuy, PESO_MINIMO_GRAMOS, PESO_MAXIMO_GRAMOS,
     CAPACIDAD_JAULA, MAX_BYTES_EVIDENCIA_ENTREGA
@@ -75,15 +74,18 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const [errorFoto, setErrorFoto] = useState<string | null>(null);
 
     // Datos generales del lote. Un Operador de CAT queda fijado a su centro.
-    const catFijo = auth.rol === "OperadorCAT"
-        ? (auth.catAsignado as CentroAcopio | null) : null;
+    const catFijo = auth.rol === "OperadorCAT" ? auth.catAsignado : null;
     const [productoraId, setProductoraId] = useState(0);
     // Registro sin catálogo (offline): cédula de la productora digitada a mano.
     // El servidor la resuelve al sincronizar; si no coincide con ninguna
     // productora del centro, la entrega va a la bandeja de vinculación.
     const [cedulaManual, setCedulaManual] = useState("");
-    const [centroAcopio, setCentroAcopio] = useState<CentroAcopio>(
-        catFijo ?? "PAT");
+    // Sin centro fijo, arranca vacío y se queda así hasta que alguien lo
+    // elija a mano (o se resuelva por el CAT de la productora elegida, ver
+    // elegirProductora): ya no hay un centro "por defecto" que preseleccionar.
+    // Es el formulario que sella el código de la jaula, así que adivinar un
+    // centro es peor que obligar a elegirlo.
+    const [centroAcopio, setCentroAcopio] = useState<string>(catFijo ?? "");
     const [cantidad, setCantidad] = useState(1);
     const [enAyunas, setEnAyunas] = useState(true);
     const [responsable, setResponsable] = useState(auth.nombreCompleto ?? "");
@@ -120,6 +122,17 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     }, [productoras, busqueda]);
 
     const productoraElegida = productoras.find((p) => p.id === productoraId);
+
+    // Una sola consulta con inactivos incluidos (misma clave de caché que usa
+    // useNombreCat más abajo, así que TanStack Query la deduplica en una sola
+    // petición) y se filtra aquí a los activos: son los únicos que tiene
+    // sentido ofrecer como elección nueva en el selector de abajo.
+    const {
+        data: centrosTodos = [], isLoading: cargandoCentros,
+        isError: errorCentros, refetch: refetchCentros,
+    } = useCentrosAcopio(true);
+    const centros = useMemo(() => centrosTodos.filter((c) => c.activo), [centrosTodos]);
+    const nombreCat = useNombreCat();
 
     // Ajusta el arreglo de cuyes al cambiar la cantidad: conserva los ya
     // registrados y precarga los nuevos con los valores del último
@@ -158,7 +171,11 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const cedulaManualValida = esCedulaValida(cedulaManual);
 
     const puedeAvanzar = () => {
-        if (paso === 1) return productoraId !== 0 || cedulaManualValida;
+        // Exige centroAcopio además de la productora/cédula: sin catFijo y
+        // sin nada elegido todavía (ya no hay preselección automática, ver
+        // el selector más abajo), no hay dónde recibir.
+        if (paso === 1)
+            return (productoraId !== 0 || cedulaManualValida) && !!centroAcopio;
         if (paso === 2) return cantidad >= 1;
         if (paso === 3) return cuyes.every((c) => c.pesoGramos > 0);
         if (paso === 4) return responsable.trim().length > 0;
@@ -168,9 +185,14 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
     const elegirProductora = (id: number, cat: string) => {
         setProductoraId(id);
         setCedulaManual("");   // productora y cédula manual son excluyentes
-        // Con CAT fijo del operador no se cambia el centro
-        if (!catFijo && CENTROS_ACOPIO.some((c) => c.value === cat))
-            setCentroAcopio(cat as CentroAcopio);
+        // Con CAT fijo del operador no se cambia el centro. `isLoading` de
+        // TanStack Query es `false` tanto cuando la consulta terminó como
+        // cuando falló o quedó pausada sin red, así que esperar a que deje
+        // de estar "cargando" no basta para saber si el catálogo trajo
+        // datos. Basta con que `centros` tenga algo: si está vacío (cargando,
+        // sin red o falló) no hay con qué validar el CAT de la productora.
+        if (!catFijo && centros.length > 0 && centros.some((c) => c.codigo === cat))
+            setCentroAcopio(cat);
     };
 
     const construirRequest = (): RegistrarEntregaRequest => ({
@@ -390,20 +412,88 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                       tracking-wide text-gray-500 mb-1">
                                             Centro de acopio
                                         </label>
-                                        <select
-                                            value={centroAcopio}
-                                            disabled={!!catFijo}
-                                            onChange={(e) =>
-                                                setCentroAcopio(e.target.value as CentroAcopio)}
-                                            className="w-full h-12 px-3 rounded-2xl border-2
-                                 border-gray-200 bg-white text-base
-                                 focus:border-primary-500 focus:outline-none
-                                 disabled:bg-gray-50 disabled:text-gray-500"
-                                        >
-                                            {CENTROS_ACOPIO.map(({ value, label }) => (
-                                                <option key={value} value={value}>{label}</option>
-                                            ))}
-                                        </select>
+                                        {/* Sin CAT fijo y sin nada en el catálogo (cargando
+                                            aparte: eso lo cubre la opción "Cargando…" de abajo),
+                                            no hay nada que elegir. `isLoading` de TanStack Query
+                                            es `false` tanto si terminó como si falló o quedó
+                                            pausada sin red, así que el aviso real depende primero
+                                            de `isOnline` (ver JaulaEnArmado, que usa el mismo
+                                            orden) y luego de `isError`: sin mirar `isOnline`
+                                            antes, una consulta pausada por falta de red se ve
+                                            idéntica a un catálogo vacío, y a la operadora en
+                                            campo se le diría que no hay centros creados cuando en
+                                            realidad lo que falta es señal. */}
+                                        {!catFijo && centros.length === 0 && !cargandoCentros ? (
+                                            <div className="rounded-2xl border-2 border-teja-200
+                                                bg-teja-50 px-3 py-2.5">
+                                                <p className="text-sm font-semibold text-teja-700">
+                                                    {!isOnline
+                                                        ? "Sin conexión: no se pudo cargar el catálogo de centros."
+                                                        : errorCentros
+                                                            ? "No se pudo cargar el catálogo de centros."
+                                                            : "Todavía no hay centros de acopio creados."}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-teja-600">
+                                                    {!isOnline
+                                                        ? "Conéctate al menos una vez para descargar el catálogo a la tablet."
+                                                        : errorCentros
+                                                            ? "Revisa la conexión con el servidor e intenta de nuevo."
+                                                            : "Pide a un administrador que cree uno en Administración."}
+                                                </p>
+                                                {isOnline && errorCentros && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => refetchCentros()}
+                                                        className="mt-1.5 text-xs font-bold text-teja-700
+                                               underline underline-offset-2"
+                                                    >
+                                                        Reintentar
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <select
+                                                value={centroAcopio}
+                                                disabled={!!catFijo}
+                                                onChange={(e) => setCentroAcopio(e.target.value)}
+                                                className="w-full h-12 px-3 rounded-2xl border-2
+                                     border-gray-200 bg-white text-base
+                                     focus:border-primary-500 focus:outline-none
+                                     disabled:bg-gray-50 disabled:text-gray-500"
+                                            >
+                                                {!centroAcopio && (
+                                                    <option value="" disabled>
+                                                        {cargandoCentros
+                                                            ? "Cargando centros…"
+                                                            : "Seleccionar centro…"}
+                                                    </option>
+                                                )}
+                                                {/* Asegura que el CAT fijo del operador tenga su
+                                                    propia opción aunque el catálogo aún no haya
+                                                    llegado (o ese centro ya esté desactivado): sin
+                                                    esto el select se vería vacío pese a tener un
+                                                    valor asignado. */}
+                                                {catFijo && !centros.some((c) => c.codigo === catFijo) && (
+                                                    <option value={catFijo}>{nombreCat(catFijo)}</option>
+                                                )}
+                                                {centros.map((c) => (
+                                                    <option key={c.codigo} value={c.codigo}>
+                                                        {etiquetaCat(c)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                        {/* Para el operador de CAT esto no bloquea nada (su
+                                            centro ya quedó fijado arriba), pero igual hay que
+                                            decir por qué el resto del catálogo no está: sin red
+                                            no es lo mismo que un fallo del servidor. */}
+                                        {catFijo && centros.length === 0 && !cargandoCentros && (
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                {!isOnline
+                                                    ? "Sin conexión: no se pudo cargar el resto del catálogo de centros; tu centro asignado sigue disponible."
+                                                    : "No se pudo cargar el resto del catálogo de centros; tu centro asignado sigue disponible."}
+                                            </p>
+                                        )}
                                     </div>
                                     <SelloDeTiempo />
                                 </div>
@@ -884,8 +974,7 @@ export function FormLote({ isOnline, onGuardado, onClose }: Props) {
                                         : cedulaManualValida
                                             ? `Cédula ${cedulaManual} (por vincular)`
                                             : "—"],
-                                    ["Centro de acopio", CENTROS_ACOPIO.find(
-                                        c => c.value === centroAcopio)?.label ?? centroAcopio],
+                                    ["Centro de acopio", nombreCat(centroAcopio)],
                                     ["Cantidad", `${cuyes.length} cuyes`],
                                     ["Peso del lote", `${pesoTotal.toLocaleString("es-EC")} g`
                                         + (pesoPromedio ? ` (${pesoPromedio} g promedio)` : "")],

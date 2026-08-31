@@ -1,6 +1,6 @@
 import {
-    COMUNIDADES_CONOCIDAS, LIENZO, PLANTA, altitudTexto, clave, desnivelAPlanta,
-    enlaceMapa, kmAPlanta, msnmMedio, proyectar, ubicacionDe, type Ubicacion,
+    LIENZO, PLANTA, altitudTexto, dentroDelEncuadre, desnivelAPlanta,
+    enlaceMapa, kmAPlanta, msnmMedio, proyectar, rotuloDe, type Ubicacion,
 } from "../../domain/comunidades/coordenadas";
 import {
     FICHA_PLANTA, descripcionDe, type Descripcion,
@@ -31,6 +31,10 @@ import { CURVAS, CURVAS_INTERVALO } from "../../domain/comunidades/relieve.gener
 interface Aporte {
     comunidad: string;
     cantidad: number;
+    latitud: number | null;
+    longitud: number | null;
+    altitudMinM: number | null;
+    altitudMaxM: number | null;
 }
 
 interface Props {
@@ -38,7 +42,17 @@ interface Props {
 }
 
 interface AporteUbicado extends Aporte {
+    // No nulo mientras haya coordenada, tenga o no pin dibujado: separado de
+    // `dentroDelMapa` a propósito (ver ese campo) para que una comunidad
+    // fuera del encuadre horneado conserve su enlace a Google Maps y su
+    // altitud en la ficha, tal como exige el comentario de cabecera de
+    // `dentroDelEncuadre` en coordenadas.ts.
     ubicacion: Ubicacion | null;
+    // true = la coordenada cae dentro del encuadre horneado y recibe pin en
+    // el mapa. false = no hay coordenada, o la hay pero cae fuera del
+    // encuadre: en ambos casos no hay pin, pero solo el primero carece
+    // también de `ubicacion`.
+    dentroDelMapa: boolean;
 }
 
 // Radio del pin según cuántos animales aportó. El rango es corto a propósito:
@@ -162,17 +176,45 @@ function Chevron() {
 }
 
 export function MapaOrigen({ aportes }: Props) {
+    // Una comunidad sin coordenadas (dada de alta sin ponérselas) o fuera del
+    // encuadre horneado no lleva pin. Sigue nombrada en el texto de la
+    // ficha: lo que se pierde es el punto en el mapa, no la trazabilidad.
     const ubicados: AporteUbicado[] = aportes
-        .map((a) => ({ ...a, ubicacion: ubicacionDe(a.comunidad) }))
+        .map((a) => {
+            if (a.latitud === null || a.longitud === null) {
+                return { ...a, ubicacion: null, dentroDelMapa: false };
+            }
+            const coordenada = { lat: a.latitud, lon: a.longitud };
+            const ajuste = rotuloDe(a.comunidad);
+            // La ubicación se arma SIEMPRE que haya coordenada, caiga o no
+            // dentro del encuadre horneado: si se dejara en null para las que
+            // caen fuera, la ficha perdía su enlace a Google Maps y su
+            // altitud igual que si nunca hubiera tenido coordenadas, que es
+            // justo lo que la cabecera de `dentroDelEncuadre` (coordenadas.ts)
+            // dice que NO debe pasar.
+            const ubicacion: Ubicacion = {
+                ...coordenada,
+                nombre: ajuste.nombre ?? a.comunidad,
+                // El cantón no viaja en el aporte (ComunidadAporteDto no
+                // lo lleva): ya se lee arriba, en la cabecera "Origen" de
+                // la ficha. Repetirlo aquí por comunidad costaría otro
+                // viaje al catálogo por un dato que ya está en pantalla.
+                canton: "",
+                etiqueta: ajuste,
+                msnm: {
+                    min: a.altitudMinM ?? 0,
+                    max: a.altitudMaxM ?? 0,
+                },
+            };
+            return { ...a, ubicacion, dentroDelMapa: dentroDelEncuadre(coordenada) };
+        })
         .sort((a, b) => b.cantidad - a.cantidad);
 
-    const conPin = ubicados.filter((a) => a.ubicacion !== null) as
+    // Solo las que de verdad se dibujan en el lienzo: una comunidad fuera del
+    // encuadre tiene `ubicacion` (para su ficha) pero no pin, así que ya no
+    // basta con mirar `ubicacion !== null` como antes.
+    const conPin = ubicados.filter((a) => a.dentroDelMapa) as
         (AporteUbicado & { ubicacion: Ubicacion })[];
-
-    // Las comunidades de la cooperativa que NO aportaron a este lote.
-    const aportantes = new Set(conPin.map((a) => clave(a.ubicacion.nombre)));
-    const contexto = COMUNIDADES_CONOCIDAS
-        .filter((u) => !aportantes.has(clave(u.nombre)));
 
     const maxCantidad = Math.max(...conPin.map((a) => a.cantidad), 1);
     const radio = (cantidad: number) =>
@@ -213,8 +255,16 @@ export function MapaOrigen({ aportes }: Props) {
                                     + `de altitud y ${kmAPlanta(a.ubicacion)} `
                                     + `kilómetros, aportó ${a.cantidad} cuyes`).join(". ")
                                 + "."
-                                : "Mapa del relieve del sur del Azuay con las comunidades "
-                                + "de la cooperativa."
+                                // Sin pines que describir: el mapa dibuja el relieve y la
+                                // planta, nada más. Antes decía "con las comunidades de la
+                                // cooperativa", frase que era cierta cuando este mapa las
+                                // dibujaba siempre como contexto; esa capa se quitó y quien
+                                // usa lector de pantalla no debe oír que hay algo que ya no
+                                // está dibujado.
+                                : `Mapa del relieve del sur del Azuay. La planta está en `
+                                + `${PLANTA.nombre}, a ${metros(msnmMedio(PLANTA))} metros, `
+                                + "en el valle. Ninguna comunidad de este lote aparece "
+                                + "dibujada en el mapa."
                         }
                     >
                         {/* El terreno real. Horneado desde una malla SRTM 30 m
@@ -259,27 +309,6 @@ export function MapaOrigen({ aportes }: Props) {
                                     stroke="#004954" strokeWidth="1"
                                     strokeDasharray="3 3"
                                 />
-                            );
-                        })}
-
-                        {/* Comunidades de la cooperativa que no aportaron aquí */}
-                        {contexto.map((u) => {
-                            const c = proyectar(u);
-                            const alaIzquierda = c.x > LIENZO.ancho * 0.6;
-                            return (
-                                <g key={`ctx-${u.nombre}`} className="animate-fade-in">
-                                    <circle cx={c.x} cy={c.y} r="3.5"
-                                        fill="#ffffff" stroke="#6b7280" strokeWidth="1.5" />
-                                    <text
-                                        x={alaIzquierda ? c.x - 7 : c.x + 7}
-                                        y={c.y + 3.5}
-                                        textAnchor={alaIzquierda ? "end" : "start"}
-                                        className="fill-gray-500"
-                                        style={{ fontSize: "9px", ...HALO, strokeWidth: 2.5 }}
-                                    >
-                                        {u.nombre}
-                                    </text>
-                                </g>
                             );
                         })}
 
@@ -408,15 +437,31 @@ export function MapaOrigen({ aportes }: Props) {
                                     </span>
                                     <span className="block text-xs text-gray-500">
                                         {a.ubicacion
-                                            ? <>
-                                                {a.ubicacion.canton} · {altitudTexto(a.ubicacion)}
-                                                <br />
-                                                {kmAPlanta(a.ubicacion)} km · baja unos{" "}
-                                                <strong className="font-semibold text-gray-700">
-                                                    {metros(desnivelAPlanta(a.ubicacion))} m
-                                                </strong>{" "}
-                                                hasta la planta
-                                            </>
+                                            ? a.dentroDelMapa
+                                                ? <>
+                                                    {/* Sin cantón aquí: ComunidadAporteDto no
+                                                        lo trae por comunidad, y ya se lee arriba
+                                                        en la cabecera "Origen" de la ficha. */}
+                                                    {altitudTexto(a.ubicacion)}
+                                                    <br />
+                                                    {kmAPlanta(a.ubicacion)} km · baja unos{" "}
+                                                    <strong className="font-semibold text-gray-700">
+                                                        {metros(desnivelAPlanta(a.ubicacion))} m
+                                                    </strong>{" "}
+                                                    hasta la planta
+                                                </>
+                                                // Con coordenada pero fuera del encuadre
+                                                // horneado (ver dentroDelEncuadre en
+                                                // coordenadas.ts): no es que falte el dato,
+                                                // es que este mapa en concreto no llega
+                                                // hasta ahí. Decir "pendiente de registro"
+                                                // sería falso, y el enlace a Google Maps de
+                                                // la ficha (más abajo) sigue funcionando.
+                                                : <>
+                                                    {altitudTexto(a.ubicacion)}
+                                                    <br />
+                                                    Fuera del área que cubre este mapa
+                                                </>
                                             // Nunca se inventa una posición aproximada: en
                                             // una ficha cuya única función es ser creíble,
                                             // un pin inventado cuesta más que un hueco

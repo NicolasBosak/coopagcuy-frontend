@@ -43,18 +43,81 @@ export const ROLES: { value: string; label: string }[] = [
     { value: "AdminTecnico", label: "Administrador técnico" },
 ];
 
+export interface Provincia {
+    id: number;
+    nombre: string;
+    activa: boolean;
+    // Cantones activos que cuelgan de ella: explica por qué una baja falló
+    totalCantones: number;
+}
+
+export interface GuardarProvinciaRequest {
+    nombre: string;
+}
+
+export interface Canton {
+    id: number;
+    nombre: string;
+    provinciaId: number;
+    // Nombre resuelto de la provincia (solo lectura)
+    provincia: string;
+    activo: boolean;
+    totalComunidades: number;
+}
+
+export interface GuardarCantonRequest {
+    nombre: string;
+    provinciaId: number;
+}
+
+// El código de tres letras es la clave, no un id numérico: prefija el
+// identificador de cada jaula (PAT-20260615-001) y por eso es inmutable.
+export interface CentroAcopio {
+    codigo: string;
+    nombre: string;
+    cantonId: number;
+    canton: string;
+    provincia: string;
+    activo: boolean;
+}
+
+export interface CrearCentroAcopioRequest {
+    codigo: string;
+    nombre: string;
+    cantonId: number;
+}
+
+// Sin código: es inmutable, y el contrato del API tampoco lo acepta.
+export interface ActualizarCentroAcopioRequest {
+    nombre: string;
+    cantonId: number;
+}
+
 export interface Comunidad {
     id: number;
     nombre: string;
+    cantonId: number;
+    // Cantón y provincia resueltos desde el catálogo (solo lectura)
     canton: string;
+    provincia: string;
     catReferencia: string;
     activa: boolean;
+    // Ubicación en el mapa público; null en comunidades dadas de alta
+    // desde Administración a las que nadie les puso coordenadas todavía
+    latitud: number | null;
+    longitud: number | null;
+    altitudMinM: number | null;
+    altitudMaxM: number | null;
 }
 
 export interface GuardarComunidadRequest {
     nombre: string;
-    canton: string;
+    cantonId: number;
     catReferencia: string;
+    latitud?: number | null;
+    longitud?: number | null;
+    altitudMinM?: number | null;
+    altitudMaxM?: number | null;
 }
 
 // Condición verificable del checklist de transporte CAT → planta

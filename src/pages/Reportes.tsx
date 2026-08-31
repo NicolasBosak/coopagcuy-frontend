@@ -16,7 +16,6 @@ import {
     BarrasDivergentes, type FilaDivergente,
 } from "../components/reportes/graficos/BarrasDivergentes";
 import { StatCard } from "../components/ui/StatCard";
-import type { CentroAcopio } from "../types/productora";
 import type { MargenDto } from "../types/reportes";
 import { useAuth } from "../context/useAuth";
 import { fechaLocal } from "../utils/fechaLocal";
@@ -325,7 +324,7 @@ export default function Reportes() {
     const [tab, setTab] = useState<Tab>(visibles[0].id);
     const [desde, setDesde] = useState(inicioMes());
     const [hasta, setHasta] = useState(hoy());
-    const [cat, setCat] = useState<CentroAcopio | "">("");
+    const [cat, setCat] = useState<string>("");
     const [exportando, setExportando] = useState(false);
     const [exportandoGeneral, setExportandoGeneral] = useState(false);
     const [gananciaVista, setGananciaVista] = useState<GananciaVista>("productora");
