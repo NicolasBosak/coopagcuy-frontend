@@ -1571,35 +1571,17 @@ export default function Reportes() {
                             </div>
                         </div>
 
-                        {/* Las tres cifras del período, sumadas en el front sobre la
-                            misma respuesta que pinta la tabla de abajo. El rótulo del
-                            total dice "animales": sin esa palabra, la tarjeta podría
-                            leerse como permiso para sumar también el dinero de los
-                            bloques de arriba. */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
-                            <StatCard
-                                label="Vendidas en la comunidad"
-                                value={totalesUnidades.comunidad}
-                                sublabel="venta directa, sin pasar por planta"
-                                color="gray" delay={0}
-                            />
-                            <StatCard
-                                label="Despachadas a clientes"
-                                value={totalesUnidades.despacho}
-                                sublabel="neto de devoluciones"
-                                color="gray" delay={60}
-                            />
-                            <StatCard
-                                label="Total de animales"
-                                value={totalesUnidades.total}
-                                sublabel="comunidad + despacho"
-                                color="green" delay={120}
-                            />
-                        </div>
-
-                        {/* La asimetría del filtro por CAT: acá SÍ se filtra, pero
-                            solo la columna de comunidad. Distinto del aviso del
-                            margen de arriba, que no se filtra en absoluto. */}
+                        {/* S1: la asimetría del filtro por CAT, ANTES de las tres
+                            cifras — no después. Con el aviso debajo de la tarjeta
+                            (como estaba antes), el ojo llega a "Total de animales: 800"
+                            sin haber leído todavía que solo uno de sus dos sumandos
+                            está acotado a la CAT filtrada; es la misma atribución
+                            equivocada que B1 corrige en el Excel, aquí a un scroll de
+                            distancia en vez de a una hoja de distancia. Se mantiene
+                            además de (no en vez de) los sublabels condicionales de
+                            abajo: alguien que solo mire los números, sin leer este
+                            párrafo, todavía encuentra la CAT nombrada junto a cada
+                            cifra. */}
                         {cat && (
                             <div className="mb-3 rounded-lg border border-bayo-200 bg-bayo-50
                               px-4 py-2.5 text-xs text-bayo-800">
@@ -1611,6 +1593,48 @@ export default function Reportes() {
                                 varias CAT, así que esa columna no se puede filtrar.
                             </div>
                         )}
+
+                        {/* Las tres cifras del período, sumadas en el front sobre la
+                            misma respuesta que pinta la tabla de abajo. El rótulo del
+                            total dice "animales": sin esa palabra, la tarjeta podría
+                            leerse como permiso para sumar también el dinero de los
+                            bloques de arriba.
+
+                            S1: los sublabels nombran la CAT cuando hay filtro puesto,
+                            en vez de un texto fijo que no distingue "acotado" de "toda
+                            la cooperativa" — así cada número lleva su propio alcance
+                            encima, sin depender de que se lea el aviso de arriba. */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-3">
+                            <StatCard
+                                label="Vendidas en la comunidad"
+                                // S3: "0" en una tarjeta verde/gris junto a un
+                                // PanelEstado diciendo que la carga falló es una
+                                // falsedad con más pinta de dato real que un
+                                // "—" vacío — un 0 se lee como "no se vendió
+                                // nada", no como "no se pudo saber".
+                                value={qUnidades.isError ? "—" : totalesUnidades.comunidad}
+                                sublabel={cat
+                                    ? `venta directa · ${cat}`
+                                    : "venta directa, sin pasar por planta"}
+                                color="gray" delay={0}
+                            />
+                            <StatCard
+                                label="Despachadas a clientes"
+                                value={qUnidades.isError ? "—" : totalesUnidades.despacho}
+                                sublabel={cat
+                                    ? "neto de devoluciones · toda la cooperativa"
+                                    : "neto de devoluciones"}
+                                color="gray" delay={60}
+                            />
+                            <StatCard
+                                label="Total de animales"
+                                value={qUnidades.isError ? "—" : totalesUnidades.total}
+                                sublabel={cat
+                                    ? `comunidad (${cat}) + despacho (toda la cooperativa)`
+                                    : "comunidad + despacho"}
+                                color="green" delay={120}
+                            />
+                        </div>
 
                         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
                             <PanelEstado
